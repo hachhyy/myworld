@@ -2,7 +2,13 @@ import React, { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useWorldStore } from './store/useWorldStore';
 import { computeSolarEnvironment } from './utils/solarAndTime';
-import { supabase, isSupabaseConfigured } from './lib/supabaseClient';
+import {
+  supabase,
+  isSupabaseConfigured,
+  pullWorldStateFromSupabase,
+  pushWorldStateToSupabase,
+  subscribeToWorldRealtime,
+} from './lib/supabaseClient';
 import { OnboardingFlow } from './components/OnboardingFlow';
 import { LoadingScreen } from './components/LoadingScreen';
 import { Planet3DScene } from './components/Planet3DScene';
@@ -21,20 +27,35 @@ export const App: React.FC = () => {
   const {
     onboardingCompleted,
     worldId,
+    roomCode,
+    planetName,
     theme,
+    currency,
+    lunarMode,
     solarOverride,
     weatherOverride,
     anniversaryDate,
+    totalKissesHistory,
+    pendingKissBursts,
     petA,
     petB,
+    petCare,
     activeUser,
     diaryPages,
+    mediaItems,
+    mapPins,
+    cravings,
+    expenses,
+    savingsGoals,
+    lunarA,
+    lunarB,
     activeBuilding,
     setActiveBuilding,
     setAuthSession,
   } = useWorldStore();
 
   const [hapticVisualPulse, setHapticVisualPulse] = useState(false);
+  const isApplyingRemoteRef = React.useRef(false);
 
   const solar = computeSolarEnvironment(
     solarOverride,
@@ -58,6 +79,118 @@ export const App: React.FC = () => {
       }
     });
   }, [onboardingCompleted, setAuthSession]);
+
+  // Sincronización Bidireccional en Tiempo Real con Supabase (Pull inicial + Suscripción Realtime)
+  useEffect(() => {
+    if (!onboardingCompleted || (!worldId && !roomCode)) return;
+
+    const applySnapshot = (snap: Awaited<ReturnType<typeof pullWorldStateFromSupabase>>) => {
+      if (!snap) return;
+      isApplyingRemoteRef.current = true;
+      useWorldStore.setState((prev) => ({
+        planetName: snap.planetName || prev.planetName,
+        anniversaryDate: snap.anniversaryDate || prev.anniversaryDate,
+        theme: (snap.theme as typeof prev.theme) || prev.theme,
+        currency: (snap.currency as typeof prev.currency) || prev.currency,
+        lunarMode: (snap.lunarMode as typeof prev.lunarMode) || prev.lunarMode,
+        totalKissesHistory:
+          typeof snap.totalKissesHistory === 'number'
+            ? Math.max(prev.totalKissesHistory, snap.totalKissesHistory)
+            : prev.totalKissesHistory,
+        pendingKissBursts: Array.isArray(snap.pendingKissBursts)
+          ? (snap.pendingKissBursts as typeof prev.pendingKissBursts)
+          : prev.pendingKissBursts,
+        petA: (snap.petA as typeof prev.petA) || prev.petA,
+        petB: (snap.petB as typeof prev.petB) || prev.petB,
+        petCare: (snap.petCare as typeof prev.petCare) || prev.petCare,
+        diaryPages: Array.isArray(snap.diaryPages)
+          ? (snap.diaryPages as typeof prev.diaryPages)
+          : prev.diaryPages,
+        mediaItems: Array.isArray(snap.mediaItems)
+          ? (snap.mediaItems as typeof prev.mediaItems)
+          : prev.mediaItems,
+        mapPins: Array.isArray(snap.mapPins)
+          ? (snap.mapPins as typeof prev.mapPins)
+          : prev.mapPins,
+        cravings: Array.isArray(snap.cravings)
+          ? (snap.cravings as typeof prev.cravings)
+          : prev.cravings,
+        expenses: Array.isArray(snap.expenses)
+          ? (snap.expenses as typeof prev.expenses)
+          : prev.expenses,
+        savingsGoals: Array.isArray(snap.savingsGoals)
+          ? (snap.savingsGoals as typeof prev.savingsGoals)
+          : prev.savingsGoals,
+        lunarA: (snap.lunarA as typeof prev.lunarA) || prev.lunarA,
+        lunarB: (snap.lunarB as typeof prev.lunarB) || prev.lunarB,
+      }));
+      setTimeout(() => {
+        isApplyingRemoteRef.current = false;
+      }, 250);
+    };
+
+    pullWorldStateFromSupabase(worldId || '', roomCode).then((snap) => {
+      if (snap && (snap.diaryPages || snap.mediaItems || snap.petA)) {
+        applySnapshot(snap);
+      }
+    });
+
+    const unsubscribe = subscribeToWorldRealtime(worldId || '', roomCode, (snap) => {
+      applySnapshot(snap);
+    });
+
+    return () => unsubscribe();
+  }, [onboardingCompleted, worldId, roomCode]);
+
+  // Push automático con debounce (700ms) a Supabase cada vez que cualquiera de los dos hace un cambio en el planeta
+  useEffect(() => {
+    if (!onboardingCompleted || (!worldId && !roomCode) || isApplyingRemoteRef.current) return;
+    const timer = setTimeout(() => {
+      pushWorldStateToSupabase(worldId || '', roomCode, {
+        planetName,
+        anniversaryDate,
+        theme,
+        currency,
+        lunarMode,
+        totalKissesHistory,
+        pendingKissBursts,
+        petA,
+        petB,
+        petCare,
+        diaryPages,
+        mediaItems,
+        mapPins,
+        cravings,
+        expenses,
+        savingsGoals,
+        lunarA,
+        lunarB,
+      });
+    }, 700);
+    return () => clearTimeout(timer);
+  }, [
+    onboardingCompleted,
+    worldId,
+    roomCode,
+    planetName,
+    anniversaryDate,
+    theme,
+    currency,
+    lunarMode,
+    totalKissesHistory,
+    pendingKissBursts,
+    petA,
+    petB,
+    petCare,
+    diaryPages,
+    mediaItems,
+    mapPins,
+    cravings,
+    expenses,
+    savingsGoals,
+    lunarA,
+    lunarB,
+  ]);
 
   // Sincronizar Tema Pastel y Modo Noche Conectado en el DOM global
   useEffect(() => {

@@ -353,3 +353,134 @@ export async function signOutFromSupabase(): Promise<void> {
     await supabase.auth.signOut().catch(() => {});
   }
 }
+
+// 6. Sincronización en Tiempo Real del estado completo de los 7 edificios con `public.worlds.world_state`
+export interface SyncedWorldSnapshot {
+  planetName?: string;
+  anniversaryDate?: string;
+  theme?: string;
+  currency?: string;
+  lunarMode?: string;
+  totalKissesHistory?: number;
+  pendingKissBursts?: unknown[];
+  petA?: unknown;
+  petB?: unknown;
+  petCare?: unknown;
+  diaryPages?: unknown[];
+  mediaItems?: unknown[];
+  mapPins?: unknown[];
+  cravings?: unknown[];
+  expenses?: unknown[];
+  savingsGoals?: unknown[];
+  lunarA?: unknown;
+  lunarB?: unknown;
+  updatedAtClient?: number;
+}
+
+export async function pullWorldStateFromSupabase(
+  worldId: string,
+  roomCode: string
+): Promise<SyncedWorldSnapshot | null> {
+  if (!isSupabaseConfigured || (!worldId && !roomCode)) return null;
+  try {
+    const query = supabase.from('worlds').select('name,anniversary_date,theme,currency,lunar_mode,total_kisses_history,world_state');
+    const { data, error } = worldId.startsWith('demo-')
+      ? await query.eq('room_code', roomCode).maybeSingle()
+      : await query.eq('id', worldId).maybeSingle();
+
+    if (error || !data) return null;
+    const ws = (data.world_state as SyncedWorldSnapshot) || {};
+    return {
+      ...ws,
+      planetName: data.name || ws.planetName,
+      anniversaryDate: data.anniversary_date || ws.anniversaryDate,
+      theme: data.theme || ws.theme,
+      currency: data.currency || ws.currency,
+      lunarMode: data.lunar_mode || ws.lunarMode,
+      totalKissesHistory:
+        typeof data.total_kisses_history === 'number'
+          ? Math.max(data.total_kisses_history, ws.totalKissesHistory || 0)
+          : ws.totalKissesHistory,
+    };
+  } catch {
+    return null;
+  }
+}
+
+export async function pushWorldStateToSupabase(
+  worldId: string,
+  roomCode: string,
+  snapshot: SyncedWorldSnapshot
+): Promise<boolean> {
+  if (!isSupabaseConfigured || (!worldId && !roomCode)) return false;
+  try {
+    const payload = {
+      name: snapshot.planetName || 'Nuestro Pequeño Planeta',
+      anniversary_date: snapshot.anniversaryDate || '2024-06-30',
+      theme: snapshot.theme || 'melocoton',
+      currency: snapshot.currency || '€',
+      lunar_mode: snapshot.lunarMode || 'single',
+      total_kisses_history: snapshot.totalKissesHistory || 0,
+      world_state: {
+        ...snapshot,
+        updatedAtClient: Date.now(),
+      },
+      updated_at: new Date().toISOString(),
+    };
+
+    const { error } = worldId.startsWith('demo-')
+      ? await supabase.from('worlds').upsert({ room_code: roomCode, ...payload }, { onConflict: 'room_code' })
+      : await supabase.from('worlds').update(payload).eq('id', worldId);
+
+    return !error;
+  } catch {
+    return false;
+  }
+}
+
+export function subscribeToWorldRealtime(
+  worldId: string,
+  roomCode: string,
+  onRemoteUpdate: (snapshot: SyncedWorldSnapshot) => void
+): () => void {
+  if (!isSupabaseConfigured || (!worldId && !roomCode)) return () => {};
+
+  const filter = worldId.startsWith('demo-')
+    ? `room_code=eq.${roomCode}`
+    : `id=eq.${worldId}`;
+
+  const channel = supabase
+    .channel(`myworld-realtime-${worldId || roomCode}`)
+    .on(
+      'postgres_changes',
+      {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'worlds',
+        filter,
+      },
+      (payload) => {
+        const row = payload.new as Record<string, unknown>;
+        if (!row) return;
+        const ws = (row.world_state as SyncedWorldSnapshot) || {};
+        onRemoteUpdate({
+          ...ws,
+          planetName: (row.name as string) || ws.planetName,
+          anniversaryDate: (row.anniversary_date as string) || ws.anniversaryDate,
+          theme: (row.theme as string) || ws.theme,
+          currency: (row.currency as string) || ws.currency,
+          lunarMode: (row.lunar_mode as string) || ws.lunarMode,
+          totalKissesHistory:
+            typeof row.total_kisses_history === 'number'
+              ? row.total_kisses_history
+              : ws.totalKissesHistory,
+        });
+      }
+    )
+    .subscribe();
+
+  return () => {
+    supabase.removeChannel(channel);
+  };
+}
+
