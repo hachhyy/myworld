@@ -1,0 +1,21 @@
+# Ignorar directorios de sistema y compilación
+node_modules/
+dist/
+.gemini
+.gemini/
+.local
+.local/
+.npm
+.npm/
+.cache/
+.config/
+.ssh/
+.bash_history
+.bash_logout
+.bashrc
+.profile
+.gitconfig
+.env
+.env.local
+*.log
+.DS_Store
