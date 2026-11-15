@@ -88,6 +88,8 @@ body,
   margin: 0;
   padding: 0;
   overflow: hidden;
+  overscroll-behavior: none;
+  touch-action: manipulation;
   background-color: var(--bg-paper);
   color: var(--text-ink);
   font-family: 'Fredoka', 'Quicksand', sans-serif;
