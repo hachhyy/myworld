@@ -355,6 +355,8 @@ export async function signOutFromSupabase(): Promise<void> {
 }
 
 // 6. Sincronización en Tiempo Real del estado completo de los 7 edificios con `public.worlds.world_state`
+export const CLIENT_INSTANCE_ID = generateUUID();
+
 export interface SyncedWorldSnapshot {
   planetName?: string;
   anniversaryDate?: string;
@@ -375,6 +377,7 @@ export interface SyncedWorldSnapshot {
   lunarA?: unknown;
   lunarB?: unknown;
   updatedAtClient?: number;
+  updatedByClientId?: string;
 }
 
 export async function pullWorldStateFromSupabase(
@@ -424,6 +427,7 @@ export async function pushWorldStateToSupabase(
       world_state: {
         ...snapshot,
         updatedAtClient: Date.now(),
+        updatedByClientId: CLIENT_INSTANCE_ID,
       },
       updated_at: new Date().toISOString(),
     };
@@ -463,6 +467,10 @@ export function subscribeToWorldRealtime(
         const row = payload.new as Record<string, unknown>;
         if (!row) return;
         const ws = (row.world_state as SyncedWorldSnapshot) || {};
+        // Ignorar actualizaciones que provengan de esta misma pestaña del navegador
+        if (ws.updatedByClientId && ws.updatedByClientId === CLIENT_INSTANCE_ID) {
+          return;
+        }
         onRemoteUpdate({
           ...ws,
           planetName: (row.name as string) || ws.planetName,

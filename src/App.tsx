@@ -100,9 +100,18 @@ export const App: React.FC = () => {
         pendingKissBursts: Array.isArray(snap.pendingKissBursts)
           ? (snap.pendingKissBursts as typeof prev.pendingKissBursts)
           : prev.pendingKissBursts,
-        petA: (snap.petA as typeof prev.petA) || prev.petA,
-        petB: (snap.petB as typeof prev.petB) || prev.petB,
-        petCare: (snap.petCare as typeof prev.petCare) || prev.petCare,
+        petA:
+          snap.petA && typeof snap.petA === 'object'
+            ? { ...prev.petA, ...(snap.petA as Partial<typeof prev.petA>) }
+            : prev.petA,
+        petB:
+          snap.petB && typeof snap.petB === 'object'
+            ? { ...prev.petB, ...(snap.petB as Partial<typeof prev.petB>) }
+            : prev.petB,
+        petCare:
+          snap.petCare && typeof snap.petCare === 'object'
+            ? { ...prev.petCare, ...(snap.petCare as Partial<typeof prev.petCare>) }
+            : prev.petCare,
         diaryPages: Array.isArray(snap.diaryPages)
           ? (snap.diaryPages as typeof prev.diaryPages)
           : prev.diaryPages,
@@ -121,8 +130,14 @@ export const App: React.FC = () => {
         savingsGoals: Array.isArray(snap.savingsGoals)
           ? (snap.savingsGoals as typeof prev.savingsGoals)
           : prev.savingsGoals,
-        lunarA: (snap.lunarA as typeof prev.lunarA) || prev.lunarA,
-        lunarB: (snap.lunarB as typeof prev.lunarB) || prev.lunarB,
+        lunarA:
+          snap.lunarA && typeof snap.lunarA === 'object'
+            ? { ...prev.lunarA, ...(snap.lunarA as Partial<typeof prev.lunarA>) }
+            : prev.lunarA,
+        lunarB:
+          snap.lunarB && typeof snap.lunarB === 'object'
+            ? { ...prev.lunarB, ...(snap.lunarB as Partial<typeof prev.lunarB>) }
+            : prev.lunarB,
       }));
       setTimeout(() => {
         isApplyingRemoteRef.current = false;
