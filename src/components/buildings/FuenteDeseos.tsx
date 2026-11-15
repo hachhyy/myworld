@@ -49,8 +49,8 @@ export const FuenteDeseos: React.FC<FuenteDeseosProps> = ({ onClose }) => {
 
   return (
     <div className="fixed inset-0 z-40 flex flex-col watercolor-paper overflow-hidden">
-      {/* Cabecera */}
-      <div className="p-3 flex items-center justify-between border-b-2 border-[var(--border-ink)] bg-[var(--bg-card)]">
+      {/* Cabecera con Safe Area superior de iOS */}
+      <div className="safe-top-header px-4 pb-3 flex items-center justify-between gap-2 border-b-2 border-[var(--border-ink)] bg-[var(--bg-card)]">
         <motion.button
           whileTap={{ scale: 0.92 }}
           onClick={onClose}

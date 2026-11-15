@@ -1357,6 +1357,7 @@ export const Planet3DScene: React.FC<Planet3DSceneProps> = ({
 
   // Iluminación limpia y luminosa (en Atardecer Rosado baña el planeta con luz dorada/rosada sin oscurecer el agua ni embarrar el verde)
   const isSunset = solar.timeOfDay === 'sunset';
+  const isNarrowMobile = typeof window !== 'undefined' && window.innerWidth < 640;
 
   return (
     <div
@@ -1366,7 +1367,10 @@ export const Planet3DScene: React.FC<Planet3DSceneProps> = ({
       }}
     >
       <Canvas
-        camera={{ position: [0, 0.45, 7.6], fov: 42 }}
+        camera={{
+          position: isNarrowMobile ? [0, 0.5, 11.6] : [0, 0.45, 9.5],
+          fov: isNarrowMobile ? 52 : 44,
+        }}
         dpr={[1, 2]}
         gl={{ antialias: true }}
       >
@@ -1412,8 +1416,8 @@ export const Planet3DScene: React.FC<Planet3DSceneProps> = ({
 
         <OrbitControls
           enablePan={false}
-          minDistance={5.2}
-          maxDistance={10.2}
+          minDistance={6.8}
+          maxDistance={15.0}
           rotateSpeed={0.68}
           zoomSpeed={0.8}
         />

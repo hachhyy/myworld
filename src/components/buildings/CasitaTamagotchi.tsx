@@ -369,8 +369,8 @@ export const CasitaTamagotchi: React.FC<CasitaTamagotchiProps> = ({ solar, onClo
 
   return (
     <div className="fixed inset-0 z-40 flex flex-col watercolor-paper overflow-hidden select-none">
-      {/* Cabecera compacta (Sin botones de simulacro/test) */}
-      <div className="px-3 py-2 flex items-center justify-between border-b-2 border-[var(--border-ink)] bg-[var(--bg-card)] z-30">
+      {/* Cabecera compacta con Safe Area superior de iOS */}
+      <div className="safe-top-header px-4 pb-2 flex items-center justify-between gap-2 border-b-2 border-[var(--border-ink)] bg-[var(--bg-card)] z-30">
         <motion.button
           whileTap={{ scale: 0.92 }}
           onClick={onClose}
@@ -1617,7 +1617,7 @@ export const CasitaTamagotchi: React.FC<CasitaTamagotchiProps> = ({ solar, onClo
       </AnimatePresence>
 
       {/* DOCK INFERIOR DE INTERACCIÓN FÍSICA DIRECTA (Con overflow-x-auto suave y proporción limpia sin recortes) */}
-      <div className="px-2.5 py-2 bg-[var(--bg-card)] border-t-2 border-[var(--border-ink)] z-30 overflow-x-auto">
+      <div className="px-4 pt-2 safe-bottom-dock bg-[var(--bg-card)] border-t-2 border-[var(--border-ink)] z-30 overflow-x-auto">
         <div className="flex items-center justify-between gap-2 min-w-max mx-auto max-w-md">
           <div className="flex items-center gap-1 bg-[var(--bg-paper)] px-1.5 py-1 rounded-2xl border-2 border-[var(--border-ink)] shrink-0">
             {FOODS.map((food) => (

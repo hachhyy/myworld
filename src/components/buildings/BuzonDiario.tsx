@@ -40,6 +40,7 @@ export const BuzonDiario: React.FC<BuzonDiarioProps> = ({ onClose }) => {
     petB,
     diaryPages,
     addDiaryPage,
+    updateDiaryPage,
     updateDiaryPagePhoto,
     deleteDiaryPage,
     markDiaryPagesRead,
@@ -115,20 +116,20 @@ export const BuzonDiario: React.FC<BuzonDiarioProps> = ({ onClose }) => {
 
   return (
     <div className="fixed inset-0 z-40 flex flex-col watercolor-paper overflow-hidden">
-      {/* Cabecera */}
-      <div className="p-3 flex items-center justify-between border-b-2 border-[var(--border-ink)] bg-[var(--bg-card)]">
+      {/* Cabecera con Safe Area superior de iOS */}
+      <div className="safe-top-header px-4 pb-3 flex items-center justify-between gap-2 border-b-2 border-[var(--border-ink)] bg-[var(--bg-card)]">
         <motion.button
           whileTap={{ scale: 0.92 }}
           onClick={onClose}
-          className="hand-button px-3 py-1.5 bg-[var(--bg-paper)] text-xs font-bold flex items-center gap-1 cursor-pointer"
+          className="hand-button px-3 py-1.5 bg-[var(--bg-paper)] text-xs font-bold flex items-center gap-1 cursor-pointer shrink-0"
         >
           <ArrowLeft className="w-4 h-4" />
           Planeta
         </motion.button>
-        <div className="text-center">
-          <h1 className="text-base font-bold">📮 Cabaña Postal · Álbum Polaroid</h1>
-          <p className="text-[11px] text-[var(--text-muted)]">
-            Nuestras Fotos Reales y Notas Manuscritas
+        <div className="text-center min-w-0">
+          <h1 className="text-sm sm:text-base font-bold truncate">📮 Cabaña Postal</h1>
+          <p className="text-[11px] text-[var(--text-muted)] truncate">
+            Álbum Polaroid y Notas
           </p>
         </div>
         <motion.button
@@ -137,15 +138,15 @@ export const BuzonDiario: React.FC<BuzonDiarioProps> = ({ onClose }) => {
             soundEngine.playPageTurn();
             setCreatingNew(!creatingNew);
           }}
-          className="hand-button px-3 py-1.5 bg-[var(--accent-primary)] text-xs font-bold flex items-center gap-1 cursor-pointer"
+          className="hand-button px-3 py-1.5 bg-[var(--accent-primary)] text-xs font-bold flex items-center gap-1 cursor-pointer shrink-0"
         >
           <Plus className="w-4 h-4" />
-          {creatingNew ? 'Ver Álbum' : 'Nueva Polaroid'}
+          {creatingNew ? 'Ver Álbum' : 'Nueva'}
         </motion.button>
       </div>
 
       {/* CONTENIDO PRINCIPAL: CREADOR DE NUEVA POLAROID O VISOR ESTRICTO POLAROID */}
-      <div className="flex-1 overflow-y-auto p-3 flex flex-col items-center">
+      <div className="flex-1 overflow-y-auto px-4 pt-3 safe-bottom-dock flex flex-col items-center">
         {creatingNew ? (
           <motion.div
             initial={{ opacity: 0, y: 15 }}
@@ -273,11 +274,19 @@ export const BuzonDiario: React.FC<BuzonDiarioProps> = ({ onClose }) => {
                   </div>
 
                   <div className="pl-4 space-y-4">
-                    {/* Cabecera de la página + Botón discreto de borrado con micro-confirmación */}
+                    {/* Cabecera de la página (Título editable) + Botón discreto de borrado con micro-confirmación */}
                     <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <h2 className="text-base font-bold leading-snug">{currentPage.title}</h2>
-                        <span className="hand-pill inline-block mt-1 px-2 py-0.5 text-[10px] font-bold bg-[var(--bg-secondary)]">
+                      <div className="flex-1 min-w-0">
+                        <input
+                          type="text"
+                          value={currentPage.title}
+                          onChange={(e) =>
+                            updateDiaryPage(currentPage.id, { title: e.target.value })
+                          }
+                          placeholder="Título del recuerdo (toca para editar)..."
+                          className="w-full bg-transparent border-b border-dashed border-[#4A3F35]/30 focus:border-[#4A3F35] focus:outline-none text-base font-bold leading-snug pb-0.5"
+                        />
+                        <span className="hand-pill inline-block mt-1.5 px-2 py-0.5 text-[10px] font-bold bg-[var(--bg-secondary)]">
                           Por {currentPage.author === 'userA' ? petA.ownerName : petB.ownerName}
                         </span>
                       </div>
@@ -316,9 +325,9 @@ export const BuzonDiario: React.FC<BuzonDiarioProps> = ({ onClose }) => {
                       )}
                     </div>
 
-                    {/* MARCO POLAROID CON CELO WASHI-TAPE + TEXTO MANUSCRITO CAVEAT */}
+                    {/* MARCO POLAROID CON CELO WASHI-TAPE + NOTA MANUSCRITA EDITABLE EN CAVEAT */}
                     <div
-                      className={`p-3.5 pb-6 rounded-2xl border-2 border-[#4A3F35] shadow-lg relative ${
+                      className={`p-3.5 pb-5 rounded-2xl border-2 border-[#4A3F35] shadow-lg relative ${
                         FRAME_STYLES.find((f) => f.id === currentPage.frameStyle)?.css || 'bg-[#FFFDF9]'
                       }`}
                     >
@@ -382,10 +391,33 @@ export const BuzonDiario: React.FC<BuzonDiarioProps> = ({ onClose }) => {
                         </button>
                       )}
 
-                      {/* Pie de foto con letra manuscrita Caveat */}
-                      <p className="font-hand text-2xl text-[#4A3F35] text-center mt-4 px-2 leading-snug">
-                        {currentPage.caption}
-                      </p>
+                      {/* Nota manuscrita Caveat siempre editable debajo de la foto (compatible con Swipe Typing de iOS) */}
+                      <textarea
+                        value={currentPage.caption}
+                        onChange={(e) =>
+                          updateDiaryPage(currentPage.id, { caption: e.target.value })
+                        }
+                        rows={3}
+                        placeholder="Toca aquí para escribir vuestra nota manuscrita..."
+                        className="w-full bg-transparent font-hand text-2xl text-[#4A3F35] text-center mt-4 px-2 py-1 leading-snug resize-none border-b border-dashed border-[#4A3F35]/25 focus:border-[#4A3F35] focus:outline-none"
+                      />
+                    </div>
+
+                    {/* Botón visible para confirmar guardado / crear nueva página */}
+                    <div className="flex items-center justify-between gap-2 pt-1">
+                      <span className="text-[11px] font-semibold text-[var(--text-muted)]">
+                        ✓ Guardado automático en vuestro planeta
+                      </span>
+                      <motion.button
+                        whileTap={{ scale: 0.94 }}
+                        onClick={() => {
+                          soundEngine.playPageTurn();
+                          setCreatingNew(true);
+                        }}
+                        className="hand-pill px-3 py-1.5 bg-[var(--accent-primary)] text-xs font-bold cursor-pointer shrink-0"
+                      >
+                        💾 Guardar / Nueva página +
+                      </motion.button>
                     </div>
                   </div>
                 </motion.div>

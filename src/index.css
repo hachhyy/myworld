@@ -96,6 +96,29 @@ body,
   transition: background-color 0.7s ease, color 0.7s ease;
 }
 
+/* Márgenes seguros nativos de iOS (Notch / Isla Dinámica y Home Indicator) */
+.safe-top-header {
+  padding-top: max(env(safe-area-inset-top, 48px), 52px);
+}
+
+.safe-bottom-dock {
+  padding-bottom: max(env(safe-area-inset-bottom, 24px), 28px);
+}
+
+.safe-modal-inset {
+  padding-top: max(env(safe-area-inset-top, 48px), 52px);
+  padding-bottom: max(env(safe-area-inset-bottom, 24px), 28px);
+}
+
+/* Permitir escritura deslizante (Swipe Typing) y selección nativa en campos de texto iOS */
+input,
+textarea,
+select {
+  touch-action: auto;
+  -webkit-user-select: text;
+  user-select: text;
+}
+
 .font-ui {
   font-family: 'Fredoka', 'Quicksand', sans-serif;
 }

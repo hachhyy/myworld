@@ -149,9 +149,9 @@ export const PlanetHUD: React.FC<PlanetHUDProps> = ({ solar, hasUnreadDiary }) =
 
   return (
     <>
-      {/* 1. CABECERA FIJA DEL PLANETA (Limpia, sin marco RoughJS desbordado) */}
-      <div className="fixed top-0 left-0 right-0 z-30 p-3 pointer-events-none flex flex-col gap-2 max-w-md mx-auto">
-        <div className="flex items-center justify-between gap-2 pointer-events-auto">
+      {/* 1. CABECERA FIJA DEL PLANETA (Con Safe Area superior de iOS y margen lateral px-4) */}
+      <div className="fixed top-0 left-0 right-0 z-30 safe-top-header px-4 pb-2 pointer-events-none flex flex-col gap-2 max-w-md mx-auto w-full box-border">
+        <div className="flex items-center justify-between gap-2 pointer-events-auto w-full">
           {/* Botón de Silencio Rápido */}
           <motion.button
             whileTap={{ scale: 0.9 }}
@@ -189,7 +189,7 @@ export const PlanetHUD: React.FC<PlanetHUDProps> = ({ solar, hasUnreadDiary }) =
         </div>
 
         {/* Indicador de Motes de Pareja + Clima/Cielo Actual */}
-        <div className="flex items-center justify-between gap-2 pointer-events-auto">
+        <div className="flex items-center justify-between gap-2 pointer-events-auto w-full">
           <button
             onClick={() => {
               setDraftNameA(petA.ownerName);
@@ -199,13 +199,13 @@ export const PlanetHUD: React.FC<PlanetHUDProps> = ({ solar, hasUnreadDiary }) =
               setMotesModalOpen(true);
               soundEngine.playPop();
             }}
-            className="hand-pill bg-[var(--bg-card)] px-2.5 py-0.5 text-[11px] font-bold flex items-center gap-1 cursor-pointer shadow-xs"
+            className="hand-pill bg-[var(--bg-card)] px-2.5 py-0.5 text-[11px] font-bold flex items-center gap-1 cursor-pointer shadow-xs min-w-0 truncate"
           >
-            <span>💑 {petA.ownerName} & {petB.ownerName}</span>
-            <span className="opacity-75">· Soy {activeUser === 'userA' ? petA.ownerName : petB.ownerName} ✏️</span>
+            <span className="truncate">💑 {petA.ownerName} & {petB.ownerName}</span>
+            <span className="opacity-75 shrink-0">· Soy {activeUser === 'userA' ? petA.ownerName : petB.ownerName} ✏️</span>
           </button>
 
-          <span className="hand-pill bg-[var(--bg-card)] px-2.5 py-0.5 text-[11px] font-semibold">
+          <span className="hand-pill bg-[var(--bg-card)] px-2.5 py-0.5 text-[11px] font-semibold shrink-0">
             {solar.label} {solar.weather === 'snow' ? '· ❄️ Nieve' : solar.weather === 'fireworks' ? '· 🎆 Fuegos' : ''}
           </span>
         </div>
@@ -218,7 +218,7 @@ export const PlanetHUD: React.FC<PlanetHUDProps> = ({ solar, hasUnreadDiary }) =
             initial={{ x: 90, opacity: 0 }}
             animate={{ x: 0, opacity: 1 }}
             transition={{ type: 'spring', stiffness: 260, damping: 20 }}
-            className="fixed right-0 top-28 z-30 flex items-center pointer-events-auto max-w-[295px]"
+            className="fixed right-2 top-40 z-30 flex items-center pointer-events-auto max-w-[295px]"
           >
             <AnimatePresence>
               {ovuloBubbleOpen && (
@@ -256,7 +256,7 @@ export const PlanetHUD: React.FC<PlanetHUDProps> = ({ solar, hasUnreadDiary }) =
                 setOvuloBubbleOpen(!ovuloBubbleOpen);
                 soundEngine.speakAnimalese('Hola parejita linda', 520);
               }}
-              className="-mr-4 cursor-pointer"
+              className="-mr-2 cursor-pointer"
               title="Toca al Óvulo Cute"
             >
               <CuteOvuloAvatar phase={primaryLunar.phase} size={74} />
@@ -290,7 +290,7 @@ export const PlanetHUD: React.FC<PlanetHUDProps> = ({ solar, hasUnreadDiary }) =
                       }
                     }}
                     initial={{ y: -50, scale: 0.8, opacity: 0 }}
-                    animate={{ y: 112, scale: 1, opacity: 1 }}
+                    animate={{ y: 138, scale: 1, opacity: 1 }}
                     exit={{ x: 260, opacity: 0, scale: 0.85 }}
                     transition={{ type: 'spring', stiffness: 350, damping: 25 }}
                     className="mx-auto w-fit max-w-[90vw] hand-card px-5 py-3 bg-[var(--bg-card)] text-center shadow-xl pointer-events-auto cursor-grab active:cursor-grabbing relative"
@@ -344,9 +344,9 @@ export const PlanetHUD: React.FC<PlanetHUDProps> = ({ solar, hasUnreadDiary }) =
       </AnimatePresence>
 
       {/* 4. PIE DE PANTALLA: BARRA RÁPIDA DE LOS 7 EDIFICIOS + KISS SENDER CON RÁFAGA */}
-      <div className="fixed bottom-0 left-0 right-0 z-30 p-3 pointer-events-none flex flex-col items-center gap-2 max-w-md mx-auto">
-        {/* Acceso táctil directo a los 7 Edificios (además de tocar los edificios 3D en la esfera) */}
-        <div className="w-full overflow-x-auto pointer-events-auto flex items-center gap-1.5 py-1 px-1">
+      <div className="fixed bottom-0 left-0 right-0 z-30 safe-bottom-dock px-4 pt-2 pointer-events-none flex flex-col items-center gap-2 max-w-md mx-auto w-full box-border">
+        {/* Acceso táctil directo a los 7 Edificios (Envuelto limpiamente para no cortarse a la derecha) */}
+        <div className="w-full pointer-events-auto flex flex-wrap items-center justify-center gap-2 py-1">
           {[
             { id: 'casita', label: '🏡 Casita', badge: false },
             { id: 'correos', label: '📮 Correos', badge: hasUnreadDiary },

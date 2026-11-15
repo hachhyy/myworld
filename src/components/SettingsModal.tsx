@@ -222,7 +222,7 @@ export const SettingsModal: React.FC = () => {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           onClick={() => setSettingsOpen(false)}
-          className="fixed inset-0 z-50 bg-black/45 backdrop-blur-xs flex items-center justify-center p-3"
+          className="fixed inset-0 z-50 bg-black/45 backdrop-blur-xs flex items-center justify-center px-4 safe-modal-inset"
         >
           <motion.div
             initial={{ scale: 0.9, y: 20 }}

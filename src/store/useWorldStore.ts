@@ -329,6 +329,7 @@ export interface WorldState {
 
   // Diario Postal
   addDiaryPage: (page: Omit<DiaryPage, 'id' | 'readByUserA' | 'readByUserB'>) => void;
+  updateDiaryPage: (id: string, patch: { title?: string; caption?: string }) => void;
   updateDiaryPagePhoto: (id: string, photoDataUrl: string, photoSizeKB?: number) => void;
   deleteDiaryPage: (id: string) => void;
   addStrokeToDiaryPage: (pageId: string, stroke: DrawingStroke) => void;
@@ -973,6 +974,14 @@ export const useWorldStore = create<WorldState>()(
         };
         set((state) => ({
           diaryPages: [newPage, ...state.diaryPages],
+        }));
+      },
+
+      updateDiaryPage: (pageId, patch) => {
+        set((state) => ({
+          diaryPages: state.diaryPages.map((p) =>
+            p.id === pageId ? { ...p, ...patch } : p
+          ),
         }));
       },
 
