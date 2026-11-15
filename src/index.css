@@ -98,16 +98,25 @@ body,
 
 /* Márgenes seguros nativos de iOS (Notch / Isla Dinámica y Home Indicator) */
 .safe-top-header {
-  padding-top: max(env(safe-area-inset-top, 48px), 52px);
+  padding-top: max(env(safe-area-inset-top, 44px), 48px);
 }
 
 .safe-bottom-dock {
-  padding-bottom: max(env(safe-area-inset-bottom, 24px), 28px);
+  padding-bottom: max(env(safe-area-inset-bottom, 20px), 24px);
 }
 
 .safe-modal-inset {
-  padding-top: max(env(safe-area-inset-top, 48px), 52px);
-  padding-bottom: max(env(safe-area-inset-bottom, 24px), 28px);
+  padding-top: max(env(safe-area-inset-top, 44px), 48px);
+  padding-bottom: max(env(safe-area-inset-bottom, 20px), 24px);
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
 /* Permitir escritura deslizante (Swipe Typing) y selección nativa en campos de texto iOS */

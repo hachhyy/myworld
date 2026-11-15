@@ -26,9 +26,10 @@ const KISS_ICONS: Record<KissIconType, { emoji: string; label: string }> = {
 interface PlanetHUDProps {
   solar: SolarEnvironment;
   hasUnreadDiary: boolean;
+  children?: React.ReactNode;
 }
 
-export const PlanetHUD: React.FC<PlanetHUDProps> = ({ solar, hasUnreadDiary }) => {
+export const PlanetHUD: React.FC<PlanetHUDProps> = ({ solar, hasUnreadDiary, children }) => {
   const {
     planetName,
     anniversaryDate,
@@ -149,120 +150,310 @@ export const PlanetHUD: React.FC<PlanetHUDProps> = ({ solar, hasUnreadDiary }) =
 
   return (
     <>
-      {/* 1. CABECERA FIJA DEL PLANETA (Con Safe Area superior de iOS y margen lateral px-4) */}
-      <div className="fixed top-0 left-0 right-0 z-30 safe-top-header px-4 pb-2 pointer-events-none flex flex-col gap-2 max-w-md mx-auto w-full box-border">
-        <div className="flex items-center justify-between gap-2 pointer-events-auto w-full">
-          {/* Botón de Silencio Rápido */}
-          <motion.button
-            whileTap={{ scale: 0.9 }}
-            onClick={toggleMute}
-            aria-label="Silenciar o activar sonido"
-            className="hand-button w-10 h-10 flex items-center justify-center bg-[var(--bg-card)] cursor-pointer shrink-0"
-          >
-            {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
-          </motion.button>
-
-          {/* Contador de Tiempo de Relación y Nombre del Planeta (Nativo y sin artefactos blancos) */}
-          <motion.button
-            whileTap={{ scale: 0.97 }}
-            onClick={() => setAnniversaryModalOpen(true)}
-            className="flex-1 min-w-0 hand-card bg-[var(--bg-card)] px-3 py-1.5 text-center cursor-pointer overflow-hidden"
-          >
-            <div className="flex items-center justify-center gap-1.5">
-              <span className="text-xs shrink-0">🪐</span>
-              <span className="font-bold text-sm truncate">{planetName}</span>
-            </div>
-            <p className="text-[11px] font-medium text-[var(--text-muted)] truncate">
-              {duration.years} años, {duration.months} meses, {duration.days} días 💕
-            </p>
-          </motion.button>
-
-          {/* Botón de Ajustes */}
-          <motion.button
-            whileTap={{ scale: 0.9 }}
-            onClick={() => setSettingsOpen(true)}
-            aria-label="Abrir ajustes del planeta"
-            className="hand-button w-10 h-10 flex items-center justify-center bg-[var(--bg-card)] cursor-pointer shrink-0"
-          >
-            <Settings className="w-5 h-5" />
-          </motion.button>
-        </div>
-
-        {/* Indicador de Motes de Pareja + Clima/Cielo Actual */}
-        <div className="flex items-center justify-between gap-2 pointer-events-auto w-full">
-          <button
-            onClick={() => {
-              setDraftNameA(petA.ownerName);
-              setDraftNameB(petB.ownerName);
-              setDraftPetA(petA.petName);
-              setDraftPetB(petB.petName);
-              setMotesModalOpen(true);
-              soundEngine.playPop();
-            }}
-            className="hand-pill bg-[var(--bg-card)] px-2.5 py-0.5 text-[11px] font-bold flex items-center gap-1 cursor-pointer shadow-xs min-w-0 truncate"
-          >
-            <span className="truncate">💑 {petA.ownerName} & {petB.ownerName}</span>
-            <span className="opacity-75 shrink-0">· Soy {activeUser === 'userA' ? petA.ownerName : petB.ownerName} ✏️</span>
-          </button>
-
-          <span className="hand-pill bg-[var(--bg-card)] px-2.5 py-0.5 text-[11px] font-semibold shrink-0">
-            {solar.label} {solar.weather === 'snow' ? '· ❄️ Nieve' : solar.weather === 'fireworks' ? '· 🎆 Fuegos' : ''}
-          </span>
-        </div>
-      </div>
-
-      {/* 2. ASOMO DEL ÓVULO CUTE (ESQUINA DEL HUD) */}
-      {(primaryLunar.sensitiveAlertActive || primaryLunar.phase === 'menstruacion') &&
-        lunarMode !== 'hidden' && (
-          <motion.div
-            initial={{ x: 90, opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            transition={{ type: 'spring', stiffness: 260, damping: 20 }}
-            className="fixed right-2 top-40 z-30 flex items-center pointer-events-auto max-w-[295px]"
-          >
-            <AnimatePresence>
-              {ovuloBubbleOpen && (
-                <motion.div
-                  initial={{ scale: 0.85, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  exit={{ scale: 0.8, opacity: 0 }}
-                  onClick={() => {
-                    soundEngine.speakAnimalese(ovuloMessage, 510);
-                    setActiveBuilding('luna');
-                  }}
-                  className="hand-card p-2.5 mr-1 cursor-pointer bg-[var(--bg-card)] text-left shadow-lg"
-                >
-                  <div className="flex items-center justify-between gap-1 mb-0.5">
-                    <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-pink-200/80 text-pink-950">
-                      Óvulo Cute · Mensajero 💕
-                    </span>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setOvuloBubbleOpen(false);
-                      }}
-                      className="text-xs opacity-60 hover:opacity-100 px-1"
-                    >
-                      ✕
-                    </button>
-                  </div>
-                  <p className="font-hand text-base leading-tight">{ovuloMessage}</p>
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-            <div
-              onClick={() => {
-                setOvuloBubbleOpen(!ovuloBubbleOpen);
-                soundEngine.speakAnimalese('Hola parejita linda', 520);
-              }}
-              className="-mr-2 cursor-pointer"
-              title="Toca al Óvulo Cute"
+      {/* ESTRUCTURA FLEX VERTICAL EN 3 ZONAS PROPORCIONADAS (100dvh) */}
+      <div className="flex flex-col justify-between h-[100dvh] w-full overflow-hidden">
+        {/* ZONA 1 (SUPERIOR - máx 15%): HEADER COMPACTO CON SAFE AREA Y PADDING-INLINE 20px */}
+        <header className="shrink-0 z-30 safe-top-header px-5 pb-1 flex flex-col gap-2 max-w-md mx-auto w-full box-border">
+          <div className="flex items-center justify-between gap-2 w-full">
+            {/* Botón de Silencio Rápido */}
+            <motion.button
+              whileTap={{ scale: 0.9 }}
+              onClick={toggleMute}
+              aria-label="Silenciar o activar sonido"
+              className="hand-button w-9 h-9 flex items-center justify-center bg-[var(--bg-card)] cursor-pointer shrink-0"
             >
-              <CuteOvuloAvatar phase={primaryLunar.phase} size={74} />
+              {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+            </motion.button>
+
+            {/* Contador de Tiempo de Relación y Nombre del Planeta (Compacto py-1) */}
+            <motion.button
+              whileTap={{ scale: 0.97 }}
+              onClick={() => setAnniversaryModalOpen(true)}
+              className="flex-1 min-w-0 hand-card bg-[var(--bg-card)] px-3 py-1 text-center cursor-pointer overflow-hidden"
+            >
+              <div className="flex items-center justify-center gap-1.5 leading-tight">
+                <span className="text-xs shrink-0">🪐</span>
+                <span className="font-bold text-xs truncate">{planetName}</span>
+              </div>
+              <p className="text-[10px] font-medium text-[var(--text-muted)] truncate leading-tight">
+                {duration.years} años, {duration.months} meses, {duration.days} días 💕
+              </p>
+            </motion.button>
+
+            {/* Botón de Ajustes */}
+            <motion.button
+              whileTap={{ scale: 0.9 }}
+              onClick={() => setSettingsOpen(true)}
+              aria-label="Abrir ajustes del planeta"
+              className="hand-button w-9 h-9 flex items-center justify-center bg-[var(--bg-card)] cursor-pointer shrink-0"
+            >
+              <Settings className="w-4 h-4" />
+            </motion.button>
+          </div>
+
+          {/* Indicador de Motes de Pareja + Clima/Cielo Actual */}
+          <div className="flex items-center justify-between gap-2 w-full">
+            <button
+              onClick={() => {
+                setDraftNameA(petA.ownerName);
+                setDraftNameB(petB.ownerName);
+                setDraftPetA(petA.petName);
+                setDraftPetB(petB.petName);
+                setMotesModalOpen(true);
+                soundEngine.playPop();
+              }}
+              className="hand-pill bg-[var(--bg-card)] px-2.5 py-0.5 text-[11px] font-bold flex items-center gap-1 cursor-pointer shadow-xs min-w-0 truncate"
+            >
+              <span className="truncate">💑 {petA.ownerName} & {petB.ownerName}</span>
+              <span className="opacity-75 shrink-0">· Soy {activeUser === 'userA' ? petA.ownerName : petB.ownerName} ✏️</span>
+            </button>
+
+            <span className="hand-pill bg-[var(--bg-card)] px-2.5 py-0.5 text-[11px] font-semibold shrink-0">
+              {solar.label} {solar.weather === 'snow' ? '· ❄️ Nieve' : solar.weather === 'fireworks' ? '· 🎆 Fuegos' : ''}
+            </span>
+          </div>
+        </header>
+
+        {/* ZONA 2 (CENTRAL - ~60%): ESCENARIO DEL PLANETA 3D CENTRADO + ÓVULO CUTE COMPACTO */}
+        <main className="flex-1 min-h-0 w-full relative">
+          {children}
+
+          {/* ASOMO DEL ÓVULO CUTE (44x44px, anclado limpio en la esquina superior derecha del cielo) */}
+          {(primaryLunar.sensitiveAlertActive || primaryLunar.phase === 'menstruacion') &&
+            lunarMode !== 'hidden' && (
+              <motion.div
+                initial={{ x: 60, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                transition={{ type: 'spring', stiffness: 260, damping: 20 }}
+                className="absolute right-5 top-2 z-30 flex items-center pointer-events-auto max-w-[260px]"
+              >
+                <AnimatePresence>
+                  {ovuloBubbleOpen && (
+                    <motion.div
+                      initial={{ scale: 0.85, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      exit={{ scale: 0.8, opacity: 0 }}
+                      onClick={() => {
+                        soundEngine.speakAnimalese(ovuloMessage, 510);
+                        setActiveBuilding('luna');
+                      }}
+                      className="hand-card p-2 mr-1.5 cursor-pointer bg-[var(--bg-card)] text-left shadow-lg"
+                    >
+                      <div className="flex items-center justify-between gap-1 mb-0.5">
+                        <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-pink-200/80 text-pink-950">
+                          Óvulo Cute 💕
+                        </span>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setOvuloBubbleOpen(false);
+                          }}
+                          className="text-xs opacity-60 hover:opacity-100 px-1"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                      <p className="font-hand text-sm leading-tight">{ovuloMessage}</p>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                <div
+                  onClick={() => {
+                    setOvuloBubbleOpen(!ovuloBubbleOpen);
+                    soundEngine.speakAnimalese('Hola parejita linda', 520);
+                  }}
+                  className="w-11 h-11 flex items-center justify-center cursor-pointer shrink-0"
+                  title="Toca al Óvulo Cute"
+                >
+                  <CuteOvuloAvatar phase={primaryLunar.phase} size={44} />
+                </div>
+              </motion.div>
+            )}
+        </main>
+
+        {/* ZONA 3 (INFERIOR - máx 25%): 1 SOLA FILA DESLIZABLE DE EDIFICIOS + DOCK COMPACTO DE BESOS */}
+        <footer className="shrink-0 z-30 safe-bottom-dock px-5 pt-1 flex flex-col items-center gap-2 max-w-md mx-auto w-full box-border">
+          {/* 1 única fila horizontal con scroll táctil suave */}
+          <div className="w-full flex overflow-x-auto no-scrollbar items-center gap-2 py-1">
+            {[
+              { id: 'casita', label: '🏡 Casita', badge: false },
+              { id: 'correos', label: '📮 Correos', badge: hasUnreadDiary },
+              { id: 'cine', label: '🍿 Cine', badge: false },
+              { id: 'viajes', label: '🎈 Viajes', badge: false },
+              { id: 'deseos', label: '🧁 Deseos', badge: false },
+              { id: 'hucha', label: '🐷 Hucha', badge: false },
+              ...(lunarMode !== 'hidden' ? [{ id: 'luna', label: '🌙 Luna', badge: false }] : []),
+            ].map((b) => (
+              <motion.button
+                key={b.id}
+                whileTap={{ scale: 0.92 }}
+                onClick={() => setActiveBuilding(b.id as BuildingId)}
+                className="relative hand-pill bg-[var(--bg-card)] px-3 py-1.5 text-xs font-semibold shrink-0 cursor-pointer flex items-center gap-1"
+              >
+                <span>{b.label}</span>
+                {b.badge && (
+                  <span
+                    className="w-2 h-2 rounded-full bg-rose-500 animate-ping"
+                    title="¡Polaroid nueva asomando en el buzón!"
+                  />
+                )}
+              </motion.button>
+            ))}
+          </div>
+
+          {/* Modal flotante de Mini Nota de hasta 3 palabras cuando pulsas en ráfaga */}
+          <AnimatePresence>
+            {(spamCount > 0 || noteComposerOpen) && (
+              <motion.div
+                initial={{ y: 20, opacity: 0, scale: 0.9 }}
+                animate={{ y: 0, opacity: 1, scale: 1 }}
+                exit={{ y: 20, opacity: 0, scale: 0.9 }}
+                className="hand-card p-2.5 w-full max-w-xs bg-[var(--bg-card)]"
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs font-bold">
+                    ¡Ráfaga: {spamCount} / 50 {KISS_ICONS[selectedIcon].emoji}!
+                  </span>
+                  <span className="text-[11px] text-[var(--text-muted)]">Máx. 3 palabras</span>
+                </div>
+                <div className="flex gap-1.5">
+                  <input
+                    type="text"
+                    value={miniNote}
+                    onChange={(e) => setMiniNote(e.target.value)}
+                    placeholder="¡Te echo de menos!"
+                    className="flex-1 px-2.5 py-1 rounded-xl border border-[var(--border-ink)] bg-[var(--bg-paper)] font-hand text-lg focus:outline-none"
+                  />
+                  <motion.button
+                    whileTap={{ scale: 0.92 }}
+                    onClick={handleConfirmSendKisses}
+                    className="hand-button px-3 py-1 bg-[var(--accent-primary)] font-bold text-xs flex items-center gap-1 cursor-pointer"
+                  >
+                    <Send className="w-3.5 h-3.5" />
+                    Enviar
+                  </motion.button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* DOCK FLOTANTE COMPACTO TIPO PASTILLA iOS */}
+          <div className="w-full flex justify-center">
+            <div className="w-full rounded-full bg-[var(--bg-card)]/92 backdrop-blur-md border-2 border-[var(--border-ink)] shadow-[0_8px_20px_rgba(61,49,42,0.16)] px-3 py-1.5 flex items-center justify-between gap-2 relative">
+              {/* Izquierda: Selector de emoji de la lluvia */}
+              <div className="relative">
+                <motion.button
+                  whileTap={{ scale: 0.92 }}
+                  onClick={() => {
+                    soundEngine.playPop();
+                    setIconPickerOpen(!iconPickerOpen);
+                  }}
+                  className="px-2.5 py-1 rounded-full bg-[var(--bg-paper)]/90 border border-[var(--border-ink)]/30 text-xs font-bold flex items-center gap-1 cursor-pointer hover:bg-[var(--bg-paper)] transition-colors"
+                  title="Elegir icono de lluvia"
+                >
+                  <span className="text-sm leading-none">{KISS_ICONS[selectedIcon].emoji}</span>
+                  <span className="text-[11px] text-[var(--text-main)]">Lluvia ▾</span>
+                </motion.button>
+
+                <AnimatePresence>
+                  {iconPickerOpen && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 12, scale: 0.92 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: 12, scale: 0.92 }}
+                      transition={{ type: 'spring', stiffness: 360, damping: 24 }}
+                      className="absolute bottom-12 left-0 w-48 hand-card p-1.5 bg-[var(--bg-card)]/95 backdrop-blur-md flex flex-col gap-1 z-50 shadow-xl"
+                    >
+                      {(Object.keys(KISS_ICONS) as KissIconType[]).map((k) => (
+                        <button
+                          key={k}
+                          onClick={() => {
+                            setSelectedIcon(k);
+                            setIconPickerOpen(false);
+                            soundEngine.playPop(1.2);
+                          }}
+                          className={`flex items-center gap-2 px-2.5 py-1.5 rounded-xl text-xs font-medium text-left cursor-pointer ${
+                            selectedIcon === k ? 'bg-[var(--accent-primary)] font-bold' : 'hover:bg-black/5'
+                          }`}
+                        >
+                          <span className="text-base">{KISS_ICONS[k].emoji}</span>
+                          <span>{KISS_ICONS[k].label}</span>
+                        </button>
+                      ))}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+
+              {/* Centro: Botón de Corazón (Kiss Sender) compacto */}
+              {cooldownRemainingSec > 0 ? (
+                <div className="flex items-center gap-1.5 px-2 py-0.5">
+                  <div className="w-22">
+                    <div className="flex justify-between text-[9px] font-bold mb-0.5">
+                      <span>Recargando</span>
+                      <span>
+                        {Math.floor(cooldownRemainingSec / 60)}:
+                        {String(cooldownRemainingSec % 60).padStart(2, '0')}
+                      </span>
+                    </div>
+                    <div className="w-full h-1.5 rounded-full bg-[var(--bg-secondary)] overflow-hidden border border-[var(--border-ink)]">
+                      <div
+                        className="h-full bg-[var(--accent-primary)] transition-all"
+                        style={{ width: `${Math.max(5, 100 - (cooldownRemainingSec / 300) * 100)}%` }}
+                      />
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => {
+                      useWorldStore.setState({ kissCooldownUntil: 0 });
+                      soundEngine.playPop(1.3);
+                    }}
+                    title="Recargar al instante"
+                    className="p-1 rounded-full hover:bg-black/5 cursor-pointer"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ) : (
+                <motion.button
+                  whileTap={{ scale: 0.85 }}
+                  animate={{
+                    scale: spamCount > 0 ? 1.06 + Math.min(0.14, spamCount * 0.003) : 1,
+                  }}
+                  transition={{ type: 'spring', stiffness: 420, damping: 16 }}
+                  onClick={handleTapKissButton}
+                  aria-label="Enviar lluvia de besos"
+                  className="-my-2.5 w-13 h-13 rounded-full bg-gradient-to-br from-[#FF758F] to-[#FF4D6D] text-white border-2 border-[var(--border-ink)] shadow-[0_5px_14px_rgba(255,77,109,0.42)] flex flex-col items-center justify-center cursor-pointer relative select-none"
+                >
+                  <span className="text-xl leading-none drop-shadow-xs">
+                    {KISS_ICONS[selectedIcon].emoji}
+                  </span>
+                  <span className="text-[9px] font-extrabold mt-0.5 tracking-tight text-white">
+                    {spamCount > 0 ? `x${spamCount}` : '¡Besos!'}
+                  </span>
+                </motion.button>
+              )}
+
+              {/* Derecha: Contador numérico limpio e integrado en la pastilla */}
+              <div
+                className="px-2.5 py-1 rounded-full bg-[var(--bg-paper)]/80 border border-[var(--border-ink)]/20 flex items-center gap-1.5"
+                title="Total de besos enviados y recibidos en vuestro planeta"
+              >
+                <Heart className="w-3.5 h-3.5 fill-rose-500 text-rose-500 shrink-0" />
+                <div className="flex flex-col leading-none text-right">
+                  <span className="text-xs font-extrabold text-[var(--text-main)] tabular-nums">
+                    {totalKissesHistory.toLocaleString('es-ES')}
+                  </span>
+                  <span className="text-[8px] font-bold text-[var(--text-muted)] uppercase tracking-wider">
+                    besos
+                  </span>
+                </div>
+              </div>
             </div>
-          </motion.div>
-        )}
+          </div>
+        </footer>
+      </div>
 
       {/* 3. LLUVIA FÍSICA DE BESOS Y NOTA FLOTANTE DESLIZABLE (SWIPE-TO-DISMISS) */}
       <AnimatePresence>
@@ -290,7 +481,7 @@ export const PlanetHUD: React.FC<PlanetHUDProps> = ({ solar, hasUnreadDiary }) =
                       }
                     }}
                     initial={{ y: -50, scale: 0.8, opacity: 0 }}
-                    animate={{ y: 138, scale: 1, opacity: 1 }}
+                    animate={{ y: 128, scale: 1, opacity: 1 }}
                     exit={{ x: 260, opacity: 0, scale: 0.85 }}
                     transition={{ type: 'spring', stiffness: 350, damping: 25 }}
                     className="mx-auto w-fit max-w-[90vw] hand-card px-5 py-3 bg-[var(--bg-card)] text-center shadow-xl pointer-events-auto cursor-grab active:cursor-grabbing relative"
@@ -342,188 +533,6 @@ export const PlanetHUD: React.FC<PlanetHUDProps> = ({ solar, hasUnreadDiary }) =
           </motion.div>
         )}
       </AnimatePresence>
-
-      {/* 4. PIE DE PANTALLA: BARRA RÁPIDA DE LOS 7 EDIFICIOS + KISS SENDER CON RÁFAGA */}
-      <div className="fixed bottom-0 left-0 right-0 z-30 safe-bottom-dock px-4 pt-2 pointer-events-none flex flex-col items-center gap-2 max-w-md mx-auto w-full box-border">
-        {/* Acceso táctil directo a los 7 Edificios (Envuelto limpiamente para no cortarse a la derecha) */}
-        <div className="w-full pointer-events-auto flex flex-wrap items-center justify-center gap-2 py-1">
-          {[
-            { id: 'casita', label: '🏡 Casita', badge: false },
-            { id: 'correos', label: '📮 Correos', badge: hasUnreadDiary },
-            { id: 'cine', label: '🍿 Cine', badge: false },
-            { id: 'viajes', label: '🎈 Viajes', badge: false },
-            { id: 'deseos', label: '🧁 Deseos', badge: false },
-            { id: 'hucha', label: '🐷 Hucha', badge: false },
-            ...(lunarMode !== 'hidden' ? [{ id: 'luna', label: '🌙 Luna', badge: false }] : []),
-          ].map((b) => (
-            <motion.button
-              key={b.id}
-              whileTap={{ scale: 0.92 }}
-              onClick={() => setActiveBuilding(b.id as BuildingId)}
-              className="relative hand-pill bg-[var(--bg-card)] px-3 py-1.5 text-xs font-semibold shrink-0 cursor-pointer flex items-center gap-1"
-            >
-              <span>{b.label}</span>
-              {b.badge && (
-                <span
-                  className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-ping"
-                  title="¡Polaroid nueva asomando en el buzón!"
-                />
-              )}
-            </motion.button>
-          ))}
-        </div>
-
-        {/* Modal flotante de Mini Nota de hasta 3 palabras cuando pulsas en ráfaga */}
-        <AnimatePresence>
-          {(spamCount > 0 || noteComposerOpen) && (
-            <motion.div
-              initial={{ y: 20, opacity: 0, scale: 0.9 }}
-              animate={{ y: 0, opacity: 1, scale: 1 }}
-              exit={{ y: 20, opacity: 0, scale: 0.9 }}
-              className="hand-card p-3 w-full max-w-xs pointer-events-auto bg-[var(--bg-card)]"
-            >
-              <div className="flex items-center justify-between mb-1.5">
-                <span className="text-xs font-bold">
-                  ¡Ráfaga acumulada: {spamCount} / 50 {KISS_ICONS[selectedIcon].emoji}!
-                </span>
-                <span className="text-[11px] text-[var(--text-muted)]">Máx. 3 palabras</span>
-              </div>
-              <div className="flex gap-1.5">
-                <input
-                  type="text"
-                  value={miniNote}
-                  onChange={(e) => setMiniNote(e.target.value)}
-                  placeholder="¡Te echo de menos!"
-                  className="flex-1 px-2.5 py-1.5 rounded-xl border border-[var(--border-ink)] bg-[var(--bg-paper)] font-hand text-lg focus:outline-none"
-                />
-                <motion.button
-                  whileTap={{ scale: 0.92 }}
-                  onClick={handleConfirmSendKisses}
-                  className="hand-button px-3 py-1.5 bg-[var(--accent-primary)] font-bold text-xs flex items-center gap-1 cursor-pointer"
-                >
-                  <Send className="w-3.5 h-3.5" />
-                  Enviar
-                </motion.button>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* DOCK FLOTANTE TIPO PASTILLA iOS: Selector + Corazón Elástico + Contador Integrado */}
-        <div className="pointer-events-auto pb-1">
-          <div className="rounded-full bg-[var(--bg-card)]/92 backdrop-blur-md border-2 border-[var(--border-ink)] shadow-[0_8px_24px_rgba(61,49,42,0.18)] px-3.5 py-1.5 flex items-center justify-between gap-3 relative">
-            {/* Izquierda: Botón sutil para desplegar y elegir el emoji de la lluvia */}
-            <div className="relative">
-              <motion.button
-                whileTap={{ scale: 0.92 }}
-                onClick={() => {
-                  soundEngine.playPop();
-                  setIconPickerOpen(!iconPickerOpen);
-                }}
-                className="px-2.5 py-1.5 rounded-full bg-[var(--bg-paper)]/90 border border-[var(--border-ink)]/30 text-xs font-bold flex items-center gap-1.5 cursor-pointer hover:bg-[var(--bg-paper)] transition-colors"
-                title="Elegir icono de lluvia"
-              >
-                <span className="text-base leading-none">{KISS_ICONS[selectedIcon].emoji}</span>
-                <span className="text-[11px] text-[var(--text-main)]">Lluvia ▾</span>
-              </motion.button>
-
-              <AnimatePresence>
-                {iconPickerOpen && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 12, scale: 0.92 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: 12, scale: 0.92 }}
-                    transition={{ type: 'spring', stiffness: 360, damping: 24 }}
-                    className="absolute bottom-13 left-0 w-48 hand-card p-1.5 bg-[var(--bg-card)]/95 backdrop-blur-md flex flex-col gap-1 z-50 shadow-xl"
-                  >
-                    {(Object.keys(KISS_ICONS) as KissIconType[]).map((k) => (
-                      <button
-                        key={k}
-                        onClick={() => {
-                          setSelectedIcon(k);
-                          setIconPickerOpen(false);
-                          soundEngine.playPop(1.2);
-                        }}
-                        className={`flex items-center gap-2 px-2.5 py-1.5 rounded-xl text-xs font-medium text-left cursor-pointer ${
-                          selectedIcon === k ? 'bg-[var(--accent-primary)] font-bold' : 'hover:bg-black/5'
-                        }`}
-                      >
-                        <span className="text-base">{KISS_ICONS[k].emoji}</span>
-                        <span>{KISS_ICONS[k].label}</span>
-                      </button>
-                    ))}
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-
-            {/* Centro: Botón grande de Corazón (Kiss Sender) con físicas elásticas Emil Kowalski */}
-            {cooldownRemainingSec > 0 ? (
-              <div className="flex items-center gap-1.5 px-2 py-0.5">
-                <div className="w-24">
-                  <div className="flex justify-between text-[9px] font-bold mb-0.5">
-                    <span>Recargando</span>
-                    <span>
-                      {Math.floor(cooldownRemainingSec / 60)}:
-                      {String(cooldownRemainingSec % 60).padStart(2, '0')}
-                    </span>
-                  </div>
-                  <div className="w-full h-2 rounded-full bg-[var(--bg-secondary)] overflow-hidden border border-[var(--border-ink)]">
-                    <div
-                      className="h-full bg-[var(--accent-primary)] transition-all"
-                      style={{ width: `${Math.max(5, 100 - (cooldownRemainingSec / 300) * 100)}%` }}
-                    />
-                  </div>
-                </div>
-                <button
-                  onClick={() => {
-                    useWorldStore.setState({ kissCooldownUntil: 0 });
-                    soundEngine.playPop(1.3);
-                  }}
-                  title="Recargar al instante"
-                  className="p-1 rounded-full hover:bg-black/5 cursor-pointer"
-                >
-                  <RotateCcw className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            ) : (
-              <motion.button
-                whileTap={{ scale: 0.85 }}
-                animate={{
-                  scale: spamCount > 0 ? 1.06 + Math.min(0.14, spamCount * 0.003) : 1,
-                }}
-                transition={{ type: 'spring', stiffness: 420, damping: 16 }}
-                onClick={handleTapKissButton}
-                aria-label="Enviar lluvia de besos"
-                className="-my-3.5 w-15 h-15 rounded-full bg-gradient-to-br from-[#FF758F] to-[#FF4D6D] text-white border-2 border-[var(--border-ink)] shadow-[0_6px_16px_rgba(255,77,109,0.45)] flex flex-col items-center justify-center cursor-pointer relative select-none"
-              >
-                <span className="text-2xl leading-none drop-shadow-xs">
-                  {KISS_ICONS[selectedIcon].emoji}
-                </span>
-                <span className="text-[10px] font-extrabold mt-0.5 tracking-tight text-white">
-                  {spamCount > 0 ? `x${spamCount}` : '¡Besos!'}
-                </span>
-              </motion.button>
-            )}
-
-            {/* Derecha: Contador numérico limpio e integrado en la pastilla */}
-            <div
-              className="px-2.5 py-1 rounded-full bg-[var(--bg-paper)]/80 border border-[var(--border-ink)]/20 flex items-center gap-1.5"
-              title="Total de besos enviados y recibidos en vuestro planeta"
-            >
-              <Heart className="w-3.5 h-3.5 fill-rose-500 text-rose-500 shrink-0" />
-              <div className="flex flex-col leading-none text-right">
-                <span className="text-xs font-extrabold text-[var(--text-main)] tabular-nums">
-                  {totalKissesHistory.toLocaleString('es-ES')}
-                </span>
-                <span className="text-[9px] font-bold text-[var(--text-muted)] uppercase tracking-wider">
-                  besos
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
 
       {/* 5. MODAL DE ANIVERSARIO, CUMPLEAÑOS E HITOS AUTOMÁTICOS */}
       <AnimatePresence>

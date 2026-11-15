@@ -251,22 +251,24 @@ export const App: React.FC = () => {
 
   return (
     <div
-      className={`relative w-full h-full overflow-hidden select-none transition-transform duration-200 ${
+      className={`relative w-full h-[100dvh] overflow-hidden select-none transition-all duration-1000 ${
         hapticVisualPulse ? 'scale-[1.008]' : 'scale-100'
       }`}
+      style={{
+        background: `linear-gradient(180deg, ${solar.skyTopColor} 0%, ${solar.skyBottomColor} 100%)`,
+      }}
     >
       {/* 1. Pantalla de Carga con saludo de las 2 mascotas y transición de aterrizaje */}
       <LoadingScreen />
 
-      {/* 2. Escena 3D Principal del Planeta con los 7 Edificios y Ciclo Solar */}
-      <Planet3DScene
-        solar={solar}
-        hasUnreadDiary={hasUnreadDiary}
-        onBuildingSelect={(b) => setActiveBuilding(b)}
-      />
-
-      {/* 3. HUD Fijo del Planeta (Contador, Óvulo Cute Mensajero y Dock de Besos iOS) */}
-      <PlanetHUD solar={solar} hasUnreadDiary={hasUnreadDiary} />
+      {/* 2 & 3. Estructura Flex Vertical en 3 Zonas (Header + Planeta 3D Centrado + Dock Compacto) */}
+      <PlanetHUD solar={solar} hasUnreadDiary={hasUnreadDiary}>
+        <Planet3DScene
+          solar={solar}
+          hasUnreadDiary={hasUnreadDiary}
+          onBuildingSelect={(b) => setActiveBuilding(b)}
+        />
+      </PlanetHUD>
 
       {/* 4. Módulos Interiores de los 7 Edificios con Físicas Elásticas */}
       <AnimatePresence>

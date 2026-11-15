@@ -1360,19 +1360,14 @@ export const Planet3DScene: React.FC<Planet3DSceneProps> = ({
   const isNarrowMobile = typeof window !== 'undefined' && window.innerWidth < 640;
 
   return (
-    <div
-      className="relative w-full h-full overflow-hidden transition-colors duration-1000"
-      style={{
-        background: `linear-gradient(180deg, ${solar.skyTopColor} 0%, ${solar.skyBottomColor} 100%)`,
-      }}
-    >
+    <div className="relative w-full h-full overflow-hidden">
       <Canvas
         camera={{
-          position: isNarrowMobile ? [0, 0.5, 11.6] : [0, 0.45, 9.5],
-          fov: isNarrowMobile ? 52 : 44,
+          position: isNarrowMobile ? [0, 0.35, 11.4] : [0, 0.35, 9.8],
+          fov: isNarrowMobile ? 48 : 44,
         }}
         dpr={[1, 2]}
-        gl={{ antialias: true }}
+        gl={{ antialias: true, alpha: true }}
       >
         <ambientLight
           intensity={solar.isNightMode ? 0.72 : isSunset ? 1.1 : 1.15}
@@ -1397,8 +1392,8 @@ export const Planet3DScene: React.FC<Planet3DSceneProps> = ({
         />
 
         {/* Sol / Luna en el cielo */}
-        <mesh position={[2.4, 2.5, -2.4]}>
-          <sphereGeometry args={[0.3, 28, 28]} />
+        <mesh position={[1.95, 2.05, -2.4]}>
+          <sphereGeometry args={[0.28, 28, 28]} />
           <meshBasicMaterial
             color={solar.isNightMode ? '#FFF3B0' : isSunset ? '#FFB5A7' : '#FFD166'}
           />
@@ -1416,8 +1411,8 @@ export const Planet3DScene: React.FC<Planet3DSceneProps> = ({
 
         <OrbitControls
           enablePan={false}
-          minDistance={6.8}
-          maxDistance={15.0}
+          minDistance={7.5}
+          maxDistance={15.5}
           rotateSpeed={0.68}
           zoomSpeed={0.8}
         />
