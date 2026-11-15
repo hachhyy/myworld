@@ -12,27 +12,24 @@ interface Planet3DSceneProps {
   onBuildingSelect: (building: BuildingId) => void;
 }
 
-// Radios esféricos exactos estilo Animal Crossing / Super Mario Galaxy
-const R_OCEAN = 2.0;      // Capa 1: Esfera base de océano/río cristalino (#4FC3F7)
-const R_SAND = 2.03;      // Capa 2A: Orilla suave de arena crema (#F9E4B7)
-const R_MEADOW = 2.06;    // Capa 2B: Superficie de pradera verde menta luminosa (#7ED992)
-const R_TRAIN = 2.065;    // Circuito ferroviario continuo sobre franja despejada
+// Radios esféricos exactos V5: Esfera base de Océano (R=2.0) + Islas/Continentes Orgánicos (R=2.05)
+const R_OCEAN = 2.0;      // Esfera interior completa de agua turquesa suave brillante
+const R_SAND = 2.022;     // Bordes orgánicos de arena crema (#F9E4B7)
+const R_MEADOW = 2.05;    // Islas y continentes orgánicos verde menta pastel (#7ED992)
+const R_TRAIN = 2.054;    // Anillo ferroviario perfecto paralelo al ecuador en el hemisferio sur
 
-// Distribución armónica de los 7 edificios:
-// - 1 en el Polo Norte suave (Luna)
-// - 3 en el Hemisferio Norte a 120° entre sí (Casita, Correos, Deseos)
-// - 3 en el Hemisferio Sur a 120° entre sí (Cine, Hucha, Faro junto a la orilla)
+// Distribución armónica de los 7 edificios sobre el corazón de cada isla orgánica (Tamaño reducido un 15% para que el planeta respire)
 export const BUILDING_COORDS: Record<
   Exclude<BuildingId, null>,
   { lat: number; lon: number; scale: number }
 > = {
-  luna: { lat: 72, lon: 0, scale: 1.12 },
-  casita: { lat: 34, lon: 0, scale: 1.16 },
-  correos: { lat: 34, lon: 120, scale: 1.14 },
-  deseos: { lat: 34, lon: -120, scale: 1.14 },
-  cine: { lat: -32, lon: 0, scale: 1.16 },
-  hucha: { lat: -32, lon: 120, scale: 1.14 },
-  viajes: { lat: -21, lon: -120, scale: 1.15 },
+  luna: { lat: 68, lon: 8, scale: 0.95 },
+  casita: { lat: 28, lon: -4, scale: 0.98 },
+  correos: { lat: 26, lon: 116, scale: 0.96 },
+  deseos: { lat: 26, lon: -116, scale: 0.96 },
+  cine: { lat: -22, lon: 14, scale: 0.98 },
+  hucha: { lat: -22, lon: 126, scale: 0.96 },
+  viajes: { lat: -19, lon: -110, scale: 0.97 },
 };
 
 function smoothstep(edge0: number, edge1: number, x: number): number {
@@ -50,73 +47,113 @@ export function latLonToUnitVector(latDeg: number, lonDeg: number): THREE.Vector
   ).normalize();
 }
 
-// Función analítica C² ultra-suave (Cero picos dentados, cero grietas, normales esféricas suaves)
+// Centros de masas de tierra orgánicas (continentes e islas redondeadas con istmos y bahías naturales)
+const ORGANIC_LAND_LOBES: { vec: THREE.Vector3; radiusRad: number; weight: number }[] = [
+  // Isla/Continente Norte-Central (La Casita + Istmo hacia el Invernadero Lunar)
+  { vec: latLonToUnitVector(28, -4), radiusRad: 0.56, weight: 1.15 },
+  { vec: latLonToUnitVector(50, 4), radiusRad: 0.42, weight: 0.95 },
+  { vec: latLonToUnitVector(68, 8), radiusRad: 0.46, weight: 1.12 },
+  // Isla Noreste (Correos / Buzón Postal)
+  { vec: latLonToUnitVector(26, 116), radiusRad: 0.52, weight: 1.12 },
+  { vec: latLonToUnitVector(44, 92), radiusRad: 0.36, weight: 0.85 },
+  // Isla Noroeste (Fuente de los Deseos)
+  { vec: latLonToUnitVector(26, -116), radiusRad: 0.52, weight: 1.12 },
+  { vec: latLonToUnitVector(42, -82), radiusRad: 0.35, weight: 0.82 },
+  // Isla Sur-Central (Cine Retro + cruce de vía férrea en tierra)
+  { vec: latLonToUnitVector(-22, 14), radiusRad: 0.54, weight: 1.15 },
+  { vec: latLonToUnitVector(-44, 18), radiusRad: 0.42, weight: 1.04 },
+  // Isla Sureste (Hucha Cerdito + cruce de vía férrea en tierra)
+  { vec: latLonToUnitVector(-22, 126), radiusRad: 0.53, weight: 1.14 },
+  { vec: latLonToUnitVector(-44, 128), radiusRad: 0.41, weight: 1.02 },
+  // Península Suroeste (Faro de Viajes junto a la bahía + cruce de vía férrea)
+  { vec: latLonToUnitVector(-19, -110), radiusRad: 0.5, weight: 1.12 },
+  { vec: latLonToUnitVector(-43, -112), radiusRad: 0.38, weight: 0.98 },
+  // Pequeño archipiélago austral decorativo
+  { vec: latLonToUnitVector(-74, -30), radiusRad: 0.36, weight: 0.9 },
+];
+
+// Ruido esférico multi-frecuencia suave para costas orgánicas con calas, lagos y penínsulas naturales (cero líneas rectas)
+function organicSphericalNoise(u: THREE.Vector3): number {
+  const n1 = Math.sin(u.x * 3.7 + u.y * 2.3) * Math.cos(u.z * 3.4 - u.x * 1.9);
+  const n2 = Math.sin(u.y * 5.3 - u.z * 4.1) * Math.cos(u.x * 4.8 + u.y * 2.7);
+  const n3 = Math.cos(u.z * 7.2 + u.x * 5.6 - u.y * 3.8);
+  return n1 * 0.085 + n2 * 0.045 + n3 * 0.022;
+}
+
+// Función de elevación de Islas y Continentes Orgánicos sobre el Océano (R=2.0 -> R=2.05)
 function evaluateSmoothPlanetSurface(unitDir: THREE.Vector3): {
   radius: number;
   isWater: boolean;
   isSand: boolean;
+  landFactor: number;
   color: THREE.Color;
 } {
-  const lat = Math.asin(THREE.MathUtils.clamp(unitDir.y, -1, 1)); // [-pi/2, pi/2]
-  const lon = Math.atan2(unitDir.x, unitDir.z); // [-pi, pi]
-  const latDeg = THREE.MathUtils.radToDeg(lat);
-  const lonDeg = THREE.MathUtils.radToDeg(lon);
+  // Combinación suave (smooth-max) de los lóbulos continentales para crear islas orgánicas y mares/lagos naturales entre ellas
+  let maxInfluence = 0;
+  let secondInfluence = 0;
 
-  // 1. Canal ecuatorial cristalino con ondas muy suaves
-  const riverCenterDeg = 3.2 * Math.sin(lon * 2.0);
-  const distToEquatorRiver = Math.abs(latDeg - riverCenterDeg);
+  for (let i = 0; i < ORGANIC_LAND_LOBES.length; i++) {
+    const lobe = ORGANIC_LAND_LOBES[i];
+    const dot = THREE.MathUtils.clamp(unitDir.dot(lobe.vec), -1, 1);
+    const angle = Math.acos(dot);
+    const normalized = 1 - angle / lobe.radiusRad;
+    if (normalized > 0) {
+      const val = smoothstep(0, 1, normalized) * lobe.weight;
+      if (val > maxInfluence) {
+        secondInfluence = maxInfluence;
+        maxInfluence = val;
+      } else if (val > secondInfluence) {
+        secondInfluence = val;
+      }
+    }
+  }
 
-  // 2. Pequeña cala/bahía turquesa en el sur (lat ~ -55°, lon entre -26° y +26°) para el puente de madera del tren
-  const dLatLagoon = (latDeg - -55) / 11;
-  const dLonLagoon = lonDeg / 26;
-  const lagoonDist = Math.hypot(dLatLagoon, dLonLagoon);
+  // Fusión orgánica entre lóbulos cercanos + perturbación costera natural
+  const blendedContinent =
+    maxInfluence + secondInfluence * 0.28 + organicSphericalNoise(unitDir);
 
-  // Factor de cercanía al agua: 0 en agua profunda, 1 en pradera interior
-  const riverLandFactor = smoothstep(10.5, 19.5, distToEquatorRiver);
-  const lagoonLandFactor = smoothstep(0.75, 1.28, lagoonDist);
-  const landFactor = Math.min(riverLandFactor, lagoonLandFactor);
+  // landFactor: 0 en mar/lago abierto, 0.35 en la orilla de arena crema, 1.0 en la pradera verde menta
+  const landFactor = smoothstep(0.24, 0.56, blendedContinent);
 
-  // Ondulación orgánica imperceptible y redonda en la pradera (máx ±0.006 para silueta 100% redonda)
-  const gentleMeadowWave =
-    0.005 * Math.sin(unitDir.x * 3.0 + unitDir.z * 2.5) * Math.cos(unitDir.y * 3.0);
+  // Relieve suave interior en las islas
+  const gentleIslandRelief =
+    0.0045 * Math.sin(unitDir.x * 4.2 + unitDir.z * 3.8) * Math.cos(unitDir.y * 4.0);
 
-  // Interpolación suave de radio:
-  // En el agua baja suavemente a 1.965 (bajo la esfera de océano R=2.00)
-  // En la costa pasa por R_SAND (2.03) y sube con bisel redondo a R_MEADOW (2.06)
-  const underwaterRadius = 1.965;
+  const underwaterRadius = 1.968;
   const radius =
     underwaterRadius +
-    (R_MEADOW - underwaterRadius) * smoothstep(0.0, 1.0, landFactor) +
-    gentleMeadowWave * smoothstep(0.6, 1.0, landFactor);
+    (R_MEADOW - underwaterRadius) * landFactor +
+    gentleIslandRelief * smoothstep(0.55, 1.0, landFactor);
 
-  const isWater = radius <= R_OCEAN + 0.004;
-  const isSand = !isWater && landFactor < 0.72;
+  const isWater = radius <= R_OCEAN + 0.003;
+  const isSand = !isWater && landFactor < 0.68;
 
-  // Color limpio y luminoso estilo Nintendo (Arena crema #F9E4B7 -> Pradera menta #7ED992)
+  // Bordes de arena crema (#F9E4B7) y pradera verde menta pastel (#7ED992 -> #8CE39E)
   const sandColor = new THREE.Color('#F9E4B7');
   const meadowColor = new THREE.Color('#7ED992');
-  const meadowHighlight = new THREE.Color('#8CE39E');
+  const meadowHighlight = new THREE.Color('#8EE6A1');
 
   const grassTone = meadowColor
     .clone()
-    .lerp(meadowHighlight, THREE.MathUtils.clamp((gentleMeadowWave + 0.005) * 80, 0, 1));
+    .lerp(meadowHighlight, THREE.MathUtils.clamp((gentleIslandRelief + 0.0045) * 95, 0, 1));
 
-  const colorBlend = smoothstep(0.28, 0.78, landFactor);
+  const colorBlend = smoothstep(0.3, 0.72, landFactor);
   const color = sandColor.clone().lerp(grassTone, colorBlend);
 
   return {
     radius,
     isWater,
     isSand,
+    landFactor,
     color,
   };
 }
 
-// Transformación exacta sobre la superficie del terreno (garantiza que length === R_terreno siempre)
+// Transformación exacta sobre la superficie de tierra firme
 function getSurfaceTransform(latDeg: number, lonDeg: number, radialOffset = 0) {
   const unit = latLonToUnitVector(latDeg, lonDeg);
   const surface = evaluateSmoothPlanetSurface(unit);
-  const exactRadius = (surface.isWater ? R_OCEAN : surface.radius) + radialOffset;
+  const exactRadius = Math.max(R_MEADOW, surface.radius) + radialOffset;
   const pos = unit.clone().multiplyScalar(exactRadius);
   const up = new THREE.Vector3(0, 1, 0);
   const quat = new THREE.Quaternion().setFromUnitVectors(up, unit);
@@ -652,8 +689,11 @@ const GroundedStylizedTree: React.FC<{
   kind: 'cherry' | 'pine' | 'oak';
   scale?: number;
 }> = ({ lat, lon, kind, scale = 1 }) => {
-  // Hundido -0.012 para que el tronco nunca flote sobre la esfera
-  const { position, quaternion } = useMemo(() => getSurfaceTransform(lat, lon, -0.012), [lat, lon]);
+  const { position, quaternion, surface } = useMemo(
+    () => getSurfaceTransform(lat, lon, -0.012),
+    [lat, lon]
+  );
+  if (surface.isWater) return null;
   return (
     <group position={position} quaternion={quaternion} scale={scale}>
       <mesh position={[0, 0.055, 0]}>
@@ -700,13 +740,17 @@ const GroundedStylizedTree: React.FC<{
   );
 };
 
-// Arbustos y flores redondeadas ancladas a R_terreno
+// Arbustos y flores redondeadas ancladas exclusivamente sobre tierra firme
 const GroundedFlowerBush: React.FC<{ lat: number; lon: number; flowerColor: string }> = ({
   lat,
   lon,
   flowerColor,
 }) => {
-  const { position, quaternion } = useMemo(() => getSurfaceTransform(lat, lon, -0.008), [lat, lon]);
+  const { position, quaternion, surface } = useMemo(
+    () => getSurfaceTransform(lat, lon, -0.008),
+    [lat, lon]
+  );
+  if (surface.isWater) return null;
   return (
     <group position={position} quaternion={quaternion}>
       <mesh position={[0, 0.022, 0]}>
@@ -725,7 +769,7 @@ const GroundedFlowerBush: React.FC<{ lat: number; lon: number; flowerColor: stri
   );
 };
 
-// Caminos finos de piedrecitas crema sobre la hierba + puente curvo sobre el río ecuatorial
+// Caminos finos de piedrecitas crema sobre las islas + puente peatonal curvo entre la Isla Norte (Casita) y la Isla Sur (Cine)
 const CreamPebblePathsAndBridge: React.FC = () => {
   const pebbles = useMemo(() => {
     const pairs: [Exclude<BuildingId, null>, Exclude<BuildingId, null>][] = [
@@ -762,17 +806,17 @@ const CreamPebblePathsAndBridge: React.FC = () => {
     return list;
   }, []);
 
-  // Puente peatonal curvo de madera clara que une La Casita (Norte) con El Cine (Sur) sobre el río
-  const riverBridgePlanks = useMemo(() => {
-    const u1 = latLonToUnitVector(16, 0);
-    const u2 = latLonToUnitVector(-16, 0);
-    const steps = 14;
+  // Puente peatonal curvo sobre el estrecho natural entre la Isla Norte y la Isla Sur
+  const straitBridgePlanks = useMemo(() => {
+    const u1 = latLonToUnitVector(12, 4);
+    const u2 = latLonToUnitVector(-10, 10);
+    const steps = 12;
     const list: { pos: [number, number, number]; quat: THREE.Quaternion }[] = [];
 
     for (let i = 0; i <= steps; i++) {
       const t = i / steps;
       const u = new THREE.Vector3().lerpVectors(u1, u2, t).normalize();
-      const arch = Math.sin(t * Math.PI) * 0.055;
+      const arch = Math.sin(t * Math.PI) * 0.052;
       const r = R_SAND + arch;
       const p = u.clone().multiplyScalar(r);
 
@@ -792,22 +836,22 @@ const CreamPebblePathsAndBridge: React.FC = () => {
     <group>
       {pebbles.map((st, idx) => (
         <mesh key={idx} position={st.pos} quaternion={st.quat} scale={[st.scale, 1, st.scale]}>
-          <cylinderGeometry args={[0.028, 0.032, 0.008, 12]} />
+          <cylinderGeometry args={[0.026, 0.03, 0.008, 12]} />
           <meshStandardMaterial color="#F9E4B7" roughness={0.85} />
         </mesh>
       ))}
-      {riverBridgePlanks.map((pl, idx) => (
+      {straitBridgePlanks.map((pl, idx) => (
         <group key={idx} position={pl.pos} quaternion={pl.quat}>
           <mesh>
-            <boxGeometry args={[0.11, 0.014, 0.038]} />
+            <boxGeometry args={[0.1, 0.014, 0.036]} />
             <meshStandardMaterial color="#E6C29F" roughness={0.8} />
           </mesh>
-          <mesh position={[-0.048, 0.02, 0]}>
-            <boxGeometry args={[0.01, 0.032, 0.01]} />
+          <mesh position={[-0.044, 0.018, 0]}>
+            <boxGeometry args={[0.009, 0.028, 0.009]} />
             <meshStandardMaterial color="#B07D52" />
           </mesh>
-          <mesh position={[0.048, 0.02, 0]}>
-            <boxGeometry args={[0.01, 0.032, 0.01]} />
+          <mesh position={[0.044, 0.018, 0]}>
+            <boxGeometry args={[0.009, 0.028, 0.009]} />
             <meshStandardMaterial color="#B07D52" />
           </mesh>
         </group>
@@ -816,9 +860,11 @@ const CreamPebblePathsAndBridge: React.FC = () => {
   );
 };
 
-// 4. CIRCUITO FERROVIARIO CONTINUO (TorusGeometry fino a radio constante R = 2.065 en franja despejada lat = -55°)
+// 4. VÍAS DE TREN CON SENTIDO FÍSICO (Anillo TorusGeometry paralelo al ecuador en el hemisferio sur, lat = -43°)
+// - Donde pasa sobre TIERRA: renderiza balasto de grava y traviesas de madera.
+// - Donde pasa sobre AGUA: renderiza un viaducto/puente de arcos de ladrillo y madera con pilares hasta el mar.
 const ContinuousRailwayAndTrain: React.FC = () => {
-  const trainLatDeg = -55;
+  const trainLatDeg = -43;
   const trainLatRad = THREE.MathUtils.degToRad(trainLatDeg);
   const ringY = R_TRAIN * Math.sin(trainLatRad);
   const ringRadius = R_TRAIN * Math.cos(trainLatRad);
@@ -827,38 +873,48 @@ const ContinuousRailwayAndTrain: React.FC = () => {
   const wagon1Ref = useRef<THREE.Group>(null);
   const wagon2Ref = useRef<THREE.Group>(null);
 
-  // Traviesas pequeñas uniformes + puente curvo de madera clara cuando pasa sobre la cala de agua (lon entre -25° y +25°)
-  const { sleepers, bridgeSegments } = useMemo(() => {
-    const sleeperCount = 72;
-    const sList: { pos: [number, number, number]; quat: THREE.Quaternion }[] = [];
-    const bList: { pos: [number, number, number]; quat: THREE.Quaternion }[] = [];
+  const { landBallastSegments, waterBridgeSegments } = useMemo(() => {
+    const segmentCount = 88;
+    const landList: { pos: [number, number, number]; quat: THREE.Quaternion }[] = [];
+    const bridgeList: {
+      pos: [number, number, number];
+      quat: THREE.Quaternion;
+      hasPier: boolean;
+    }[] = [];
 
-    for (let i = 0; i < sleeperCount; i++) {
-      const lonRad = (i / sleeperCount) * Math.PI * 2 - Math.PI;
-      const lonDeg = THREE.MathUtils.radToDeg(lonRad);
+    const getCirclePoint = (angle: number) =>
+      new THREE.Vector3(
+        ringRadius * Math.sin(angle),
+        ringY,
+        ringRadius * Math.cos(angle)
+      );
 
-      const getCirclePoint = (angle: number) =>
-        new THREE.Vector3(
-          ringRadius * Math.sin(angle),
-          ringY,
-          ringRadius * Math.cos(angle)
-        );
-
+    for (let i = 0; i < segmentCount; i++) {
+      const lonRad = (i / segmentCount) * Math.PI * 2 - Math.PI;
       const p = getCirclePoint(lonRad);
-      const pNext = getCirclePoint(lonRad + 0.04);
+      const pNext = getCirclePoint(lonRad + 0.035);
       const normal = p.clone().normalize();
       const tangent = pNext.clone().sub(p).normalize();
       const binormal = new THREE.Vector3().crossVectors(normal, tangent).normalize();
       const m = new THREE.Matrix4().makeBasis(binormal, normal, tangent);
       const quat = new THREE.Quaternion().setFromRotationMatrix(m);
 
-      sList.push({ pos: [p.x, p.y, p.z], quat });
-
-      if (Math.abs(lonDeg) <= 27) {
-        bList.push({ pos: [p.x, p.y, p.z], quat });
+      // Comprobar matemáticamente si este punto del anillo está sobre tierra firme o sobre el mar
+      const surf = evaluateSmoothPlanetSurface(normal);
+      if (surf.isWater || surf.landFactor < 0.45) {
+        bridgeList.push({
+          pos: [p.x, p.y, p.z],
+          quat,
+          hasPier: i % 2 === 0,
+        });
+      } else {
+        landList.push({
+          pos: [p.x, p.y, p.z],
+          quat,
+        });
       }
     }
-    return { sleepers: sList, bridgeSegments: bList };
+    return { landBallastSegments: landList, waterBridgeSegments: bridgeList };
   }, [ringRadius, ringY]);
 
   useFrame(({ clock }) => {
@@ -885,94 +941,121 @@ const ContinuousRailwayAndTrain: React.FC = () => {
     };
 
     placeCarriageOnRing(locoRef.current, baseAngle);
-    placeCarriageOnRing(wagon1Ref.current, baseAngle - 0.14);
-    placeCarriageOnRing(wagon2Ref.current, baseAngle - 0.27);
+    placeCarriageOnRing(wagon1Ref.current, baseAngle - 0.13);
+    placeCarriageOnRing(wagon2Ref.current, baseAngle - 0.25);
   });
 
   return (
     <group>
-      {/* Dos raíles plateados finos continuos (TorusGeometry apoyado a radio constante R = 2.065) */}
+      {/* Dos raíles plateados continuos (TorusGeometry perfecto paralelo al ecuador en el hemisferio sur) */}
       <mesh position={[0, ringY, 0]} rotation={[Math.PI / 2, 0, 0]}>
-        <torusGeometry args={[ringRadius - 0.022, 0.0055, 10, 96]} />
+        <torusGeometry args={[ringRadius - 0.021, 0.005, 10, 110]} />
         <meshStandardMaterial color="#DCE3EA" metalness={0.55} roughness={0.3} />
       </mesh>
       <mesh position={[0, ringY, 0]} rotation={[Math.PI / 2, 0, 0]}>
-        <torusGeometry args={[ringRadius + 0.022, 0.0055, 10, 96]} />
+        <torusGeometry args={[ringRadius + 0.021, 0.005, 10, 110]} />
         <meshStandardMaterial color="#DCE3EA" metalness={0.55} roughness={0.3} />
       </mesh>
 
-      {/* Traviesas pequeñas uniformes de madera */}
-      {sleepers.map((s, idx) => (
-        <mesh key={idx} position={s.pos} quaternion={s.quat}>
-          <boxGeometry args={[0.072, 0.006, 0.018]} />
-          <meshStandardMaterial color="#9C6644" roughness={0.85} />
-        </mesh>
+      {/* Tramos sobre TIERRA: lecho de balasto de grava + traviesas de madera */}
+      {landBallastSegments.map((s, idx) => (
+        <group key={`land-${idx}`} position={s.pos} quaternion={s.quat}>
+          {/* Balasto de grava cálida asentado sobre la tierra */}
+          <mesh position={[0, -0.005, 0]}>
+            <boxGeometry args={[0.088, 0.008, 0.082]} />
+            <meshStandardMaterial color="#C8B8A6" roughness={0.92} />
+          </mesh>
+          {/* Traviesa de madera */}
+          <mesh position={[0, 0.001, 0]}>
+            <boxGeometry args={[0.072, 0.006, 0.019]} />
+            <meshStandardMaterial color="#8D5B4C" roughness={0.85} />
+          </mesh>
+        </group>
       ))}
 
-      {/* Puente curvo continuo de madera clara cuando la vía cruza sobre el agua azul */}
-      {bridgeSegments.map((b, idx) => (
-        <group key={idx} position={b.pos} quaternion={b.quat}>
-          <mesh position={[0, -0.012, 0]}>
-            <boxGeometry args={[0.12, 0.016, 0.08]} />
-            <meshStandardMaterial color="#E6C29F" roughness={0.78} />
+      {/* Tramos sobre AGUA: Puente de arcos de ladrillo terracota y madera con pilares hasta el océano */}
+      {waterBridgeSegments.map((b, idx) => (
+        <group key={`bridge-${idx}`} position={b.pos} quaternion={b.quat}>
+          {/* Tablero de madera y ladrillo del puente */}
+          <mesh position={[0, -0.009, 0]}>
+            <boxGeometry args={[0.112, 0.015, 0.115]} />
+            <meshStandardMaterial color="#D9A066" roughness={0.78} />
           </mesh>
-          <mesh position={[-0.052, 0.012, 0]}>
-            <boxGeometry args={[0.008, 0.028, 0.075]} />
-            <meshStandardMaterial color="#C68B59" />
+          {/* Traviesa sobre el puente */}
+          <mesh position={[0, 0.001, 0]}>
+            <boxGeometry args={[0.072, 0.006, 0.019]} />
+            <meshStandardMaterial color="#7F4F24" roughness={0.85} />
           </mesh>
-          <mesh position={[0.052, 0.012, 0]}>
-            <boxGeometry args={[0.008, 0.028, 0.075]} />
-            <meshStandardMaterial color="#C68B59" />
+          {/* Barandillas laterales de madera */}
+          <mesh position={[-0.05, 0.014, 0]}>
+            <boxGeometry args={[0.008, 0.024, 0.112]} />
+            <meshStandardMaterial color="#B07D52" />
           </mesh>
-          {idx % 3 === 0 && (
-            <mesh position={[0, -0.05, 0]}>
-              <cylinderGeometry args={[0.012, 0.016, 0.08, 8]} />
-              <meshStandardMaterial color="#B07D52" />
-            </mesh>
+          <mesh position={[0.05, 0.014, 0]}>
+            <boxGeometry args={[0.008, 0.024, 0.112]} />
+            <meshStandardMaterial color="#B07D52" />
+          </mesh>
+          {/* Arco de ladrillo terracota bajo el tablero */}
+          <mesh position={[0, -0.024, 0]}>
+            <boxGeometry args={[0.096, 0.018, 0.084]} />
+            <meshStandardMaterial color="#C86D51" roughness={0.82} />
+          </mesh>
+          {/* Pilares de ladrillo y piedra que bajan hasta el mar */}
+          {b.hasPier && (
+            <group>
+              <mesh position={[-0.034, -0.052, 0]}>
+                <cylinderGeometry args={[0.012, 0.016, 0.068, 8]} />
+                <meshStandardMaterial color="#B55D43" roughness={0.85} />
+              </mesh>
+              <mesh position={[0.034, -0.052, 0]}>
+                <cylinderGeometry args={[0.012, 0.016, 0.068, 8]} />
+                <meshStandardMaterial color="#B55D43" roughness={0.85} />
+              </mesh>
+            </group>
           )}
         </group>
       ))}
 
-      {/* Locomotora roja/pastel */}
+      {/* Locomotora roja/pastel siguiendo matemáticamente el anillo */}
       <group ref={locoRef}>
         <mesh position={[0, 0.042, 0]}>
-          <boxGeometry args={[0.072, 0.06, 0.12]} />
+          <boxGeometry args={[0.07, 0.058, 0.116]} />
           <meshStandardMaterial color="#E76F51" />
         </mesh>
-        <mesh position={[0, 0.08, -0.022]}>
-          <boxGeometry args={[0.068, 0.05, 0.06]} />
+        <mesh position={[0, 0.078, -0.022]}>
+          <boxGeometry args={[0.066, 0.048, 0.058]} />
           <meshStandardMaterial color="#FFD166" />
         </mesh>
-        <mesh position={[0, 0.085, 0.032]}>
-          <cylinderGeometry args={[0.015, 0.012, 0.045, 10]} />
+        <mesh position={[0, 0.082, 0.03]}>
+          <cylinderGeometry args={[0.014, 0.012, 0.044, 10]} />
           <meshStandardMaterial color="#3D312A" />
         </mesh>
-        <mesh position={[0, 0.122, 0.028]}>
-          <sphereGeometry args={[0.02, 10, 10]} />
+        <mesh position={[0, 0.118, 0.028]}>
+          <sphereGeometry args={[0.019, 10, 10]} />
           <meshBasicMaterial color="#FFFFFF" />
         </mesh>
       </group>
 
       {/* Vagoncito 1 (Azul menta pastel) */}
       <group ref={wagon1Ref}>
-        <mesh position={[0, 0.04, 0]}>
-          <boxGeometry args={[0.066, 0.054, 0.1]} />
+        <mesh position={[0, 0.038, 0]}>
+          <boxGeometry args={[0.064, 0.052, 0.096]} />
           <meshStandardMaterial color="#4EA8DE" />
         </mesh>
-        <mesh position={[0, 0.072, 0]}>
-          <boxGeometry args={[0.07, 0.014, 0.104]} />
+        <mesh position={[0, 0.068, 0]}>
+          <boxGeometry args={[0.068, 0.013, 0.1]} />
           <meshStandardMaterial color="#FFFDF9" />
         </mesh>
       </group>
 
       {/* Vagoncito 2 (Rosa coral pastel) */}
       <group ref={wagon2Ref}>
-        <mesh position={[0, 0.04, 0]}>
-          <boxGeometry args={[0.066, 0.054, 0.1]} />
+        <mesh position={[0, 0.038, 0]}>
+          <boxGeometry args={[0.064, 0.052, 0.096]} />
           <meshStandardMaterial color="#FF8FA3" />
         </mesh>
-        <mesh position={[0, 0.072, 0]}>
-          <boxGeometry args={[0.07, 0.014, 0.104]} />
+        <mesh position={[0, 0.068, 0]}>
+          <boxGeometry args={[0.068, 0.013, 0.1]} />
           <meshStandardMaterial color="#FFFDF9" />
         </mesh>
       </group>
@@ -1026,11 +1109,11 @@ const FluffyCloudsOrbit: React.FC = () => {
   );
 };
 
-// Malla Esférica Suave en Capas (Cero flatShading, cero picos dentados, SphereGeometry de alta definición)
+// Malla de Islas Orgánicas con IcosahedronGeometry sobre la Esfera Base de Océano (R = 2.0)
 const SmoothLayeredPlanetMesh: React.FC = () => {
   const continentGeo = useMemo(() => {
-    // SphereGeometry(1, 128, 96) con sombreado 100% suave y normales analíticas esféricas
-    const geo = new THREE.SphereGeometry(1, 128, 96);
+    // IcosahedronGeometry(1, 36) proporciona teselación orgánica isótropa sin pellizcos en los polos
+    const geo = new THREE.IcosahedronGeometry(1, 36);
     const posAttr = geo.attributes.position;
     const normAttr = geo.attributes.normal;
     const colors = new Float32Array(posAttr.count * 3);
@@ -1040,7 +1123,6 @@ const SmoothLayeredPlanetMesh: React.FC = () => {
       u.fromBufferAttribute(posAttr, i).normalize();
       const { radius, color } = evaluateSmoothPlanetSurface(u);
       posAttr.setXYZ(i, u.x * radius, u.y * radius, u.z * radius);
-      // Normal esférica radial suave para eliminar cualquier grieta o sombra negra en la costa
       normAttr.setXYZ(i, u.x, u.y, u.z);
       colors[i * 3] = color.r;
       colors[i * 3 + 1] = color.g;
@@ -1053,17 +1135,17 @@ const SmoothLayeredPlanetMesh: React.FC = () => {
 
   return (
     <group>
-      {/* CAPA 1: Esfera Base de Océano / Río Cristalino (R = 2.0, #4FC3F7 con brillo especular suave) */}
+      {/* CAPA 1: Esfera Base Interior de Océano (R = 2.0, color turquesa suave brillante) */}
       <mesh>
         <sphereGeometry args={[R_OCEAN, 64, 64]} />
         <meshStandardMaterial
           color="#4FC3F7"
-          roughness={0.2}
-          metalness={0.06}
+          roughness={0.18}
+          metalness={0.08}
         />
       </mesh>
 
-      {/* CAPA 2: Continentes de Arena Crema (#F9E4B7) y Pradera Verde Menta Luminosa (#7ED992) */}
+      {/* CAPA 2: Islas y Continentes Orgánicos (R = 2.05) en verde menta pastel con orillas de arena crema */}
       <mesh geometry={continentGeo}>
         <meshStandardMaterial
           vertexColors
@@ -1090,7 +1172,7 @@ const PlanetWorldGroup: React.FC<{
   const planetGroupRef = useRef<THREE.Group>(null);
   const [zoomTarget, setZoomTarget] = useState<BuildingId>(null);
 
-  // Anclaje hundido -0.03 en el terreno verde como exige la especificación
+  // Bases de los 7 edificios asentadas firmemente sobre tierra firme (hundidas -0.02 en las islas orgánicas)
   const bTransforms = useMemo(() => {
     return {
       casita: getSurfaceTransform(BUILDING_COORDS.casita.lat, BUILDING_COORDS.casita.lon, -0.02),
@@ -1103,33 +1185,33 @@ const PlanetWorldGroup: React.FC<{
     };
   }, []);
 
-  // Todos los árboles y arbustos en tierra firme verificada (lejos de edificios y de la vía en lat = -55°)
+  // Árboles distribuidos dentro de las islas orgánicas (nunca en el agua ni sobre la vía en lat = -43°)
   const trees = useMemo(
     () => [
-      { lat: 52, lon: 55, kind: 'cherry' as const, scale: 1.0 },
-      { lat: 50, lon: -58, kind: 'oak' as const, scale: 1.0 },
-      { lat: 48, lon: 180, kind: 'pine' as const, scale: 1.05 },
-      { lat: 24, lon: 52, kind: 'oak' as const, scale: 0.95 },
-      { lat: 25, lon: -52, kind: 'cherry' as const, scale: 0.95 },
-      { lat: 26, lon: 175, kind: 'pine' as const, scale: 0.95 },
-      { lat: -24, lon: 58, kind: 'cherry' as const, scale: 1.0 },
-      { lat: -26, lon: -58, kind: 'oak' as const, scale: 0.95 },
-      { lat: -36, lon: 175, kind: 'pine' as const, scale: 1.0 },
-      { lat: -72, lon: 35, kind: 'pine' as const, scale: 0.95 },
-      { lat: -72, lon: -85, kind: 'oak' as const, scale: 0.95 },
-      { lat: -70, lon: 155, kind: 'cherry' as const, scale: 0.95 },
+      { lat: 42, lon: -14, kind: 'cherry' as const, scale: 0.92 },
+      { lat: 46, lon: 16, kind: 'oak' as const, scale: 0.92 },
+      { lat: 36, lon: 102, kind: 'cherry' as const, scale: 0.9 },
+      { lat: 18, lon: 130, kind: 'oak' as const, scale: 0.9 },
+      { lat: 36, lon: -102, kind: 'cherry' as const, scale: 0.9 },
+      { lat: 16, lon: -128, kind: 'pine' as const, scale: 0.9 },
+      { lat: -14, lon: 28, kind: 'cherry' as const, scale: 0.92 },
+      { lat: -30, lon: 4, kind: 'oak' as const, scale: 0.9 },
+      { lat: -14, lon: 138, kind: 'pine' as const, scale: 0.92 },
+      { lat: -30, lon: 114, kind: 'oak' as const, scale: 0.9 },
+      { lat: -12, lon: -98, kind: 'cherry' as const, scale: 0.9 },
+      { lat: -72, lon: -28, kind: 'pine' as const, scale: 0.88 },
     ],
     []
   );
 
   const bushes = useMemo(
     () => [
-      { lat: 38, lon: 28, color: '#FF8FA3' },
-      { lat: 38, lon: -28, color: '#FFD166' },
-      { lat: 42, lon: 92, color: '#CDB4DB' },
-      { lat: -28, lon: 28, color: '#FF8FA3' },
-      { lat: -28, lon: -28, color: '#FFD166' },
-      { lat: -35, lon: 88, color: '#FF8FA3' },
+      { lat: 22, lon: 10, color: '#FF8FA3' },
+      { lat: 34, lon: -18, color: '#FFD166' },
+      { lat: 32, lon: 126, color: '#CDB4DB' },
+      { lat: 32, lon: -126, color: '#FF8FA3' },
+      { lat: -18, lon: 2, color: '#FFD166' },
+      { lat: -18, lon: 116, color: '#FF8FA3' },
     ],
     []
   );

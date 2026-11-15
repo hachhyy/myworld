@@ -13,7 +13,6 @@ import { OnboardingFlow } from './components/OnboardingFlow';
 import { LoadingScreen } from './components/LoadingScreen';
 import { Planet3DScene } from './components/Planet3DScene';
 import { PlanetHUD } from './components/PlanetHUD';
-import { TestSimulatorPanel } from './components/TestSimulatorPanel';
 import { SettingsModal } from './components/SettingsModal';
 import { CasitaTamagotchi } from './components/buildings/CasitaTamagotchi';
 import { BuzonDiario } from './components/buildings/BuzonDiario';
@@ -80,12 +79,12 @@ export const App: React.FC = () => {
     });
   }, [onboardingCompleted, setAuthSession]);
 
-  // Sincronización Bidireccional en Tiempo Real con Supabase (Pull inicial + Suscripción Realtime)
+  // Sincronización Bidireccional en Tiempo Real con Supabase (Aislamiento estricto por `worldId`)
   useEffect(() => {
-    if (!onboardingCompleted || (!worldId && !roomCode)) return;
+    if (!onboardingCompleted || !worldId) return;
 
     const applySnapshot = (snap: Awaited<ReturnType<typeof pullWorldStateFromSupabase>>) => {
-      if (!snap) return;
+      if (!snap || (snap.worldId && snap.worldId !== worldId)) return;
       isApplyingRemoteRef.current = true;
       useWorldStore.setState((prev) => ({
         planetName: snap.planetName || prev.planetName,
@@ -144,24 +143,25 @@ export const App: React.FC = () => {
       }, 250);
     };
 
-    pullWorldStateFromSupabase(worldId || '', roomCode).then((snap) => {
+    pullWorldStateFromSupabase(worldId).then((snap) => {
       if (snap && (snap.diaryPages || snap.mediaItems || snap.petA)) {
         applySnapshot(snap);
       }
     });
 
-    const unsubscribe = subscribeToWorldRealtime(worldId || '', roomCode, (snap) => {
+    const unsubscribe = subscribeToWorldRealtime(worldId, (snap) => {
       applySnapshot(snap);
     });
 
     return () => unsubscribe();
-  }, [onboardingCompleted, worldId, roomCode]);
+  }, [onboardingCompleted, worldId]);
 
-  // Push automático con debounce (700ms) a Supabase cada vez que cualquiera de los dos hace un cambio en el planeta
+  // Push automático con debounce (650ms) a Supabase filtrado estrictamente por `worldId`
   useEffect(() => {
-    if (!onboardingCompleted || (!worldId && !roomCode) || isApplyingRemoteRef.current) return;
+    if (!onboardingCompleted || !worldId || isApplyingRemoteRef.current) return;
     const timer = setTimeout(() => {
-      pushWorldStateToSupabase(worldId || '', roomCode, {
+      pushWorldStateToSupabase(worldId, roomCode, {
+        worldId,
         planetName,
         anniversaryDate,
         theme,
@@ -181,7 +181,7 @@ export const App: React.FC = () => {
         lunarA,
         lunarB,
       });
-    }, 700);
+    }, 650);
     return () => clearTimeout(timer);
   }, [
     onboardingCompleted,
@@ -228,14 +228,13 @@ export const App: React.FC = () => {
     activeUser === 'userA' ? !p.readByUserA : !p.readByUserB
   );
 
-  // Si NO hay sesión guardada o aún no tiene Planeta vinculado -> Mostrar Flujo de "Primera Vez" (Onboarding de 3 pasos)
+  // Si NO hay sesión guardada o aún no tiene Planeta vinculado (`worldId`) -> Mostrar Flujo de Login / Vinculación
   const hasActiveLinkedSession = Boolean(onboardingCompleted && worldId);
 
   if (!hasActiveLinkedSession) {
     return <OnboardingFlow />;
   }
 
-  // Si YA ha iniciado sesión y tiene Planeta vinculado -> NUNCA ve login; va directo al saludo de mascotas y aterrizaje 3D
   return (
     <div
       className={`relative w-full h-full overflow-hidden select-none transition-transform duration-200 ${
@@ -252,13 +251,10 @@ export const App: React.FC = () => {
         onBuildingSelect={(b) => setActiveBuilding(b)}
       />
 
-      {/* 3. HUD Fijo del Planeta (Contador, Óvulo Cute Mensajero y Kiss Sender) */}
+      {/* 3. HUD Fijo del Planeta (Contador, Óvulo Cute Mensajero y Dock de Besos iOS) */}
       <PlanetHUD solar={solar} hasUnreadDiary={hasUnreadDiary} />
 
-      {/* 4. Botón Flotante "🛠️ Modo Test (Simulador)" para QA en un solo dispositivo */}
-      <TestSimulatorPanel />
-
-      {/* 5. Módulos Interiores de los 7 Edificios con Físicas Elásticas */}
+      {/* 4. Módulos Interiores de los 7 Edificios con Físicas Elásticas */}
       <AnimatePresence>
         {activeBuilding && (
           <motion.div

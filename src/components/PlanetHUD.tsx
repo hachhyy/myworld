@@ -41,6 +41,7 @@ export const PlanetHUD: React.FC<PlanetHUDProps> = ({ solar, hasUnreadDiary }) =
     setAnniversaryModalOpen,
     totalKissesHistory,
     kissCooldownUntil,
+    pendingKissBursts,
     sendKissBurst,
     consumePendingKissesForActiveUser,
     petA,
@@ -84,7 +85,7 @@ export const PlanetHUD: React.FC<PlanetHUDProps> = ({ solar, hasUnreadDiary }) =
     return () => clearInterval(timer);
   }, [kissCooldownUntil]);
 
-  // Al abrir la app o alternar usuario, comprobar si hay besos acumulados para lanzar la lluvia física
+  // Al abrir la app, alternar usuario o recibir besos en tiempo real desde el móvil de la pareja
   useEffect(() => {
     const pending = consumePendingKissesForActiveUser();
     if (pending.length > 0) {
@@ -94,27 +95,7 @@ export const PlanetHUD: React.FC<PlanetHUDProps> = ({ solar, hasUnreadDiary }) =
       const t = setTimeout(() => setActiveRainBursts([]), 7000);
       return () => clearTimeout(t);
     }
-  }, [activeUser, consumePendingKissesForActiveUser]);
-
-  // Escuchar eventos del Panel de Simulación QA ("🛠️ Modo Test")
-  useEffect(() => {
-    const handleSimKissRain = (e: Event) => {
-      const custom = e as CustomEvent<PendingKissBurst>;
-      if (custom.detail) {
-        setActiveRainBursts([custom.detail]);
-        setTimeout(() => setActiveRainBursts([]), 6500);
-      }
-    };
-    const handleOpenOvulo = () => {
-      setOvuloBubbleOpen(true);
-    };
-    window.addEventListener('myworld-sim-kiss-rain', handleSimKissRain);
-    window.addEventListener('myworld-open-ovulo-bubble', handleOpenOvulo);
-    return () => {
-      window.removeEventListener('myworld-sim-kiss-rain', handleSimKissRain);
-      window.removeEventListener('myworld-open-ovulo-bubble', handleOpenOvulo);
-    };
-  }, []);
+  }, [activeUser, pendingKissBursts.length, consumePendingKissesForActiveUser]);
 
   const handleTapKissButton = () => {
     if (cooldownRemainingSec > 0) {
@@ -403,101 +384,118 @@ export const PlanetHUD: React.FC<PlanetHUDProps> = ({ solar, hasUnreadDiary }) =
           )}
         </AnimatePresence>
 
-        {/* Controles del Kiss Sender */}
-        <div className="flex items-center justify-center gap-2.5 pointer-events-auto pb-1">
-          {/* Selector desplegable de qué se envía en la lluvia */}
-          <div className="relative">
-            <motion.button
-              whileTap={{ scale: 0.92 }}
-              onClick={() => {
-                soundEngine.playPop();
-                setIconPickerOpen(!iconPickerOpen);
-              }}
-              className="hand-pill bg-[var(--bg-card)] px-3 py-2 text-xs font-semibold flex items-center gap-1.5 cursor-pointer"
-            >
-              <span className="text-base">{KISS_ICONS[selectedIcon].emoji}</span>
-              <span>Elegir lluvia ▾</span>
-            </motion.button>
-
-            <AnimatePresence>
-              {iconPickerOpen && (
-                <motion.div
-                  initial={{ opacity: 0, y: 12, scale: 0.92 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: 12, scale: 0.92 }}
-                  className="absolute bottom-12 left-0 w-48 hand-card p-1.5 bg-[var(--bg-card)] flex flex-col gap-1 z-50"
-                >
-                  {(Object.keys(KISS_ICONS) as KissIconType[]).map((k) => (
-                    <button
-                      key={k}
-                      onClick={() => {
-                        setSelectedIcon(k);
-                        setIconPickerOpen(false);
-                        soundEngine.playPop(1.2);
-                      }}
-                      className={`flex items-center gap-2 px-2.5 py-1.5 rounded-xl text-xs font-medium text-left cursor-pointer ${
-                        selectedIcon === k ? 'bg-[var(--accent-primary)] font-bold' : 'hover:bg-black/5'
-                      }`}
-                    >
-                      <span className="text-base">{KISS_ICONS[k].emoji}</span>
-                      <span>{KISS_ICONS[k].label}</span>
-                    </button>
-                  ))}
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-
-          {/* Botón Redondo y Gordito de Mandar Besos en Ráfaga */}
-          {cooldownRemainingSec > 0 ? (
-            <div className="hand-card px-4 py-2 bg-[var(--bg-card)] flex items-center gap-2">
-              <div className="w-28">
-                <div className="flex justify-between text-[10px] font-bold mb-1">
-                  <span>Recargando mimos...</span>
-                  <span>
-                    {Math.floor(cooldownRemainingSec / 60)}:
-                    {String(cooldownRemainingSec % 60).padStart(2, '0')}
-                  </span>
-                </div>
-                <div className="w-full h-2.5 rounded-full bg-[var(--bg-secondary)] overflow-hidden border border-[var(--border-ink)]">
-                  <div
-                    className="h-full bg-[var(--accent-primary)] transition-all"
-                    style={{ width: `${Math.max(5, 100 - (cooldownRemainingSec / 300) * 100)}%` }}
-                  />
-                </div>
-              </div>
-              <button
+        {/* DOCK FLOTANTE TIPO PASTILLA iOS: Selector + Corazón Elástico + Contador Integrado */}
+        <div className="pointer-events-auto pb-1">
+          <div className="rounded-full bg-[var(--bg-card)]/92 backdrop-blur-md border-2 border-[var(--border-ink)] shadow-[0_8px_24px_rgba(61,49,42,0.18)] px-3.5 py-1.5 flex items-center justify-between gap-3 relative">
+            {/* Izquierda: Botón sutil para desplegar y elegir el emoji de la lluvia */}
+            <div className="relative">
+              <motion.button
+                whileTap={{ scale: 0.92 }}
                 onClick={() => {
-                  useWorldStore.setState({ kissCooldownUntil: 0 });
-                  soundEngine.playPop(1.3);
+                  soundEngine.playPop();
+                  setIconPickerOpen(!iconPickerOpen);
                 }}
-                title="Recargar al instante"
-                className="p-1.5 rounded-full hover:bg-black/5 cursor-pointer"
+                className="px-2.5 py-1.5 rounded-full bg-[var(--bg-paper)]/90 border border-[var(--border-ink)]/30 text-xs font-bold flex items-center gap-1.5 cursor-pointer hover:bg-[var(--bg-paper)] transition-colors"
+                title="Elegir icono de lluvia"
               >
-                <RotateCcw className="w-4 h-4" />
-              </button>
-            </div>
-          ) : (
-            <motion.button
-              whileTap={{
-                scale: 1.18 + Math.min(0.25, spamCount * 0.005),
-                rotate: spamCount % 2 === 0 ? -6 : 6,
-              }}
-              transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-              onClick={handleTapKissButton}
-              className="hand-button w-16 h-16 rounded-full bg-[var(--accent-secondary)] flex flex-col items-center justify-center cursor-pointer relative"
-            >
-              <span className="text-2xl leading-none">{KISS_ICONS[selectedIcon].emoji}</span>
-              <span className="text-[10px] font-bold mt-0.5 text-[#4A3F35]">
-                {spamCount > 0 ? `x${spamCount}` : '¡Besos!'}
-              </span>
-            </motion.button>
-          )}
+                <span className="text-base leading-none">{KISS_ICONS[selectedIcon].emoji}</span>
+                <span className="text-[11px] text-[var(--text-main)]">Lluvia ▾</span>
+              </motion.button>
 
-          {/* Contador histórico de besos */}
-          <div className="hand-pill bg-[var(--bg-card)] px-3 py-2 text-xs font-semibold flex items-center gap-1">
-            <Heart className="w-3.5 h-3.5 fill-rose-400 text-rose-500" />
-            <span>{totalKissesHistory.toLocaleString('es-ES')}</span>
+              <AnimatePresence>
+                {iconPickerOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 12, scale: 0.92 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 12, scale: 0.92 }}
+                    transition={{ type: 'spring', stiffness: 360, damping: 24 }}
+                    className="absolute bottom-13 left-0 w-48 hand-card p-1.5 bg-[var(--bg-card)]/95 backdrop-blur-md flex flex-col gap-1 z-50 shadow-xl"
+                  >
+                    {(Object.keys(KISS_ICONS) as KissIconType[]).map((k) => (
+                      <button
+                        key={k}
+                        onClick={() => {
+                          setSelectedIcon(k);
+                          setIconPickerOpen(false);
+                          soundEngine.playPop(1.2);
+                        }}
+                        className={`flex items-center gap-2 px-2.5 py-1.5 rounded-xl text-xs font-medium text-left cursor-pointer ${
+                          selectedIcon === k ? 'bg-[var(--accent-primary)] font-bold' : 'hover:bg-black/5'
+                        }`}
+                      >
+                        <span className="text-base">{KISS_ICONS[k].emoji}</span>
+                        <span>{KISS_ICONS[k].label}</span>
+                      </button>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            {/* Centro: Botón grande de Corazón (Kiss Sender) con físicas elásticas Emil Kowalski */}
+            {cooldownRemainingSec > 0 ? (
+              <div className="flex items-center gap-1.5 px-2 py-0.5">
+                <div className="w-24">
+                  <div className="flex justify-between text-[9px] font-bold mb-0.5">
+                    <span>Recargando</span>
+                    <span>
+                      {Math.floor(cooldownRemainingSec / 60)}:
+                      {String(cooldownRemainingSec % 60).padStart(2, '0')}
+                    </span>
+                  </div>
+                  <div className="w-full h-2 rounded-full bg-[var(--bg-secondary)] overflow-hidden border border-[var(--border-ink)]">
+                    <div
+                      className="h-full bg-[var(--accent-primary)] transition-all"
+                      style={{ width: `${Math.max(5, 100 - (cooldownRemainingSec / 300) * 100)}%` }}
+                    />
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    useWorldStore.setState({ kissCooldownUntil: 0 });
+                    soundEngine.playPop(1.3);
+                  }}
+                  title="Recargar al instante"
+                  className="p-1 rounded-full hover:bg-black/5 cursor-pointer"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ) : (
+              <motion.button
+                whileTap={{ scale: 0.85 }}
+                animate={{
+                  scale: spamCount > 0 ? 1.06 + Math.min(0.14, spamCount * 0.003) : 1,
+                }}
+                transition={{ type: 'spring', stiffness: 420, damping: 16 }}
+                onClick={handleTapKissButton}
+                aria-label="Enviar lluvia de besos"
+                className="-my-3.5 w-15 h-15 rounded-full bg-gradient-to-br from-[#FF758F] to-[#FF4D6D] text-white border-2 border-[var(--border-ink)] shadow-[0_6px_16px_rgba(255,77,109,0.45)] flex flex-col items-center justify-center cursor-pointer relative select-none"
+              >
+                <span className="text-2xl leading-none drop-shadow-xs">
+                  {KISS_ICONS[selectedIcon].emoji}
+                </span>
+                <span className="text-[10px] font-extrabold mt-0.5 tracking-tight text-white">
+                  {spamCount > 0 ? `x${spamCount}` : '¡Besos!'}
+                </span>
+              </motion.button>
+            )}
+
+            {/* Derecha: Contador numérico limpio e integrado en la pastilla */}
+            <div
+              className="px-2.5 py-1 rounded-full bg-[var(--bg-paper)]/80 border border-[var(--border-ink)]/20 flex items-center gap-1.5"
+              title="Total de besos enviados y recibidos en vuestro planeta"
+            >
+              <Heart className="w-3.5 h-3.5 fill-rose-500 text-rose-500 shrink-0" />
+              <div className="flex flex-col leading-none text-right">
+                <span className="text-xs font-extrabold text-[var(--text-main)] tabular-nums">
+                  {totalKissesHistory.toLocaleString('es-ES')}
+                </span>
+                <span className="text-[9px] font-bold text-[var(--text-muted)] uppercase tracking-wider">
+                  besos
+                </span>
+              </div>
+            </div>
           </div>
         </div>
       </div>

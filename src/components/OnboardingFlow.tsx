@@ -34,7 +34,6 @@ export const OnboardingFlow: React.FC = () => {
     setAuthSession,
     setLinkedWorld,
     completeOnboardingWithPet,
-    enterTrialModeWithoutAccount,
   } = useWorldStore();
 
   // Estado Paso 1: Registro / Login
@@ -42,6 +41,7 @@ export const OnboardingFlow: React.FC = () => {
   const [nameInput, setNameInput] = useState('');
   const [emailInput, setEmailInput] = useState('');
   const [passwordInput, setPasswordInput] = useState('');
+  const [quickRoomCodeInput, setQuickRoomCodeInput] = useState('');
   const [authError, setAuthError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -64,6 +64,36 @@ export const OnboardingFlow: React.FC = () => {
   const [selectedSpecies, setSelectedSpecies] = useState<PetSpecies>('capibara');
   const [petNameInput, setPetNameInput] = useState('Mochi');
   const [birthdayInput, setBirthdayInput] = useState('1999-04-18');
+
+  // Acceso directo por código de 6 letras en el Login -> aterriza directamente en el `world_id` aislado de la pareja
+  const handleQuickCodeEnter = async () => {
+    setAuthError(null);
+    const clean = quickRoomCodeInput.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+    if (clean.length < 4) {
+      setAuthError('Introduce vuestro código privado de 6 letras o números 💕');
+      return;
+    }
+    setLoading(true);
+    try {
+      const worldRow = await joinWorldByCodeInTable(clean);
+      setAuthSession(
+        authUserId || `usr_${clean.toLowerCase()}`,
+        authUserEmail || `${clean.toLowerCase()}@myworld.app`,
+        nameInput.trim() || petA.ownerName || 'Alex'
+      );
+      setLinkedWorld(
+        worldRow.id,
+        worldRow.name,
+        worldRow.room_code,
+        worldRow.anniversary_date
+      );
+      completeOnboardingWithPet(selectedSpecies, petNameInput || 'Mochi', birthdayInput);
+    } catch (err) {
+      setAuthError(err instanceof Error ? err.message : 'No encontramos ese código de planeta');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Paso 1: Crear cuenta nueva o Iniciar sesión
   const handleAuthSubmit = async (e: React.FormEvent) => {
@@ -91,7 +121,7 @@ export const OnboardingFlow: React.FC = () => {
       } else {
         const res = await loginUserWithSupabase(emailInput.trim(), passwordInput);
         setAuthSession(res.userId, res.email, res.name);
-        // Si ya tenía un mundo y mascota vinculados en su perfil, restaurar y entrar directo
+        // Si ya tenía un mundo y mascota vinculados en su perfil, restaurar y entrar directo a su `world_id`
         if (res.world && res.profile) {
           setLinkedWorld(
             res.world.id,
@@ -174,7 +204,7 @@ export const OnboardingFlow: React.FC = () => {
         id: authUserId || `usr_${Date.now()}`,
         name: petA.ownerName,
         email: authUserEmail || 'pareja@myworld.app',
-        world_id: worldId || 'world-seed-miel26',
+        world_id: worldId || null,
         birthday: birthdayInput,
         pet_species: selectedSpecies,
         pet_name: petNameInput.trim() || 'Mochi',
@@ -337,18 +367,36 @@ export const OnboardingFlow: React.FC = () => {
                 </form>
               </HandDrawnBox>
 
-              {/* Botón discreto "✨ Entrar en Modo Prueba (Sin cuenta)" */}
-              <div className="text-center pt-1">
-                <motion.button
-                  whileTap={{ scale: 0.95 }}
-                  type="button"
-                  onClick={enterTrialModeWithoutAccount}
-                  className="hand-pill px-4 py-2 bg-[var(--bg-card)] text-xs font-bold text-[var(--text-ink)] inline-flex items-center gap-1.5 cursor-pointer hover:bg-[var(--bg-secondary)]"
-                >
-                  <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                  <span>✨ Entrar en Modo Prueba (Sin cuenta)</span>
-                </motion.button>
-              </div>
+              {/* Acceso directo por Código de Pareja de 6 letras (Aislamiento por world_id) */}
+              <HandDrawnBox className="bg-[var(--bg-card)] p-3.5">
+                <div className="space-y-2 text-xs">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold flex items-center gap-1.5">
+                      <KeyRound className="w-3.5 h-3.5 text-rose-500" />
+                      ¿Ya tenéis código de 6 letras de vuestro planeta?
+                    </span>
+                  </div>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      maxLength={6}
+                      value={quickRoomCodeInput}
+                      onChange={(e) => setQuickRoomCodeInput(e.target.value.toUpperCase())}
+                      placeholder="CÓDIGO (Ej. MIEL26)"
+                      className="flex-1 px-3 py-2 rounded-xl border-2 border-[var(--border-ink)] bg-[var(--bg-paper)] font-mono text-sm font-bold tracking-widest uppercase text-center"
+                    />
+                    <motion.button
+                      whileTap={{ scale: 0.95 }}
+                      type="button"
+                      disabled={loading}
+                      onClick={handleQuickCodeEnter}
+                      className="hand-button px-4 py-2 bg-[#A8D5BA] text-[#2B3A30] font-bold flex items-center gap-1 cursor-pointer"
+                    >
+                      <span>Aterrizar 🪐</span>
+                    </motion.button>
+                  </div>
+                </div>
+              </HandDrawnBox>
             </motion.div>
           )}
 

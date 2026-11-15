@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import { PastelTheme, useWorldStore } from '../store/useWorldStore';
+import { joinWorldByCodeInTable } from '../lib/supabaseClient';
 import { calculateRelationshipDuration } from '../utils/solarAndTime';
 import { soundEngine, triggerHeartbeatHaptic } from '../utils/soundAndHaptics';
 
@@ -32,7 +33,7 @@ export const SettingsModal: React.FC = () => {
     planetName,
     setPlanetName,
     roomCode,
-    setRoomCode,
+    setLinkedWorld,
     generateNewRoomCode,
     anniversaryDate,
     setAnniversaryDate,
@@ -66,7 +67,7 @@ export const SettingsModal: React.FC = () => {
     soundEngine.playPop(1.2);
     triggerHeartbeatHaptic('push-permission');
     if (typeof window === 'undefined' || !('Notification' in window)) {
-      setPushStatus('Tu navegador actual es modo lectura (simulado activo ✅)');
+      setPushStatus('Avisos locales activados en este navegador ✅');
       return;
     }
     try {
@@ -252,7 +253,7 @@ export const SettingsModal: React.FC = () => {
                   className="hand-pill px-2.5 py-0.5 text-[11px] font-bold bg-[#1E2436] text-[#F7E8C4] flex items-center gap-1 cursor-pointer"
                 >
                   <Moon className="w-3 h-3" />
-                  {solarOverride === 'night' ? 'Salir Modo Noche' : 'Probar Azul Noche'}
+                  {solarOverride === 'night' ? 'Salir Modo Noche' : 'Cambiar a Azul Noche'}
                 </button>
               </div>
 
@@ -327,9 +328,16 @@ export const SettingsModal: React.FC = () => {
                   className="flex-1 px-2.5 py-1.5 rounded-xl border border-[var(--border-ink)] bg-[var(--bg-paper)] font-mono uppercase"
                 />
                 <button
-                  onClick={() => {
+                  onClick={async () => {
                     if (joinCodeInput.trim().length >= 4) {
-                      setRoomCode(joinCodeInput.trim());
+                      const worldRow = await joinWorldByCodeInTable(joinCodeInput.trim());
+                      setLinkedWorld(
+                        worldRow.id,
+                        worldRow.name,
+                        worldRow.room_code,
+                        worldRow.anniversary_date
+                      );
+                      useWorldStore.setState({ onboardingCompleted: true });
                       setJoinCodeInput('');
                       soundEngine.playChime();
                     }

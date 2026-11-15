@@ -280,7 +280,7 @@ export async function createWorldInTable(
   return newWorld;
 }
 
-// 4. Buscar y vincularse a un Planeta existente en la tabla `worlds` mediante el código de 6 caracteres
+// 4. Buscar y vincularse a un Planeta existente en la tabla `worlds` mediante el código de 6 caracteres (aislamiento estricto por `world_id`)
 export async function joinWorldByCodeInTable(roomCodeInput: string): Promise<WorldRow> {
   const cleanCode = roomCodeInput.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6);
   if (cleanCode.length < 4) {
@@ -295,10 +295,34 @@ export async function joinWorldByCodeInTable(roomCodeInput: string): Promise<Wor
         .eq('room_code', cleanCode)
         .maybeSingle();
       if (!error && data) {
+        const worlds = getLocalWorlds();
+        const exists = worlds.some((w) => w.id === data.id);
+        if (!exists) {
+          worlds.push(data as WorldRow);
+          saveLocalWorlds(worlds);
+        }
         return data as WorldRow;
       }
+
+      // Si el código aún no existe en la tabla remota, crear la fila aislada con su UUID único `world_id`
+      const { data: created, error: insertErr } = await supabase
+        .from('worlds')
+        .insert({
+          name: `Planeta ${cleanCode}`,
+          room_code: cleanCode,
+          anniversary_date: '2024-06-30',
+        })
+        .select()
+        .single();
+
+      if (!insertErr && created) {
+        const worlds = getLocalWorlds();
+        worlds.push(created as WorldRow);
+        saveLocalWorlds(worlds);
+        return created as WorldRow;
+      }
     } catch {
-      // Continuar a búsqueda local
+      // Continuar a búsqueda local si no hay red
     }
   }
 
@@ -318,9 +342,9 @@ export async function joinWorldByCodeInTable(roomCodeInput: string): Promise<Wor
   return linkedWorld;
 }
 
-// 5. Guardar mascota inicial y cumpleaños en la tabla `profiles` con su `auth.user.id`
+// 5. Guardar mascota inicial y cumpleaños en la tabla `profiles` filtrando por `world_id`
 export async function saveProfileInTable(profile: ProfileRow): Promise<void> {
-  if (isSupabaseConfigured) {
+  if (isSupabaseConfigured && profile.world_id) {
     try {
       const { data: sessionData } = await supabase.auth.getSession();
       const uid = sessionData.session?.user?.id || profile.id;
@@ -354,10 +378,11 @@ export async function signOutFromSupabase(): Promise<void> {
   }
 }
 
-// 6. Sincronización en Tiempo Real del estado completo de los 7 edificios con `public.worlds.world_state`
+// 6. Sincronización en Tiempo Real del estado completo de los 7 edificios filtrado estrictamente por `world_id`
 export const CLIENT_INSTANCE_ID = generateUUID();
 
 export interface SyncedWorldSnapshot {
+  worldId?: string;
   planetName?: string;
   anniversaryDate?: string;
   theme?: string;
@@ -381,20 +406,21 @@ export interface SyncedWorldSnapshot {
 }
 
 export async function pullWorldStateFromSupabase(
-  worldId: string,
-  roomCode: string
+  worldId: string
 ): Promise<SyncedWorldSnapshot | null> {
-  if (!isSupabaseConfigured || (!worldId && !roomCode)) return null;
+  if (!isSupabaseConfigured || !worldId) return null;
   try {
-    const query = supabase.from('worlds').select('name,anniversary_date,theme,currency,lunar_mode,total_kisses_history,world_state');
-    const { data, error } = worldId.startsWith('demo-')
-      ? await query.eq('room_code', roomCode).maybeSingle()
-      : await query.eq('id', worldId).maybeSingle();
+    const { data, error } = await supabase
+      .from('worlds')
+      .select('id,name,anniversary_date,theme,currency,lunar_mode,total_kisses_history,world_state')
+      .eq('id', worldId)
+      .maybeSingle();
 
     if (error || !data) return null;
     const ws = (data.world_state as SyncedWorldSnapshot) || {};
     return {
       ...ws,
+      worldId: data.id,
       planetName: data.name || ws.planetName,
       anniversaryDate: data.anniversary_date || ws.anniversaryDate,
       theme: data.theme || ws.theme,
@@ -415,10 +441,11 @@ export async function pushWorldStateToSupabase(
   roomCode: string,
   snapshot: SyncedWorldSnapshot
 ): Promise<boolean> {
-  if (!isSupabaseConfigured || (!worldId && !roomCode)) return false;
+  if (!isSupabaseConfigured || !worldId) return false;
   try {
     const payload = {
       name: snapshot.planetName || 'Nuestro Pequeño Planeta',
+      room_code: roomCode,
       anniversary_date: snapshot.anniversaryDate || '2024-06-30',
       theme: snapshot.theme || 'melocoton',
       currency: snapshot.currency || '€',
@@ -426,15 +453,17 @@ export async function pushWorldStateToSupabase(
       total_kisses_history: snapshot.totalKissesHistory || 0,
       world_state: {
         ...snapshot,
+        worldId,
         updatedAtClient: Date.now(),
         updatedByClientId: CLIENT_INSTANCE_ID,
       },
       updated_at: new Date().toISOString(),
     };
 
-    const { error } = worldId.startsWith('demo-')
-      ? await supabase.from('worlds').upsert({ room_code: roomCode, ...payload }, { onConflict: 'room_code' })
-      : await supabase.from('worlds').update(payload).eq('id', worldId);
+    const { error } = await supabase
+      .from('worlds')
+      .update(payload)
+      .eq('id', worldId);
 
     return !error;
   } catch {
@@ -444,35 +473,31 @@ export async function pushWorldStateToSupabase(
 
 export function subscribeToWorldRealtime(
   worldId: string,
-  roomCode: string,
   onRemoteUpdate: (snapshot: SyncedWorldSnapshot) => void
 ): () => void {
-  if (!isSupabaseConfigured || (!worldId && !roomCode)) return () => {};
-
-  const filter = worldId.startsWith('demo-')
-    ? `room_code=eq.${roomCode}`
-    : `id=eq.${worldId}`;
+  if (!isSupabaseConfigured || !worldId) return () => {};
 
   const channel = supabase
-    .channel(`myworld-realtime-${worldId || roomCode}`)
+    .channel(`myworld-isolated-${worldId}`)
     .on(
       'postgres_changes',
       {
         event: 'UPDATE',
         schema: 'public',
         table: 'worlds',
-        filter,
+        filter: `id=eq.${worldId}`,
       },
       (payload) => {
         const row = payload.new as Record<string, unknown>;
-        if (!row) return;
+        if (!row || row.id !== worldId) return;
         const ws = (row.world_state as SyncedWorldSnapshot) || {};
-        // Ignorar actualizaciones que provengan de esta misma pestaña del navegador
+        // Ignorar actualizaciones originadas en esta misma pestaña
         if (ws.updatedByClientId && ws.updatedByClientId === CLIENT_INSTANCE_ID) {
           return;
         }
         onRemoteUpdate({
           ...ws,
+          worldId: row.id as string,
           planetName: (row.name as string) || ws.planetName,
           anniversaryDate: (row.anniversary_date as string) || ws.anniversaryDate,
           theme: (row.theme as string) || ws.theme,
@@ -491,4 +516,5 @@ export function subscribeToWorldRealtime(
     supabase.removeChannel(channel);
   };
 }
+
 

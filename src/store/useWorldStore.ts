@@ -298,7 +298,6 @@ export interface WorldState {
   setAuthSession: (userId: string, email: string, name: string) => void;
   setLinkedWorld: (worldId: string, planetName: string, roomCode: string, anniversaryDate: string) => void;
   completeOnboardingWithPet: (species: PetSpecies, petName: string, birthday: string) => void;
-  enterTrialModeWithoutAccount: () => void;
   logoutSession: () => Promise<void>;
 
   // Acciones generales
@@ -358,13 +357,6 @@ export interface WorldState {
   // Invernadero Lunar
   setLunarMode: (mode: 'single' | 'dual' | 'hidden') => void;
   updateLunarProfile: (which: 'A' | 'B', partial: Partial<LunarProfileState>) => void;
-
-  // Acciones del Panel de Simulación QA ("🛠️ Modo Test")
-  simulatePartnerKissBurst50: () => PendingKissBurst;
-  simulatePartnerNewPolaroid: () => void;
-  simulatePartnerSecretMovieVote: () => void;
-  simulateOvuloCuteAlert: () => void;
-  simulateDirtyAndHungryPets: () => void;
 }
 
 const broadcastChannel =
@@ -852,20 +844,8 @@ export const useWorldStore = create<WorldState>()(
             birthday: birthday || '1999-04-18',
           },
           onboardingCompleted: true,
-          hasCompletedLanding: false, // Lanza la pantalla de carga con las dos mascotas saludando y el aterrizaje 3D
+          hasCompletedLanding: false,
         }));
-      },
-
-      enterTrialModeWithoutAccount: () => {
-        soundEngine.playChime();
-        triggerHeartbeatHaptic('trial-mode');
-        set({
-          authUserId: 'trial-user-a',
-          authUserEmail: 'pareja@myworld.app',
-          worldId: 'world-seed-miel26',
-          onboardingCompleted: true,
-          hasCompletedLanding: false, // Va a la pantalla de carga de las mascotas saludando y aterriza en el Planeta 3D
-        });
       },
 
       logoutSession: async () => {
@@ -885,7 +865,10 @@ export const useWorldStore = create<WorldState>()(
 
       setPlanetName: (planetName) => {
         set({ planetName });
-        broadcastChannel?.postMessage({ type: 'SYNC', state: { planetName } });
+        const wid = get().worldId;
+        if (wid) {
+          broadcastChannel?.postMessage({ type: 'SYNC', worldId: wid, state: { planetName } });
+        }
       },
       setCoupleNames: (nameA, nameB) => {
         const cleanA = nameA.trim() || 'Alex';
@@ -960,7 +943,10 @@ export const useWorldStore = create<WorldState>()(
           kissCooldownUntil: cooldown,
           pendingKissBursts: [...state.pendingKissBursts, burst],
         }));
-        broadcastChannel?.postMessage({ type: 'KISS_BURST', burst });
+        const wid = get().worldId;
+        if (wid) {
+          broadcastChannel?.postMessage({ type: 'KISS_BURST', worldId: wid, burst });
+        }
       },
 
       consumePendingKissesForActiveUser: () => {
@@ -1231,136 +1217,6 @@ export const useWorldStore = create<WorldState>()(
           const updated = { ...state[key], ...partial, lastUpdated: 'Hoy' };
           return { [key]: updated };
         });
-      },
-
-      simulatePartnerKissBurst50: () => {
-        triggerHeartbeatHaptic('sim-50-kisses');
-        soundEngine.playChime();
-        const partner = get().activeUser === 'userA' ? 'userB' : 'userA';
-        const burst: PendingKissBurst = {
-          id: `sim-kiss-${Date.now()}`,
-          from: partner,
-          count: 50,
-          iconType: 'corazones',
-          miniNote: '¡Te echo de menos!',
-          timestamp: Date.now(),
-        };
-        set((state) => ({
-          totalKissesHistory: state.totalKissesHistory + 50,
-          activeBuilding: null,
-        }));
-        if (typeof window !== 'undefined') {
-          window.dispatchEvent(new CustomEvent('myworld-sim-kiss-rain', { detail: burst }));
-        }
-        return burst;
-      },
-
-      simulatePartnerNewPolaroid: () => {
-        soundEngine.playPageTurn();
-        triggerHeartbeatHaptic('sim-polaroid');
-        const partner = get().activeUser === 'userA' ? 'userB' : 'userA';
-        const newPage: DiaryPage = {
-          id: `diary-sim-${Date.now()}`,
-          date: 'Hoy · Sorpresa en el Buzón',
-          author: partner,
-          title: '¡Sorpresa recién dejada en nuestro buzón! 💌',
-          caption: 'He dibujado la mitad de este recuerdo para que lo termines tú conmigo 💕',
-          photoDataUrl: createCozySvgDataUrl('#FFD6E0', '#CFE8F9', '📸💑✨', 'Recuerdo Sorpresa'),
-          photoSizeKB: 39.2,
-          frameStyle: 'estrellitas',
-          canvasBgColor: '#FFFDF9',
-          strokes: [
-            {
-              id: `st-sim-${Date.now()}`,
-              tool: 'acuarela',
-              color: '#E88B84',
-              size: 12,
-              points: [
-                [110, 90],
-                [95, 72],
-                [76, 78],
-                [75, 98],
-                [110, 126],
-              ],
-              author: partner,
-            },
-          ],
-          stickers: [{ id: `stk-${Date.now()}`, emoji: '💌', x: 78, y: 22 }],
-          readByUserA: partner === 'userA',
-          readByUserB: partner === 'userB',
-        };
-        set((state) => ({
-          diaryPages: [newPage, ...state.diaryPages],
-          activeBuilding: null,
-        }));
-      },
-
-      simulatePartnerSecretMovieVote: () => {
-        soundEngine.playChime();
-        triggerHeartbeatHaptic('sim-movie-vote');
-        const active = get().activeUser;
-        set((state) => {
-          const updated = state.mediaItems.map((m, idx) => {
-            if (idx === 1 || m.id === 'media-watched-2') {
-              return active === 'userA'
-                ? {
-                    ...m,
-                    status: 'watched' as const,
-                    ratingA: undefined,
-                    reviewA: undefined,
-                    ratingB: 5,
-                    reviewB: '¡Voto secreto listo! En cuanto votes tú se abrirá nuestro sobre sellado 🎉',
-                  }
-                : {
-                    ...m,
-                    status: 'watched' as const,
-                    ratingB: undefined,
-                    reviewB: undefined,
-                    ratingA: 5,
-                    reviewA: '¡Voto secreto listo! En cuanto votes tú se abrirá nuestro sobre sellado 🎉',
-                  };
-            }
-            return m;
-          });
-          return { mediaItems: updated, activeBuilding: 'cine' };
-        });
-      },
-
-      simulateOvuloCuteAlert: () => {
-        triggerHeartbeatHaptic('sim-ovulo');
-        soundEngine.speakAnimalese(
-          'Hola hoy estamos en días de regla con dolorcito de barriga y queremos mimos',
-          515
-        );
-        set((state) => ({
-          lunarMode: state.lunarMode === 'hidden' ? 'single' : state.lunarMode,
-          lunarA: {
-            ...state.lunarA,
-            phase: 'menstruacion',
-            cramps: 'Dolorcito fuerte',
-            mood: 'Mimosa',
-            craving: 'Chocolate calentito y muchos mimos',
-            sensitiveAlertActive: true,
-          },
-          activeBuilding: null,
-        }));
-        if (typeof window !== 'undefined') {
-          window.dispatchEvent(new CustomEvent('myworld-open-ovulo-bubble'));
-        }
-      },
-
-      simulateDirtyAndHungryPets: () => {
-        triggerHeartbeatHaptic('sim-dirty-pets');
-        soundEngine.playPop(0.85);
-        set((state) => ({
-          petCare: {
-            ...state.petCare,
-            hunger: 25,
-            hygiene: 22,
-            energy: 32,
-          },
-          activeBuilding: 'casita',
-        }));
       },
     }),
     {
