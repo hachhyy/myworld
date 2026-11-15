@@ -1013,17 +1013,22 @@ export const CasitaTamagotchi: React.FC<CasitaTamagotchiProps> = ({ solar, onClo
           style={{ position: 'absolute' }}
           className="z-20 flex flex-col items-center pointer-events-auto"
         >
-          {!inBedSleeping && (
-            <motion.div
-              initial={{ opacity: 0, y: 4 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="mb-1 px-2.5 py-0.5 rounded-2xl bg-[#FFFDF9]/95 border-2 border-[var(--border-ink)] shadow-xs max-w-[136px]"
-            >
-              <p className="handwritten text-sm leading-tight text-[var(--text-main)] text-center truncate">
-                “{pawHighFive ? '¡Te quiero mucho! 🐾' : petA.speechBubble}”
-              </p>
-            </motion.div>
-          )}
+          {/* Globo de diálogo solo al tocar a la mascota (texto completo sin recortes) */}
+          <AnimatePresence>
+            {!inBedSleeping && (pettingPet === 'A' || pawHighFive) && (
+              <motion.div
+                initial={{ opacity: 0, y: 6, scale: 0.9 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 4, scale: 0.9 }}
+                transition={{ type: 'spring', stiffness: 350, damping: 25 }}
+                className="mb-1.5 px-3 py-1 rounded-2xl bg-[#FFFDF9] border-2 border-[var(--border-ink)] shadow-md max-w-[185px] z-30"
+              >
+                <p className="handwritten text-sm leading-snug text-[var(--text-main)] text-center break-words">
+                  “{pawHighFive ? '¡Te quiero mucho! 🐾' : petA.speechBubble}”
+                </p>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {/* Sombra ovalada suave en el anclaje izquierdo de la alfombra */}
           {!inBedSleeping && (
@@ -1064,8 +1069,9 @@ export const CasitaTamagotchi: React.FC<CasitaTamagotchiProps> = ({ solar, onClo
           </div>
 
           {!inBedSleeping && (
-            <div className="mt-0.5 px-2.5 py-0.5 rounded-full bg-[#FFFDF9]/95 border-2 border-[var(--border-ink)] text-[11px] font-bold shadow-xs whitespace-nowrap">
-              {petA.petName} · {petA.ownerName}
+            <div className="mt-0.5 px-2.5 py-0.5 rounded-full bg-[#FFFDF9]/95 border-2 border-[var(--border-ink)] text-[11px] font-bold shadow-xs whitespace-nowrap flex items-center gap-1">
+              <span>{MOODS.find((m) => m.id === petA.mood)?.emoji || '😊'}</span>
+              <span>{petA.petName} · {petA.ownerName}</span>
             </div>
           )}
         </motion.div>
@@ -1096,17 +1102,22 @@ export const CasitaTamagotchi: React.FC<CasitaTamagotchiProps> = ({ solar, onClo
           style={{ position: 'absolute' }}
           className="z-20 flex flex-col items-center pointer-events-auto"
         >
-          {!inBedSleeping && (
-            <motion.div
-              initial={{ opacity: 0, y: 4 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="mb-1 px-2.5 py-0.5 rounded-2xl bg-[#FFFDF9]/95 border-2 border-[var(--border-ink)] shadow-xs max-w-[136px]"
-            >
-              <p className="handwritten text-sm leading-tight text-[var(--text-main)] text-center truncate">
-                “{pawHighFive ? '¡Mimitos juntos! 💕' : petB.speechBubble}”
-              </p>
-            </motion.div>
-          )}
+          {/* Globo de diálogo solo al tocar a la mascota (texto completo sin recortes) */}
+          <AnimatePresence>
+            {!inBedSleeping && (pettingPet === 'B' || pawHighFive) && (
+              <motion.div
+                initial={{ opacity: 0, y: 6, scale: 0.9 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 4, scale: 0.9 }}
+                transition={{ type: 'spring', stiffness: 350, damping: 25 }}
+                className="mb-1.5 px-3 py-1 rounded-2xl bg-[#FFFDF9] border-2 border-[var(--border-ink)] shadow-md max-w-[185px] z-30"
+              >
+                <p className="handwritten text-sm leading-snug text-[var(--text-main)] text-center break-words">
+                  “{pawHighFive ? '¡Mimitos juntos! 💕' : petB.speechBubble}”
+                </p>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {/* Sombra ovalada suave en el anclaje derecho de la alfombra */}
           {!inBedSleeping && (
@@ -1147,8 +1158,9 @@ export const CasitaTamagotchi: React.FC<CasitaTamagotchiProps> = ({ solar, onClo
           </div>
 
           {!inBedSleeping && (
-            <div className="mt-0.5 px-2.5 py-0.5 rounded-full bg-[#FFFDF9]/95 border-2 border-[var(--border-ink)] text-[11px] font-bold shadow-xs whitespace-nowrap">
-              {petB.petName} · {petB.ownerName}
+            <div className="mt-0.5 px-2.5 py-0.5 rounded-full bg-[#FFFDF9]/95 border-2 border-[var(--border-ink)] text-[11px] font-bold shadow-xs whitespace-nowrap flex items-center gap-1">
+              <span>{MOODS.find((m) => m.id === petB.mood)?.emoji || '🥰'}</span>
+              <span>{petB.petName} · {petB.ownerName}</span>
             </div>
           )}
         </motion.div>
@@ -1216,9 +1228,29 @@ export const CasitaTamagotchi: React.FC<CasitaTamagotchiProps> = ({ solar, onClo
                 <line x1="40" y1="14" x2="40" y2="64" stroke="#3D312A" strokeWidth="1.8" opacity="0.3" />
                 <line x1="76" y1="14" x2="76" y2="64" stroke="#3D312A" strokeWidth="1.8" opacity="0.3" />
               </svg>
-              <div className="absolute -top-7 left-1/2 -translate-x-1/2 text-xs font-bold text-[#3D312A] bg-[#FFFDF9]/95 px-2.5 py-0.5 rounded-full border border-[#3D312A] animate-bounce whitespace-nowrap shadow-xs">
-                Zzz... 💤
-              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* CAPA Z-INDEX 40: "Zzz... 💤" FLOTANDO LIMPIAMENTE SOBRE SUS CABEZAS AL DORMIR */}
+        <AnimatePresence>
+          {inBedSleeping && (
+            <motion.div
+              initial={{ opacity: 0, y: 8, scale: 0.85 }}
+              animate={{ opacity: 1, y: [0, -6, 0], scale: 1 }}
+              exit={{ opacity: 0, y: 6, scale: 0.85 }}
+              transition={{
+                y: { duration: 2.2, repeat: Infinity, ease: 'easeInOut' },
+                opacity: { duration: 0.25 },
+              }}
+              style={{
+                left: '16.5%',
+                top: '13.5%',
+                transform: 'translate(-50%, -50%)',
+              }}
+              className="absolute z-40 pointer-events-none text-xs font-extrabold text-[#3D312A] bg-[#FFFDF9] px-3 py-1 rounded-full border-2 border-[#3D312A] whitespace-nowrap shadow-md"
+            >
+              Zzz... 💤
             </motion.div>
           )}
         </AnimatePresence>
@@ -1466,7 +1498,7 @@ export const CasitaTamagotchi: React.FC<CasitaTamagotchiProps> = ({ solar, onClo
                 )}
 
                 {decorTab === 'mascotas' && (
-                  <div className="flex items-center justify-between gap-1.5 bg-[var(--bg-paper)] p-2 rounded-2xl border-2 border-[var(--border-ink)]">
+                  <div className="flex items-center justify-between gap-1.5 bg-[var(--bg-paper)] p-2 rounded-2xl border-2 border-[var(--border-ink)] overflow-x-auto">
                     {[
                       { type: 'hat', val: 'ninguno', icon: '🚫' },
                       { type: 'hat', val: 'corona', icon: '👑' },
@@ -1488,7 +1520,7 @@ export const CasitaTamagotchi: React.FC<CasitaTamagotchiProps> = ({ solar, onClo
                           }
                           soundEngine.playPop();
                         }}
-                        className="w-9 h-9 rounded-xl border-2 border-[var(--border-ink)] bg-white flex items-center justify-center text-lg cursor-pointer"
+                        className="w-9 h-9 shrink-0 rounded-xl border-2 border-[var(--border-ink)] bg-white flex items-center justify-center text-lg cursor-pointer"
                       >
                         {acc.icon}
                       </button>
@@ -1518,7 +1550,7 @@ export const CasitaTamagotchi: React.FC<CasitaTamagotchiProps> = ({ solar, onClo
                     </button>
                   ))}
                 </div>
-                <div className="flex items-center justify-between gap-1.5 bg-[var(--bg-paper)] p-2 rounded-2xl border-2 border-[var(--border-ink)]">
+                <div className="flex items-center justify-between gap-1.5 bg-[var(--bg-paper)] p-2 rounded-2xl border-2 border-[var(--border-ink)] overflow-x-auto">
                   {[
                     { type: 'hat', val: 'ninguno', icon: '🚫' },
                     { type: 'hat', val: 'corona', icon: '👑' },
@@ -1540,7 +1572,7 @@ export const CasitaTamagotchi: React.FC<CasitaTamagotchiProps> = ({ solar, onClo
                         }
                         soundEngine.playPop();
                       }}
-                      className="w-9 h-9 rounded-xl border-2 border-[var(--border-ink)] bg-white flex items-center justify-center text-lg cursor-pointer"
+                      className="w-9 h-9 shrink-0 rounded-xl border-2 border-[var(--border-ink)] bg-white flex items-center justify-center text-lg cursor-pointer"
                     >
                       {acc.icon}
                     </button>
@@ -1575,7 +1607,7 @@ export const CasitaTamagotchi: React.FC<CasitaTamagotchiProps> = ({ solar, onClo
                   maxLength={70}
                   value={myPet.speechBubble}
                   onChange={(e) => updatePetProfile(activeUser, { speechBubble: e.target.value })}
-                  placeholder="Escribe qué piensa tu mascota..."
+                  placeholder="Escribe qué piensa tu mascota (se verá al tocarla)..."
                   className="w-full px-3 py-1.5 rounded-xl border-2 border-[var(--border-ink)] bg-[var(--bg-paper)] handwritten text-base"
                 />
               </div>
@@ -1584,102 +1616,108 @@ export const CasitaTamagotchi: React.FC<CasitaTamagotchiProps> = ({ solar, onClo
         )}
       </AnimatePresence>
 
-      {/* DOCK INFERIOR DE INTERACCIÓN FÍSICA DIRECTA */}
-      <div className="px-3 py-2.5 bg-[var(--bg-card)] border-t-2 border-[var(--border-ink)] flex items-center justify-between gap-1.5 z-30">
-        <div className="flex items-center gap-1.5 bg-[var(--bg-paper)] px-2 py-1 rounded-2xl border-2 border-[var(--border-ink)]">
-          {FOODS.map((food) => (
+      {/* DOCK INFERIOR DE INTERACCIÓN FÍSICA DIRECTA (Con overflow-x-auto suave y proporción limpia sin recortes) */}
+      <div className="px-2.5 py-2 bg-[var(--bg-card)] border-t-2 border-[var(--border-ink)] z-30 overflow-x-auto">
+        <div className="flex items-center justify-between gap-2 min-w-max mx-auto max-w-md">
+          <div className="flex items-center gap-1 bg-[var(--bg-paper)] px-1.5 py-1 rounded-2xl border-2 border-[var(--border-ink)] shrink-0">
+            {FOODS.map((food) => (
+              <motion.button
+                key={food.id}
+                whileTap={{ scale: 1.18 }}
+                onPointerDown={(e) => startFoodDrag(food, e)}
+                onPointerMove={moveFoodDrag}
+                onPointerUp={endFoodDrag}
+                onPointerCancel={endFoodDrag}
+                title={`Arrastra ${food.name} a la boca de tu mascota`}
+                className="w-9 h-9 shrink-0 rounded-xl bg-white border-2 border-[var(--border-ink)] flex items-center justify-center text-xl shadow-xs cursor-grab active:cursor-grabbing touch-none"
+              >
+                {food.emoji}
+              </motion.button>
+            ))}
+          </div>
+
+          <div className="flex items-center gap-1 shrink-0">
             <motion.button
-              key={food.id}
-              whileTap={{ scale: 1.2 }}
-              onPointerDown={(e) => startFoodDrag(food, e)}
-              onPointerMove={moveFoodDrag}
-              onPointerUp={endFoodDrag}
-              onPointerCancel={endFoodDrag}
-              title={`Arrastra ${food.name} a la boca de tu mascota`}
-              className="w-11 h-11 rounded-xl bg-white border-2 border-[var(--border-ink)] flex items-center justify-center text-2xl shadow-xs cursor-grab active:cursor-grabbing touch-none"
-            >
-              {food.emoji}
-            </motion.button>
-          ))}
-        </div>
-
-        <div className="flex items-center gap-1.5">
-          <motion.button
-            whileTap={{ scale: 0.9 }}
-            onClick={() => {
-              const next = !spongeActive;
-              setSpongeActive(next);
-              setPetAnimState('idle');
-              if (next) {
-                showToast('Frota la esponja 🧽 sobre las mascotas en la alfombra 🫧');
-              } else {
-                setFoamBubbles([]);
-                setSpongePos(null);
-              }
-            }}
-            className={`w-11 h-11 rounded-2xl border-2 border-[var(--border-ink)] flex items-center justify-center text-2xl shadow-xs cursor-pointer ${
-              spongeActive ? 'bg-[#ADE8F4] scale-110 ring-2 ring-[#0077B6]' : 'bg-[var(--bg-paper)]'
-            }`}
-          >
-            🧽
-          </motion.button>
-
-          <motion.button
-            whileTap={{ scale: 0.9 }}
-            onClick={() => {
-              const next = !inBedSleeping;
-              setPetAnimState(next ? 'sleeping' : 'idle');
-              if (next) {
-                careForPets('sleep');
-                showToast('¡A dormir en las almohadas bajo la manta! 🛏️💤');
-              } else {
-                showToast('¡De vuelta a jugar en la alfombra rosa! 🐾');
-              }
-            }}
-            className={`w-11 h-11 rounded-2xl border-2 border-[var(--border-ink)] flex items-center justify-center text-2xl shadow-xs cursor-pointer ${
-              inBedSleeping ? 'bg-[#CDB4DB] scale-110' : 'bg-[var(--bg-paper)]'
-            }`}
-          >
-            🛏️
-          </motion.button>
-
-          <motion.button
-            whileTap={{ scale: 0.9 }}
-            onClick={() => {
-              setPetAnimState('idle');
-              careForPets('pamper_partner');
-              setPawHighFive(true);
-              spawnParticlesAtPet('A', ['💖', '💕']);
-              spawnParticlesAtPet('B', ['💖', '💕']);
-              soundEngine.speakAnimalese('Mimitos ricos', 520);
-              showToast(`¡Abrazos y mimos entre ${petA.petName} y ${petB.petName}! 💕`);
-              setTimeout(() => setPawHighFive(false), 1800);
-            }}
-            className="w-11 h-11 rounded-2xl border-2 border-[var(--border-ink)] bg-[#FFD6E0] flex items-center justify-center text-2xl shadow-xs cursor-pointer"
-          >
-            💕
-          </motion.button>
-        </div>
-
-        <div className="flex items-center gap-1">
-          {[
-            { id: 'decor', icon: '🎨' },
-            { id: 'armario', icon: '👑' },
-            { id: 'estado', icon: '💭' },
-          ].map((tab) => (
-            <motion.button
-              key={tab.id}
               whileTap={{ scale: 0.9 }}
-              onClick={() =>
-                setOpenDrawer((prev) => (prev === tab.id ? 'none' : (tab.id as 'decor' | 'armario' | 'estado')))
-              }
-              className={`w-10 h-11 rounded-2xl border-2 border-[var(--border-ink)] flex items-center justify-center text-xl cursor-pointer ${
-                openDrawer === tab.id ? 'bg-[var(--accent-terracotta)] text-white' : 'bg-[var(--bg-paper)]'
+              onClick={() => {
+                const next = !spongeActive;
+                setSpongeActive(next);
+                setPetAnimState('idle');
+                if (next) {
+                  showToast('Frota la esponja 🧽 sobre las mascotas en la alfombra 🫧');
+                } else {
+                  setFoamBubbles([]);
+                  setSpongePos(null);
+                }
+              }}
+              title="Bañar con esponja"
+              className={`w-9 h-9 shrink-0 rounded-2xl border-2 border-[var(--border-ink)] flex items-center justify-center text-xl shadow-xs cursor-pointer ${
+                spongeActive ? 'bg-[#ADE8F4] scale-105 ring-2 ring-[#0077B6]' : 'bg-[var(--bg-paper)]'
               }`}
             >
-              {tab.icon}
+              🧽
             </motion.button>
-          ))}
+
+            <motion.button
+              whileTap={{ scale: 0.9 }}
+              onClick={() => {
+                const next = !inBedSleeping;
+                setPetAnimState(next ? 'sleeping' : 'idle');
+                if (next) {
+                  careForPets('sleep');
+                  showToast('¡A dormir en las almohadas bajo la manta! 🛏️💤');
+                } else {
+                  showToast('¡De vuelta a jugar en la alfombra rosa! 🐾');
+                }
+              }}
+              title="Arropar en la cama"
+              className={`w-9 h-9 shrink-0 rounded-2xl border-2 border-[var(--border-ink)] flex items-center justify-center text-xl shadow-xs cursor-pointer ${
+                inBedSleeping ? 'bg-[#CDB4DB] scale-105' : 'bg-[var(--bg-paper)]'
+              }`}
+            >
+              🛏️
+            </motion.button>
+
+            <motion.button
+              whileTap={{ scale: 0.9 }}
+              onClick={() => {
+                setPetAnimState('idle');
+                careForPets('pamper_partner');
+                setPawHighFive(true);
+                spawnParticlesAtPet('A', ['💖', '💕']);
+                spawnParticlesAtPet('B', ['💖', '💕']);
+                soundEngine.speakAnimalese('Mimitos ricos', 520);
+                showToast(`¡Abrazos y mimos entre ${petA.petName} y ${petB.petName}! 💕`);
+                setTimeout(() => setPawHighFive(false), 1800);
+              }}
+              title="Dar mimos juntos"
+              className="w-9 h-9 shrink-0 rounded-2xl border-2 border-[var(--border-ink)] bg-[#FFD6E0] flex items-center justify-center text-xl shadow-xs cursor-pointer"
+            >
+              💕
+            </motion.button>
+          </div>
+
+          <div className="flex items-center gap-1 shrink-0 pr-0.5">
+            {[
+              { id: 'decor', icon: '🎨', title: 'Muebles y decoración' },
+              { id: 'armario', icon: '👑', title: 'Especie y accesorios' },
+              { id: 'estado', icon: '💭', title: 'Estado y pensamiento' },
+            ].map((tab) => (
+              <motion.button
+                key={tab.id}
+                whileTap={{ scale: 0.9 }}
+                title={tab.title}
+                onClick={() =>
+                  setOpenDrawer((prev) => (prev === tab.id ? 'none' : (tab.id as 'decor' | 'armario' | 'estado')))
+                }
+                className={`w-9 h-9 shrink-0 rounded-2xl border-2 border-[var(--border-ink)] flex items-center justify-center text-lg cursor-pointer ${
+                  openDrawer === tab.id ? 'bg-[var(--accent-terracotta)] text-white' : 'bg-[var(--bg-paper)]'
+                }`}
+              >
+                {tab.icon}
+              </motion.button>
+            ))}
+          </div>
         </div>
       </div>
     </div>

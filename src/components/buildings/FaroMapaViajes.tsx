@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Search, MapPin, Sparkles, Palette } from 'lucide-react';
+import { ArrowLeft, Search, MapPin, Sparkles, Palette, Trash2 } from 'lucide-react';
 import L from 'leaflet';
 import { MapPinItem, useWorldStore } from '../../store/useWorldStore';
 import { soundEngine } from '../../utils/soundAndHaptics';
@@ -31,6 +31,7 @@ export const FaroMapaViajes: React.FC<FaroMapaViajesProps> = ({ onClose }) => {
     mapVisualStyle,
     setMapVisualStyle,
     addMapPin,
+    deleteMapPin,
     toggleMapPinStatus,
   } = useWorldStore();
 
@@ -39,10 +40,11 @@ export const FaroMapaViajes: React.FC<FaroMapaViajesProps> = ({ onClose }) => {
   const markersLayerRef = useRef<L.LayerGroup | null>(null);
   const draftMarkerRef = useRef<L.Marker | null>(null);
 
-  const [selectedPin, setSelectedPin] = useState<MapPinItem | null>(mapPins[0] || null);
+  // Entrar directamente al mapa limpio e interactivo (sin modal inicial tapando la pantalla)
+  const [selectedPin, setSelectedPin] = useState<MapPinItem | null>(null);
+  const [confirmDeletePinId, setConfirmDeletePinId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [suggestions, setSuggestions] = useState<{ display_name: string; lat: number; lon: number }[]>([]);
-  const [pinModeHint, setPinModeHint] = useState(false);
 
   // Modal de crear nueva chincheta al tocar el mapa o elegir del buscador
   const [newPinCoords, setNewPinCoords] = useState<{ lat: number; lng: number } | null>(null);
@@ -101,7 +103,7 @@ export const FaroMapaViajes: React.FC<FaroMapaViajesProps> = ({ onClose }) => {
   const dropPinAtCoords = (lat: number, lng: number, presetName?: string) => {
     soundEngine.playPop(1.25);
     setSelectedPin(null);
-    setPinModeHint(false);
+    setConfirmDeletePinId(null);
     setNewPinCoords({ lat, lng });
     setNewNote('');
     setNewPhotoUrl(undefined);
@@ -193,6 +195,7 @@ export const FaroMapaViajes: React.FC<FaroMapaViajesProps> = ({ onClose }) => {
         L.DomEvent.stopPropagation(ev);
         soundEngine.playPop(1.15);
         setNewPinCoords(null);
+        setConfirmDeletePinId(null);
         setSelectedPin(pin);
         leafletMapRef.current?.flyTo([pin.lat, pin.lng], 12, { duration: 1.1 });
       });
@@ -294,7 +297,7 @@ export const FaroMapaViajes: React.FC<FaroMapaViajesProps> = ({ onClose }) => {
         </motion.button>
       </div>
 
-      {/* Buscador Nominatim + Botón Destacado "📍 Toca el mapa para clavar chincheta" */}
+      {/* Buscador Nominatim + Chips de lugares (Sin tutorial inicial intrusivo) */}
       <div className="p-2.5 bg-[var(--bg-secondary)] border-b border-[var(--border-ink)] z-20 space-y-2">
         <div className="max-w-md mx-auto flex items-center gap-2">
           <div className="relative flex-1">
@@ -325,12 +328,11 @@ export const FaroMapaViajes: React.FC<FaroMapaViajesProps> = ({ onClose }) => {
             )}
           </div>
 
-          {/* Botón destacado para clavar chincheta */}
+          {/* Botón rápido para clavar chincheta */}
           <motion.button
             whileTap={{ scale: 0.94 }}
             onClick={() => {
               setSelectedPin(null);
-              setPinModeHint(true);
               const center = leafletMapRef.current?.getCenter();
               if (center) {
                 dropPinAtCoords(center.lat, center.lng);
@@ -342,33 +344,27 @@ export const FaroMapaViajes: React.FC<FaroMapaViajesProps> = ({ onClose }) => {
           </motion.button>
         </div>
 
-        {/* Banner instructivo + Chips rápidos */}
-        <div className="flex items-center justify-between gap-2 max-w-md mx-auto">
-          <span className="text-[11px] font-bold text-[var(--accent-terracotta)]">
-            {pinModeHint
-              ? '✨ ¡Toca cualquier punto del mapa para clavar tu chincheta!'
-              : '📍 Toca cualquier punto del mapa para clavar una chincheta al instante'}
-          </span>
-        </div>
-
-        <div className="flex gap-1.5 overflow-x-auto max-w-md mx-auto pb-0.5">
-          {mapPins.map((p) => (
-            <button
-              key={p.id}
-              onClick={() => {
-                setNewPinCoords(null);
-                setSelectedPin(p);
-                leafletMapRef.current?.flyTo([p.lat, p.lng], 13, { duration: 1.1 });
-              }}
-              className={`hand-pill px-2.5 py-0.5 text-[11px] font-bold shrink-0 cursor-pointer flex items-center gap-1 ${
-                p.status === 'visited' ? 'bg-[#A8D5BA] text-[#2B3A30]' : 'bg-[#FFB5C2] text-[#4A252C]'
-              }`}
-            >
-              <span>{CATEGORY_EMOJI[p.category]}</span>
-              <span>{p.name.split('·')[0]}</span>
-            </button>
-          ))}
-        </div>
+        {mapPins.length > 0 && (
+          <div className="flex gap-1.5 overflow-x-auto max-w-md mx-auto pb-0.5">
+            {mapPins.map((p) => (
+              <button
+                key={p.id}
+                onClick={() => {
+                  setNewPinCoords(null);
+                  setConfirmDeletePinId(null);
+                  setSelectedPin(p);
+                  leafletMapRef.current?.flyTo([p.lat, p.lng], 13, { duration: 1.1 });
+                }}
+                className={`hand-pill px-2.5 py-0.5 text-[11px] font-bold shrink-0 cursor-pointer flex items-center gap-1 ${
+                  p.status === 'visited' ? 'bg-[#A8D5BA] text-[#2B3A30]' : 'bg-[#FFB5C2] text-[#4A252C]'
+                }`}
+              >
+                <span>{CATEGORY_EMOJI[p.category]}</span>
+                <span>{p.name.split('·')[0]}</span>
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* CONTENEDOR DEL MAPA 2D INTERACTIVO */}
@@ -379,7 +375,7 @@ export const FaroMapaViajes: React.FC<FaroMapaViajesProps> = ({ onClose }) => {
       >
         <div ref={mapContainerRef} className="w-full h-full z-0 cursor-crosshair" />
 
-        {/* Tarjeta Polaroid artesanal al tocar una chincheta existente (Sin letreros técnicos de KB) */}
+        {/* Tarjeta Polaroid artesanal al tocar una chincheta existente (con opción de borrado) */}
         <AnimatePresence>
           {selectedPin && !newPinCoords && (
             <motion.div
@@ -410,16 +406,56 @@ export const FaroMapaViajes: React.FC<FaroMapaViajesProps> = ({ onClose }) => {
                     {selectedPin.category} · {selectedPin.date} · {'❤️'.repeat(selectedPin.rating)}
                   </p>
                 </div>
-                <button
-                  onClick={() => setSelectedPin(null)}
-                  className="hand-pill px-2 py-0.5 text-xs font-bold cursor-pointer"
-                >
-                  ✕
-                </button>
+
+                <div className="flex items-center gap-1 shrink-0">
+                  {confirmDeletePinId === selectedPin.id ? (
+                    <div className="flex items-center gap-1 bg-rose-100 border border-rose-300 px-2 py-0.5 rounded-xl">
+                      <span className="text-[10px] font-bold text-rose-900">¿Borrar?</span>
+                      <button
+                        onClick={() => {
+                          deleteMapPin(selectedPin.id);
+                          setConfirmDeletePinId(null);
+                          setSelectedPin(null);
+                        }}
+                        className="px-1.5 py-0.5 rounded bg-rose-600 text-white text-[10px] font-bold cursor-pointer"
+                      >
+                        Sí
+                      </button>
+                      <button
+                        onClick={() => setConfirmDeletePinId(null)}
+                        className="px-1.5 py-0.5 rounded bg-white text-rose-900 text-[10px] font-bold cursor-pointer"
+                      >
+                        No
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => {
+                        soundEngine.playPop();
+                        setConfirmDeletePinId(selectedPin.id);
+                      }}
+                      title="Borrar esta chincheta"
+                      className="p-1.5 rounded-xl text-[var(--text-muted)] hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
+
+                  <button
+                    onClick={() => {
+                      setConfirmDeletePinId(null);
+                      setSelectedPin(null);
+                    }}
+                    className="hand-pill px-2 py-0.5 text-xs font-bold cursor-pointer"
+                  >
+                    ✕
+                  </button>
+                </div>
               </div>
 
-              {selectedPin.photoDataUrl && (
-                <div className="relative mx-auto bg-[#FFFDF9] p-2.5 pb-4 rounded-xl border-2 border-[var(--border-ink)] shadow-sm mb-2">
+              {selectedPin.photoDataUrl &&
+              !selectedPin.photoDataUrl.startsWith('data:image/svg+xml') ? (
+                <div className="relative mx-auto bg-[#FFFDF9] p-2.5 pb-4 rounded-xl border-2 border-[var(--border-ink)] shadow-sm mb-1">
                   {/* Celo decorativo Washi-Tape arriba */}
                   <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 -rotate-2 w-20 h-4 bg-[#FFB5C2] border border-[var(--border-ink)] opacity-90" />
                   <img
@@ -431,6 +467,10 @@ export const FaroMapaViajes: React.FC<FaroMapaViajesProps> = ({ onClose }) => {
                     «{selectedPin.note}»
                   </p>
                 </div>
+              ) : (
+                <p className="font-hand text-xl text-center py-1.5 px-2 rounded-xl bg-[var(--bg-paper)] border border-[var(--border-ink)]/20 leading-tight text-[#3D312A]">
+                  «{selectedPin.note}»
+                </p>
               )}
             </motion.div>
           )}

@@ -31,6 +31,7 @@ export const App: React.FC = () => {
     theme,
     currency,
     lunarMode,
+    lunarOwner,
     solarOverride,
     weatherOverride,
     anniversaryDate,
@@ -92,9 +93,10 @@ export const App: React.FC = () => {
         theme: (snap.theme as typeof prev.theme) || prev.theme,
         currency: (snap.currency as typeof prev.currency) || prev.currency,
         lunarMode: (snap.lunarMode as typeof prev.lunarMode) || prev.lunarMode,
+        lunarOwner: (snap.lunarOwner as typeof prev.lunarOwner) || prev.lunarOwner,
         totalKissesHistory:
           typeof snap.totalKissesHistory === 'number'
-            ? Math.max(prev.totalKissesHistory, snap.totalKissesHistory)
+            ? snap.totalKissesHistory
             : prev.totalKissesHistory,
         pendingKissBursts: Array.isArray(snap.pendingKissBursts)
           ? (snap.pendingKissBursts as typeof prev.pendingKissBursts)
@@ -112,13 +114,23 @@ export const App: React.FC = () => {
             ? { ...prev.petCare, ...(snap.petCare as Partial<typeof prev.petCare>) }
             : prev.petCare,
         diaryPages: Array.isArray(snap.diaryPages)
-          ? (snap.diaryPages as typeof prev.diaryPages)
+          ? (snap.diaryPages as typeof prev.diaryPages).map((p) => ({
+              ...p,
+              photoDataUrl: p.photoDataUrl?.startsWith('data:image/svg+xml')
+                ? undefined
+                : p.photoDataUrl,
+            }))
           : prev.diaryPages,
         mediaItems: Array.isArray(snap.mediaItems)
           ? (snap.mediaItems as typeof prev.mediaItems)
           : prev.mediaItems,
         mapPins: Array.isArray(snap.mapPins)
-          ? (snap.mapPins as typeof prev.mapPins)
+          ? (snap.mapPins as typeof prev.mapPins).map((p) => ({
+              ...p,
+              photoDataUrl: p.photoDataUrl?.startsWith('data:image/svg+xml')
+                ? undefined
+                : p.photoDataUrl,
+            }))
           : prev.mapPins,
         cravings: Array.isArray(snap.cravings)
           ? (snap.cravings as typeof prev.cravings)
@@ -167,6 +179,7 @@ export const App: React.FC = () => {
         theme,
         currency,
         lunarMode,
+        lunarOwner,
         totalKissesHistory,
         pendingKissBursts,
         petA,
@@ -192,6 +205,7 @@ export const App: React.FC = () => {
     theme,
     currency,
     lunarMode,
+    lunarOwner,
     totalKissesHistory,
     pendingKissBursts,
     petA,

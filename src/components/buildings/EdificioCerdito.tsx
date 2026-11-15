@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Plus, CheckCircle, PiggyBank, Receipt, Sparkles } from 'lucide-react';
+import { ArrowLeft, Plus, CheckCircle, PiggyBank, Receipt, Sparkles, Trash2 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { ExpenseCategory, ExpenseItem, useWorldStore } from '../../store/useWorldStore';
 import { soundEngine } from '../../utils/soundAndHaptics';
@@ -27,6 +27,7 @@ export const EdificioCerdito: React.FC<EdificioCerditoProps> = ({ onClose }) => 
     setCurrency,
     expenses,
     addExpense,
+    deleteExpense,
     settleAllExpenses,
     savingsGoals,
     addSavingsContribution,
@@ -35,6 +36,7 @@ export const EdificioCerdito: React.FC<EdificioCerditoProps> = ({ onClose }) => 
 
   const [tab, setTab] = useState<'tricount' | 'hucha'>('tricount');
   const [composerOpen, setComposerOpen] = useState(false);
+  const [confirmDeleteExpenseId, setConfirmDeleteExpenseId] = useState<string | null>(null);
 
   // Estado formulario de nuevo gasto
   const [title, setTitle] = useState('');
@@ -399,20 +401,20 @@ export const EdificioCerdito: React.FC<EdificioCerditoProps> = ({ onClose }) => 
               </div>
             </div>
 
-            {/* Historial mensual de gastos */}
+            {/* Historial mensual de gastos con opción de borrado rápido */}
             <div className="space-y-2">
               {expenses.map((e) => (
                 <div
                   key={e.id}
-                  className={`hand-card p-3 bg-[var(--bg-card)] flex items-center justify-between ${
+                  className={`hand-card p-3 bg-[var(--bg-card)] flex items-center justify-between gap-2 ${
                     e.settled ? 'opacity-65' : ''
                   }`}
                 >
-                  <div className="flex items-center gap-2.5">
-                    <span className="text-2xl">{CATEGORY_META[e.category]?.emoji || '🐷'}</span>
-                    <div>
-                      <p className="text-xs font-bold">{e.title}</p>
-                      <p className="text-[11px] text-[var(--text-muted)]">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <span className="text-2xl shrink-0">{CATEGORY_META[e.category]?.emoji || '🐷'}</span>
+                    <div className="min-w-0">
+                      <p className="text-xs font-bold truncate">{e.title}</p>
+                      <p className="text-[11px] text-[var(--text-muted)] truncate">
                         Pagó {e.paidBy === 'userA' ? petA.ownerName : petB.ownerName} ·{' '}
                         {e.splitMode === '50_50'
                           ? '50/50'
@@ -424,13 +426,48 @@ export const EdificioCerdito: React.FC<EdificioCerditoProps> = ({ onClose }) => 
                       </p>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-sm font-bold">
-                      {e.amount.toFixed(2).replace('.', ',')} {currency}
-                    </p>
-                    <span className="text-[10px] font-semibold text-[var(--text-muted)]">
-                      {e.settled ? 'Saldado ✅' : e.date}
-                    </span>
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    <div className="text-right">
+                      <p className="text-sm font-bold">
+                        {e.amount.toFixed(2).replace('.', ',')} {currency}
+                      </p>
+                      <span className="text-[10px] font-semibold text-[var(--text-muted)]">
+                        {e.settled ? 'Saldado ✅' : e.date}
+                      </span>
+                    </div>
+
+                    {confirmDeleteExpenseId === e.id ? (
+                      <div className="flex items-center gap-1 bg-rose-100 border border-rose-300 px-2 py-1 rounded-xl">
+                        <span className="text-[10px] font-bold text-rose-900">¿Borrar?</span>
+                        <button
+                          onClick={() => {
+                            deleteExpense(e.id);
+                            setConfirmDeleteExpenseId(null);
+                          }}
+                          className="px-1.5 py-0.5 rounded bg-rose-600 text-white text-[10px] font-bold cursor-pointer"
+                        >
+                          Sí
+                        </button>
+                        <button
+                          onClick={() => setConfirmDeleteExpenseId(null)}
+                          className="px-1.5 py-0.5 rounded bg-white text-rose-900 text-[10px] font-bold cursor-pointer"
+                        >
+                          No
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => {
+                          soundEngine.playPop();
+                          setConfirmDeleteExpenseId(e.id);
+                        }}
+                        title="Borrar este gasto"
+                        className="p-1.5 rounded-xl text-[var(--text-muted)] hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}

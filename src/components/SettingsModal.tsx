@@ -10,12 +10,13 @@ import {
   Moon,
   Palette,
   RefreshCw,
+  RotateCcw,
   Share2,
   Sparkles,
 } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import { PastelTheme, useWorldStore } from '../store/useWorldStore';
-import { joinWorldByCodeInTable } from '../lib/supabaseClient';
+import { joinWorldByCodeInTable, pushWorldStateToSupabase } from '../lib/supabaseClient';
 import { calculateRelationshipDuration } from '../utils/solarAndTime';
 import { soundEngine, triggerHeartbeatHaptic } from '../utils/soundAndHaptics';
 
@@ -30,6 +31,7 @@ export const SettingsModal: React.FC = () => {
   const {
     settingsOpen,
     setSettingsOpen,
+    worldId,
     planetName,
     setPlanetName,
     roomCode,
@@ -51,8 +53,11 @@ export const SettingsModal: React.FC = () => {
     mapPins,
     mediaItems,
     totalKissesHistory,
+    resetKissCounter,
     lunarMode,
     setLunarMode,
+    lunarOwner,
+    setLunarOwner,
     authUserEmail,
     logoutSession,
   } = useWorldStore();
@@ -61,6 +66,8 @@ export const SettingsModal: React.FC = () => {
   const [pushStatus, setPushStatus] = useState<string>('Pendiente de activar');
   const [copiedCode, setCopiedCode] = useState(false);
   const [generatingPdf, setGeneratingPdf] = useState(false);
+  const [confirmResetKisses, setConfirmResetKisses] = useState(false);
+  const [kissesResetDone, setKissesResetDone] = useState(false);
 
   // Activar Notificaciones Web Push mediante clic directo del usuario (requisito iOS 16.4+)
   const handleRequestPushPermission = async () => {
@@ -438,6 +445,114 @@ export const SettingsModal: React.FC = () => {
                     <option value="hidden">Ocultar Edificio</option>
                   </select>
                 </div>
+              </div>
+
+              {lunarMode === 'single' && (
+                <div className="pt-1">
+                  <label className="block text-[11px] font-bold mb-1">
+                    🌙 ¿Quién registra su ciclo en el Invernadero Lunar?
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setLunarOwner('userA')}
+                      className={`py-1.5 rounded-xl font-bold border border-[var(--border-ink)] cursor-pointer ${
+                        lunarOwner === 'userA'
+                          ? 'bg-pink-200 text-pink-950'
+                          : 'bg-[var(--bg-paper)]'
+                      }`}
+                    >
+                      🌸 {petA.ownerName} (Edita)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setLunarOwner('userB')}
+                      className={`py-1.5 rounded-xl font-bold border border-[var(--border-ink)] cursor-pointer ${
+                        lunarOwner === 'userB'
+                          ? 'bg-pink-200 text-pink-950'
+                          : 'bg-[var(--bg-paper)]'
+                      }`}
+                    >
+                      🌸 {petB.ownerName} (Edita)
+                    </button>
+                  </div>
+                  <p className="text-[10px] text-[var(--text-muted)] mt-1">
+                    La otra persona verá el calendario en <strong>Modo Solo-Lectura</strong> con el resumen del Óvulo Cute 💕
+                  </p>
+                </div>
+              )}
+
+              {/* Reseteo de Contador de Besos a 0 sincronizado en ambos dispositivos */}
+              <div className="pt-2 border-t border-[var(--border-ink)]/15">
+                {!confirmResetKisses ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      soundEngine.playPop();
+                      setConfirmResetKisses(true);
+                    }}
+                    className="w-full py-2 px-3 rounded-xl border border-rose-300 bg-rose-50/70 hover:bg-rose-100/80 text-rose-900 font-bold flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                    <span>
+                      {kissesResetDone
+                        ? '¡Contador de besos reiniciado a 0! ✅'
+                        : `Reiniciar contador de besos a 0 (${totalKissesHistory.toLocaleString('es-ES')} actuales)`}
+                    </span>
+                  </button>
+                ) : (
+                  <div className="p-2.5 rounded-xl bg-rose-100/85 border border-rose-300 space-y-2 text-center">
+                    <p className="text-[11px] font-bold text-rose-950">
+                      ¿Seguro que quieres poner el contador de besos de ambos a 0?
+                    </p>
+                    <div className="flex gap-2 justify-center">
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          resetKissCounter();
+                          setConfirmResetKisses(false);
+                          setKissesResetDone(true);
+                          setTimeout(() => setKissesResetDone(false), 3000);
+                          if (worldId) {
+                            const st = useWorldStore.getState();
+                            await pushWorldStateToSupabase(worldId, st.roomCode, {
+                              worldId,
+                              planetName: st.planetName,
+                              anniversaryDate: st.anniversaryDate,
+                              theme: st.theme,
+                              currency: st.currency,
+                              lunarMode: st.lunarMode,
+                              lunarOwner: st.lunarOwner,
+                              totalKissesHistory: 0,
+                              pendingKissBursts: [],
+                              petA: st.petA,
+                              petB: st.petB,
+                              petCare: st.petCare,
+                              diaryPages: st.diaryPages,
+                              mediaItems: st.mediaItems,
+                              mapPins: st.mapPins,
+                              cravings: st.cravings,
+                              expenses: st.expenses,
+                              savingsGoals: st.savingsGoals,
+                              lunarA: st.lunarA,
+                              lunarB: st.lunarB,
+                            });
+                          }
+                        }}
+                        className="px-3 py-1 rounded-lg bg-rose-600 text-white font-bold text-xs cursor-pointer"
+                      >
+                        Sí, reiniciar a 0
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setConfirmResetKisses(false)}
+                        className="px-3 py-1 rounded-lg bg-white/80 text-rose-950 font-bold text-xs border border-rose-300 cursor-pointer"
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 

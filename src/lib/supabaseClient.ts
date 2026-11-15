@@ -388,6 +388,7 @@ export interface SyncedWorldSnapshot {
   theme?: string;
   currency?: string;
   lunarMode?: string;
+  lunarOwner?: 'userA' | 'userB';
   totalKissesHistory?: number;
   pendingKissBursts?: unknown[];
   petA?: unknown;

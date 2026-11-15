@@ -68,8 +68,11 @@ function diffDays(target: Date, base: Date): number {
 
 export const InvernaderoLunar: React.FC<InvernaderoLunarProps> = ({ onClose }) => {
   const {
+    activeUser,
     lunarMode,
     setLunarMode,
+    lunarOwner,
+    setLunarOwner,
     lunarA,
     lunarB,
     petA,
@@ -77,9 +80,25 @@ export const InvernaderoLunar: React.FC<InvernaderoLunarProps> = ({ onClose }) =
     updateLunarProfile,
   } = useWorldStore();
 
-  const [activeProfileTab, setActiveProfileTab] = useState<'A' | 'B'>('A');
-  const current: LunarProfileState = activeProfileTab === 'A' ? lunarA : lunarB;
-  const ownerDisplayName = activeProfileTab === 'A' ? petA.ownerName : petB.ownerName;
+  const [activeProfileTab, setActiveProfileTab] = useState<'A' | 'B'>(
+    lunarOwner === 'userB' ? 'B' : 'A'
+  );
+
+  // En modo 'single', siempre mostramos el calendario de la propietaria configurada (`lunarOwner`)
+  const effectiveTab: 'A' | 'B' =
+    lunarMode === 'dual' ? activeProfileTab : lunarOwner === 'userB' ? 'B' : 'A';
+
+  const current: LunarProfileState = effectiveTab === 'A' ? lunarA : lunarB;
+  const ownerDisplayName = effectiveTab === 'A' ? petA.ownerName : petB.ownerName;
+  const partnerDisplayName = effectiveTab === 'A' ? petB.ownerName : petA.ownerName;
+
+  // Permiso estricto de edición: SOLO la persona propietaria de este calendario puede editar fechas o síntomas
+  const canEdit =
+    lunarMode === 'dual'
+      ? effectiveTab === 'A'
+        ? activeUser === 'userA'
+        : activeUser === 'userB'
+      : activeUser === lunarOwner;
 
   // Navegación del mes en el calendario Bullet Journal
   const today = useMemo(() => new Date(), []);
@@ -89,9 +108,10 @@ export const InvernaderoLunar: React.FC<InvernaderoLunarProps> = ({ onClose }) =
   const cycleLength = current.cycleLength || 28;
   const periodLength = current.periodLength || 5;
   const periodStartDates = useMemo(() => {
-    const raw = current.periodStartDates && current.periodStartDates.length > 0
-      ? current.periodStartDates
-      : [toDateStr(new Date(today.getFullYear(), today.getMonth(), today.getDate() - 2))];
+    const raw =
+      current.periodStartDates && current.periodStartDates.length > 0
+        ? current.periodStartDates
+        : [toDateStr(new Date(today.getFullYear(), today.getMonth(), today.getDate() - 2))];
     return [...raw].sort();
   }, [current.periodStartDates, today]);
 
@@ -118,8 +138,7 @@ export const InvernaderoLunar: React.FC<InvernaderoLunarProps> = ({ onClose }) =
 
   // Motor de Cálculo Automático de Fase para cualquier fecha del calendario
   const evaluateDateInCycle = (dateObj: Date) => {
-    const dateStr = toDateStr(dateObj);
-    const ovulationOffset = Math.max(10, cycleLength - 14); // Día de ovulación (~14 días antes de la siguiente regla)
+    const ovulationOffset = Math.max(10, cycleLength - 14);
     const fertileStart = Math.max(periodLength + 1, ovulationOffset - 3);
     const fertileEnd = Math.min(cycleLength - 2, ovulationOffset + 1);
 
@@ -186,20 +205,20 @@ export const InvernaderoLunar: React.FC<InvernaderoLunarProps> = ({ onClose }) =
       current.phase !== todayCycleInfo.phase ||
       current.dayOfCycle !== todayCycleInfo.dayOfCycle
     ) {
-      updateLunarProfile(activeProfileTab, {
+      updateLunarProfile(effectiveTab, {
         phase: todayCycleInfo.phase,
         dayOfCycle: todayCycleInfo.dayOfCycle,
       });
     }
-  }, [todayCycleInfo.phase, todayCycleInfo.dayOfCycle, activeProfileTab]);
+  }, [todayCycleInfo.phase, todayCycleInfo.dayOfCycle, effectiveTab]);
 
-  // Tocar cualquier día del calendario para marcar o desmarcar inicio de regla
+  // Tocar cualquier día del calendario para marcar o desmarcar inicio de regla (SOLO si canEdit === true)
   const handleToggleDayPeriodStart = (dateObj: Date) => {
+    if (!canEdit) return;
     soundEngine.playPop(1.15);
     triggerHeartbeatHaptic('calendar-day-tap');
     const clickedStr = toDateStr(dateObj);
 
-    // Si ya hay un inicio registrado a menos de 5 días de distancia, lo quitamos o movemos
     const existingNear = periodStartDates.find(
       (d) => Math.abs(diffDays(parseDateStr(d), dateObj)) < periodLength
     );
@@ -219,13 +238,14 @@ export const InvernaderoLunar: React.FC<InvernaderoLunarProps> = ({ onClose }) =
       nextDates = [clickedStr];
     }
 
-    updateLunarProfile(activeProfileTab, {
+    updateLunarProfile(effectiveTab, {
       periodStartDates: nextDates,
     });
   };
 
   // Botón rápido "🩸 Registrar inicio de regla hoy"
   const handleLogPeriodToday = () => {
+    if (!canEdit) return;
     handleToggleDayPeriodStart(today);
   };
 
@@ -233,7 +253,6 @@ export const InvernaderoLunar: React.FC<InvernaderoLunarProps> = ({ onClose }) =
   const calendarDays = useMemo(() => {
     const firstDayOfMonth = new Date(viewYear, viewMonth, 1);
     const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
-    // Convertir domingo (0) a 6, lunes (1) a 0
     const startWeekday = (firstDayOfMonth.getDay() + 6) % 7;
 
     const cells: (Date | null)[] = [];
@@ -253,21 +272,22 @@ export const InvernaderoLunar: React.FC<InvernaderoLunarProps> = ({ onClose }) =
 
   const buildEmpatheticMessage = (prof: LunarProfileState, phaseNow: CyclePhase) => {
     if (phaseNow === 'menstruacion') {
-      return `«¡Hola! Hoy estamos en el día ${todayCycleInfo.dayOfCycle} del ciclo (días de regla con ${prof.cramps.toLowerCase()}). Es el momento ideal para traernos algo calentito (${prof.craving.toLowerCase()}), dar muchos mimos y descansar juntos 💕»`;
+      return `«¡Hola ${partnerDisplayName}! Hoy ${ownerDisplayName} está en el día ${todayCycleInfo.dayOfCycle} del ciclo (días de regla con ${prof.cramps.toLowerCase()}). Es el momento ideal para llevarle algo calentito (${prof.craving.toLowerCase()}), darle muchos mimos y descansar juntos 💕»`;
     }
     if (phaseNow === 'folicular') {
-      return `«¡Hola! Estamos en fase folicular (día ${todayCycleInfo.dayOfCycle}) con energía ${prof.energy.toLowerCase()} y humor ${prof.mood.toLowerCase()}. ¡Nos apetece mucho ${prof.craving.toLowerCase()} juntos! 🌱»`;
+      return `«¡Hola ${partnerDisplayName}! Estamos en fase folicular (día ${todayCycleInfo.dayOfCycle}) con energía ${prof.energy.toLowerCase()} y humor ${prof.mood.toLowerCase()}. ¡Hoy apetece mucho ${prof.craving.toLowerCase()} juntos! 🌱»`;
     }
     if (phaseNow === 'ovulacion') {
-      return `«¡Brillando a tope en nuestra ventana de ovulación ✨ (día ${todayCycleInfo.dayOfCycle})! Estamos con humor ${prof.mood.toLowerCase()} y ganas de ${prof.craving.toLowerCase()}. ¡Planazo de cita hoy!»`;
+      return `«¡Brillando a tope en ventana de ovulación ✨ (día ${todayCycleInfo.dayOfCycle})! ${ownerDisplayName} está con humor ${prof.mood.toLowerCase()} y ganas de ${prof.craving.toLowerCase()}. ¡Planazo de cita hoy!»`;
     }
-    return `«¡Hola! Estamos en fase lútea (día ${todayCycleInfo.dayOfCycle}, faltan ${todayCycleInfo.daysRemaining} días para la próxima regla). Un té calentito, ${prof.craving.toLowerCase()} y abrazos en el sofá nos harán súper felices 🌙🍵»`;
+    return `«¡Hola ${partnerDisplayName}! Hoy estamos en fase lútea (día ${todayCycleInfo.dayOfCycle}, faltan ${todayCycleInfo.daysRemaining} días para la próxima regla). Apetecen mimos, ${prof.craving.toLowerCase()} y abrazos en el sofá 🌙🍵»`;
   };
 
   const messageForPartner = buildEmpatheticMessage(current, todayCycleInfo.phase);
 
   const handleUpdate = (partial: Partial<LunarProfileState>) => {
-    updateLunarProfile(activeProfileTab, partial);
+    if (!canEdit) return;
+    updateLunarProfile(effectiveTab, partial);
     triggerHeartbeatHaptic('lunar-log');
   };
 
@@ -287,7 +307,8 @@ export const InvernaderoLunar: React.FC<InvernaderoLunarProps> = ({ onClose }) =
         <div className="text-center">
           <h1 className="text-base font-bold">🌙 El Invernadero Lunar</h1>
           <p className="text-[11px] text-[var(--text-muted)]">
-            Calendario Menstrual Automático de {ownerDisplayName}
+            Calendario Menstrual de {ownerDisplayName}{' '}
+            {canEdit ? '(Modo Edición ✏️)' : '(Solo-Lectura 👀)'}
           </p>
         </div>
 
@@ -329,7 +350,31 @@ export const InvernaderoLunar: React.FC<InvernaderoLunarProps> = ({ onClose }) =
       )}
 
       <div className="flex-1 overflow-y-auto p-3 space-y-3 max-w-md mx-auto w-full">
-        {/* 1. CABECERA DEL ÓVULO CUTE + CONTADOR AUTOMÁTICO DE CICLO */}
+        {/* Banner informativo de Permisos cuando entra la pareja en Modo Solo-Lectura */}
+        {!canEdit && (
+          <div className="hand-card p-3 bg-[#FFF3E6] border-2 border-[var(--border-ink)] flex items-center justify-between gap-2 text-xs">
+            <div className="space-y-0.5">
+              <p className="font-bold text-[#4A3F35]">
+                🔒 Modo Solo-Lectura para {activeUser === 'userA' ? petA.ownerName : petB.ownerName}
+              </p>
+              <p className="text-[11px] text-[var(--text-muted)]">
+                Solo <strong>{ownerDisplayName}</strong> puede anotar días de sangrado o editar síntomas. ¡El Óvulo Cute te resume abajo cómo cuidarla hoy! 💕
+              </p>
+            </div>
+            {lunarMode === 'single' && (
+              <button
+                type="button"
+                onClick={() => setLunarOwner(activeUser)}
+                className="hand-pill px-2.5 py-1 bg-[var(--bg-card)] text-[10px] font-bold shrink-0 cursor-pointer"
+                title="Cambiar si este calendario es tuyo"
+              >
+                Soy yo quien menstrúa
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* 1. CABECERA DEL ÓVULO CUTE COMO MENSAJERO ÚNICO + CONTADOR AUTOMÁTICO DE CICLO */}
         <div className="hand-card p-3.5 bg-[var(--bg-card)] flex flex-col items-center text-center space-y-2">
           <div className="flex flex-wrap items-center justify-between gap-1.5 w-full text-[11px]">
             <span className={`hand-pill px-2.5 py-0.5 font-bold ${PHASE_META[todayCycleInfo.phase].badgeBg}`}>
@@ -359,38 +404,46 @@ export const InvernaderoLunar: React.FC<InvernaderoLunarProps> = ({ onClose }) =
               <p className="text-[11px] text-[var(--text-muted)] leading-snug">
                 {PHASE_META[todayCycleInfo.phase].outfitDesc}
               </p>
-              <motion.button
-                whileTap={{ scale: 0.94 }}
-                onClick={handleLogPeriodToday}
-                className="hand-button mt-1 px-3 py-1.5 bg-[#FFB5C2] text-[#4A1C24] text-[11px] font-bold flex items-center gap-1 cursor-pointer"
-              >
-                <Droplets className="w-3.5 h-3.5" />
-                🩸 Registrar inicio de regla hoy
-              </motion.button>
+              {canEdit ? (
+                <motion.button
+                  whileTap={{ scale: 0.94 }}
+                  onClick={handleLogPeriodToday}
+                  className="hand-button mt-1 px-3 py-1.5 bg-[#FFB5C2] text-[#4A1C24] text-[11px] font-bold flex items-center gap-1 cursor-pointer"
+                >
+                  <Droplets className="w-3.5 h-3.5" />
+                  🩸 Registrar inicio de regla hoy
+                </motion.button>
+              ) : (
+                <span className="inline-block mt-1 px-2.5 py-1 rounded-full bg-pink-100 text-pink-950 text-[10px] font-bold border border-pink-300">
+                  💌 Resumen del Óvulo Cute para ti
+                </span>
+              )}
             </div>
           </div>
 
-          {/* Mensaje empático automático para la pareja */}
+          {/* Tarjeta Resumen del Óvulo Cute Mensajero para la pareja */}
           <div className="hand-card p-2.5 bg-[var(--bg-paper)] w-full text-left space-y-1">
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-bold flex items-center gap-1 text-rose-600">
                 <HeartHandshake className="w-3.5 h-3.5" />
-                Mensaje automático para {activeProfileTab === 'A' ? petB.ownerName : petA.ownerName}:
+                Óvulo Cute Mensajero para {partnerDisplayName}:
               </span>
-              <label className="flex items-center gap-1 text-[10px] font-bold cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={current.sensitiveAlertActive}
-                  onChange={(e) => handleUpdate({ sensitiveAlertActive: e.target.checked })}
-                />
-                Asomar en el Planeta
-              </label>
+              {canEdit && (
+                <label className="flex items-center gap-1 text-[10px] font-bold cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={current.sensitiveAlertActive}
+                    onChange={(e) => handleUpdate({ sensitiveAlertActive: e.target.checked })}
+                  />
+                  Asomar en el Planeta
+                </label>
+              )}
             </div>
             <p className="font-hand text-lg leading-snug">{messageForPartner}</p>
           </div>
         </div>
 
-        {/* 2. CUADRÍCULA DE CALENDARIO MENSUAL VISUAL (ESTILO BULLET JOURNAL PASTEL) */}
+        {/* 2. CUADRÍCULA DE CALENDARIO MENSUAL VISUAL (EDITABLE SOLO POR ELLA / SOLO-LECTURA PARA LA PAREJA) */}
         <div className="hand-card p-3.5 bg-[var(--bg-card)] space-y-3">
           <div className="flex items-center justify-between">
             <button
@@ -414,7 +467,9 @@ export const InvernaderoLunar: React.FC<InvernaderoLunarProps> = ({ onClose }) =
                 {monthTitle}
               </h3>
               <p className="text-[10px] text-[var(--text-muted)]">
-                Toca cualquier día para marcar o desmarcar tus días de regla 🩸
+                {canEdit
+                  ? 'Toca cualquier día para marcar o desmarcar tus días de regla 🩸'
+                  : `Vista de consulta de los días y fases de ${ownerDisplayName} 🌸`}
               </p>
             </div>
 
@@ -451,8 +506,7 @@ export const InvernaderoLunar: React.FC<InvernaderoLunarProps> = ({ onClose }) =
               const info = evaluateDateInCycle(dateObj);
               const isToday = toDateStr(dateObj) === toDateStr(today);
 
-              // Colores pastel según fase calculada
-              let bgClass = 'bg-[#EDE0F5] text-[#3B2847]'; // Lútea (Lavanda pastel)
+              let bgClass = 'bg-[#EDE0F5] text-[#3B2847]';
               let badgeIcon = '🌙';
               if (info.isRecordedPeriod) {
                 bgClass = 'bg-[#FF99AC] text-[#4A121F] font-extrabold';
@@ -473,11 +527,12 @@ export const InvernaderoLunar: React.FC<InvernaderoLunarProps> = ({ onClose }) =
               return (
                 <motion.button
                   key={toDateStr(dateObj)}
-                  whileTap={{ scale: 0.9 }}
+                  whileTap={canEdit ? { scale: 0.9 } : undefined}
+                  disabled={!canEdit}
                   onClick={() => handleToggleDayPeriodStart(dateObj)}
-                  className={`relative h-11 rounded-xl border-2 border-[var(--border-ink)] flex flex-col items-center justify-center cursor-pointer transition-transform ${bgClass} ${
-                    isToday ? 'ring-2 ring-[#3D312A] scale-105 shadow-sm' : ''
-                  }`}
+                  className={`relative h-11 rounded-xl border-2 border-[var(--border-ink)] flex flex-col items-center justify-center transition-transform ${bgClass} ${
+                    canEdit ? 'cursor-pointer' : 'cursor-default'
+                  } ${isToday ? 'ring-2 ring-[#3D312A] scale-105 shadow-sm' : ''}`}
                 >
                   <span className="text-[11px] leading-none">{dateObj.getDate()}</span>
                   <span className="text-[9px] leading-none mt-0.5">{badgeIcon}</span>
@@ -511,35 +566,42 @@ export const InvernaderoLunar: React.FC<InvernaderoLunarProps> = ({ onClose }) =
             </div>
           </div>
 
-          {/* Ajuste de Duración Media del Ciclo (21-40) y de la Regla (3-8) */}
-          <div className="grid grid-cols-2 gap-2 pt-1 border-t border-[var(--border-ink)]/15 text-xs">
-            <div className="bg-[var(--bg-paper)] p-2 rounded-xl border border-[var(--border-ink)]">
-              <label className="text-[10px] font-bold block">
-                Duración media del ciclo: <strong>{cycleLength} días</strong>
-              </label>
-              <input
-                type="range"
-                min={21}
-                max={40}
-                value={cycleLength}
-                onChange={(e) => handleUpdate({ cycleLength: Number(e.target.value) })}
-                className="w-full accent-rose-500 mt-1"
-              />
+          {/* Ajuste de Duración Media del Ciclo (Solo editable por ella) */}
+          {canEdit ? (
+            <div className="grid grid-cols-2 gap-2 pt-1 border-t border-[var(--border-ink)]/15 text-xs">
+              <div className="bg-[var(--bg-paper)] p-2 rounded-xl border border-[var(--border-ink)]">
+                <label className="text-[10px] font-bold block">
+                  Duración media del ciclo: <strong>{cycleLength} días</strong>
+                </label>
+                <input
+                  type="range"
+                  min={21}
+                  max={40}
+                  value={cycleLength}
+                  onChange={(e) => handleUpdate({ cycleLength: Number(e.target.value) })}
+                  className="w-full accent-rose-500 mt-1"
+                />
+              </div>
+              <div className="bg-[var(--bg-paper)] p-2 rounded-xl border border-[var(--border-ink)]">
+                <label className="text-[10px] font-bold block">
+                  Duración de la regla: <strong>{periodLength} días</strong>
+                </label>
+                <input
+                  type="range"
+                  min={3}
+                  max={8}
+                  value={periodLength}
+                  onChange={(e) => handleUpdate({ periodLength: Number(e.target.value) })}
+                  className="w-full accent-rose-500 mt-1"
+                />
+              </div>
             </div>
-            <div className="bg-[var(--bg-paper)] p-2 rounded-xl border border-[var(--border-ink)]">
-              <label className="text-[10px] font-bold block">
-                Duración de la regla: <strong>{periodLength} días</strong>
-              </label>
-              <input
-                type="range"
-                min={3}
-                max={8}
-                value={periodLength}
-                onChange={(e) => handleUpdate({ periodLength: Number(e.target.value) })}
-                className="w-full accent-rose-500 mt-1"
-              />
+          ) : (
+            <div className="pt-1 border-t border-[var(--border-ink)]/15 flex items-center justify-between text-[11px] font-semibold text-[var(--text-muted)]">
+              <span>Ciclo medio de {ownerDisplayName}: {cycleLength} días</span>
+              <span>Duración media de sangrado: {periodLength} días</span>
             </div>
-          </div>
+          )}
         </div>
 
         {/* 3. HISTORIAL DE CICLOS REGISTRADOS */}
@@ -563,107 +625,140 @@ export const InvernaderoLunar: React.FC<InvernaderoLunarProps> = ({ onClose }) =
               return (
                 <span
                   key={dStr}
-                  onClick={() => handleToggleDayPeriodStart(dObj)}
-                  title="Toca para eliminar este inicio"
-                  className="hand-pill px-2.5 py-1 bg-[#FFD6E0] text-[#4A1C24] text-[11px] font-bold cursor-pointer flex items-center gap-1"
+                  onClick={() => canEdit && handleToggleDayPeriodStart(dObj)}
+                  title={canEdit ? 'Toca para eliminar este inicio' : undefined}
+                  className={`hand-pill px-2.5 py-1 bg-[#FFD6E0] text-[#4A1C24] text-[11px] font-bold flex items-center gap-1 ${
+                    canEdit ? 'cursor-pointer' : 'cursor-default'
+                  }`}
                 >
                   <span>🩸 Inicio: {label}</span>
-                  <span className="opacity-60">✕</span>
+                  {canEdit && <span className="opacity-60">✕</span>}
                 </span>
               );
             })}
           </div>
         </div>
 
-        {/* 4. REGISTRO DIARIO DE SÍNTOMAS Y ANTOJOS */}
+        {/* 4. REGISTRO DIARIO DE SÍNTOMAS Y ANTOJOS (EDITABLE POR ELLA / TARJETA RESUMEN PARA LA PAREJA) */}
         <div className="hand-card p-3.5 bg-[var(--bg-card)] space-y-3 text-xs">
           <h3 className="text-xs font-bold uppercase text-[var(--text-muted)] flex items-center gap-1">
             <Sparkles className="w-3.5 h-3.5" />
-            Síntomas y Mimos de Hoy
+            {canEdit
+              ? 'Anótale tus Síntomas y Antojos de Hoy'
+              : `Estado y Antojos de ${ownerDisplayName} Hoy (Solo-Lectura)`}
           </h3>
 
-          <div>
-            <p className="font-bold mb-1">Dolor de barriga:</p>
-            <div className="grid grid-cols-3 gap-1.5">
-              {(['Sin dolor', 'Molestia leve', 'Dolorcito fuerte'] as const).map((cr) => (
-                <button
-                  key={cr}
-                  onClick={() =>
-                    handleUpdate({
-                      cramps: cr,
-                      sensitiveAlertActive: cr !== 'Sin dolor' || current.sensitiveAlertActive,
-                    })
-                  }
-                  className={`py-1.5 px-2 rounded-xl font-bold border border-[var(--border-ink)] cursor-pointer ${
-                    current.cramps === cr ? 'bg-rose-300 text-rose-950' : 'bg-[var(--bg-paper)]'
-                  }`}
-                >
-                  {cr}
-                </button>
-              ))}
-            </div>
-          </div>
+          {canEdit ? (
+            <>
+              <div>
+                <p className="font-bold mb-1">Dolor de barriga:</p>
+                <div className="grid grid-cols-3 gap-1.5">
+                  {(['Sin dolor', 'Molestia leve', 'Dolorcito fuerte'] as const).map((cr) => (
+                    <button
+                      key={cr}
+                      onClick={() =>
+                        handleUpdate({
+                          cramps: cr,
+                          sensitiveAlertActive: cr !== 'Sin dolor' || current.sensitiveAlertActive,
+                        })
+                      }
+                      className={`py-1.5 px-2 rounded-xl font-bold border border-[var(--border-ink)] cursor-pointer ${
+                        current.cramps === cr ? 'bg-rose-300 text-rose-950' : 'bg-[var(--bg-paper)]'
+                      }`}
+                    >
+                      {cr}
+                    </button>
+                  ))}
+                </div>
+              </div>
 
-          <div>
-            <p className="font-bold mb-1">Flujo:</p>
-            <div className="grid grid-cols-4 gap-1.5">
-              {(['Ninguno', 'Ligero', 'Medio', 'Abundante'] as const).map((fl) => (
-                <button
-                  key={fl}
-                  onClick={() => handleUpdate({ flow: fl })}
-                  className={`py-1.5 px-2 rounded-xl font-bold border border-[var(--border-ink)] cursor-pointer ${
-                    current.flow === fl ? 'bg-[var(--accent-primary)]' : 'bg-[var(--bg-paper)]'
-                  }`}
-                >
-                  💧 {fl}
-                </button>
-              ))}
-            </div>
-          </div>
+              <div>
+                <p className="font-bold mb-1">Flujo:</p>
+                <div className="grid grid-cols-4 gap-1.5">
+                  {(['Ninguno', 'Ligero', 'Medio', 'Abundante'] as const).map((fl) => (
+                    <button
+                      key={fl}
+                      onClick={() => handleUpdate({ flow: fl })}
+                      className={`py-1.5 px-2 rounded-xl font-bold border border-[var(--border-ink)] cursor-pointer ${
+                        current.flow === fl ? 'bg-[var(--accent-primary)]' : 'bg-[var(--bg-paper)]'
+                      }`}
+                    >
+                      💧 {fl}
+                    </button>
+                  ))}
+                </div>
+              </div>
 
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <p className="font-bold mb-1">Nivel de Energía:</p>
-              <select
-                value={current.energy}
-                onChange={(e) =>
-                  handleUpdate({ energy: e.target.value as LunarProfileState['energy'] })
-                }
-                className="w-full p-1.5 rounded-xl border border-[var(--border-ink)] bg-[var(--bg-paper)] font-semibold"
-              >
-                <option value="Baja">🔋 Baja (Necesito sofá)</option>
-                <option value="Normal">⚡ Normal</option>
-                <option value="Alta">🚀 Alta</option>
-              </select>
-            </div>
-            <div>
-              <p className="font-bold mb-1">Humor de hoy:</p>
-              <select
-                value={current.mood}
-                onChange={(e) =>
-                  handleUpdate({ mood: e.target.value as LunarProfileState['mood'] })
-                }
-                className="w-full p-1.5 rounded-xl border border-[var(--border-ink)] bg-[var(--bg-paper)] font-semibold"
-              >
-                <option value="Mimosa">🥺 Mimosa</option>
-                <option value="Sensible">💧 Sensible</option>
-                <option value="Tranquila">🍵 Tranquila</option>
-                <option value="Radiante">✨ Radiante</option>
-                <option value="Cansada">😴 Cansada</option>
-              </select>
-            </div>
-          </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <p className="font-bold mb-1">Nivel de Energía:</p>
+                  <select
+                    value={current.energy}
+                    onChange={(e) =>
+                      handleUpdate({ energy: e.target.value as LunarProfileState['energy'] })
+                    }
+                    className="w-full p-1.5 rounded-xl border border-[var(--border-ink)] bg-[var(--bg-paper)] font-semibold"
+                  >
+                    <option value="Baja">🔋 Baja (Necesito sofá)</option>
+                    <option value="Normal">⚡ Normal</option>
+                    <option value="Alta">🚀 Alta</option>
+                  </select>
+                </div>
+                <div>
+                  <p className="font-bold mb-1">Humor de hoy:</p>
+                  <select
+                    value={current.mood}
+                    onChange={(e) =>
+                      handleUpdate({ mood: e.target.value as LunarProfileState['mood'] })
+                    }
+                    className="w-full p-1.5 rounded-xl border border-[var(--border-ink)] bg-[var(--bg-paper)] font-semibold"
+                  >
+                    <option value="Mimosa">🥺 Mimosa</option>
+                    <option value="Sensible">💧 Sensible</option>
+                    <option value="Tranquila">🍵 Tranquila</option>
+                    <option value="Radiante">✨ Radiante</option>
+                    <option value="Cansada">😴 Cansada</option>
+                  </select>
+                </div>
+              </div>
 
-          <div>
-            <p className="font-bold mb-1">Antojo del día (se lo chivamos a tu pareja):</p>
-            <input
-              type="text"
-              value={current.craving}
-              onChange={(e) => handleUpdate({ craving: e.target.value })}
-              placeholder="Ej. Chocolate calentito y mimos..."
-              className="w-full px-3 py-1.5 rounded-xl border border-[var(--border-ink)] bg-[var(--bg-paper)] font-hand text-lg"
-            />
-          </div>
+              <div>
+                <p className="font-bold mb-1">Antojo del día (se lo chivamos a tu pareja):</p>
+                <input
+                  type="text"
+                  value={current.craving}
+                  onChange={(e) => handleUpdate({ craving: e.target.value })}
+                  placeholder="Ej. Chocolate calentito y mimos..."
+                  className="w-full px-3 py-1.5 rounded-xl border border-[var(--border-ink)] bg-[var(--bg-paper)] font-hand text-lg"
+                />
+              </div>
+            </>
+          ) : (
+            <div className="grid grid-cols-2 gap-2">
+              <div className="p-2.5 rounded-xl bg-[var(--bg-paper)] border border-[var(--border-ink)]">
+                <span className="text-[10px] text-[var(--text-muted)] block">Dolor / Molestia:</span>
+                <span className="font-bold text-sm">{current.cramps}</span>
+              </div>
+              <div className="p-2.5 rounded-xl bg-[var(--bg-paper)] border border-[var(--border-ink)]">
+                <span className="text-[10px] text-[var(--text-muted)] block">Flujo hoy:</span>
+                <span className="font-bold text-sm">💧 {current.flow}</span>
+              </div>
+              <div className="p-2.5 rounded-xl bg-[var(--bg-paper)] border border-[var(--border-ink)]">
+                <span className="text-[10px] text-[var(--text-muted)] block">Energía:</span>
+                <span className="font-bold text-sm">🔋 {current.energy}</span>
+              </div>
+              <div className="p-2.5 rounded-xl bg-[var(--bg-paper)] border border-[var(--border-ink)]">
+                <span className="text-[10px] text-[var(--text-muted)] block">Estado de ánimo:</span>
+                <span className="font-bold text-sm">✨ {current.mood}</span>
+              </div>
+              <div className="col-span-2 p-3 rounded-xl bg-pink-50 border border-pink-300">
+                <span className="text-[10px] font-bold uppercase text-pink-900 block">
+                  🍫 Antojo especial que le hace ilusión hoy:
+                </span>
+                <p className="font-hand text-xl text-pink-950 mt-0.5">«{current.craving}»</p>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

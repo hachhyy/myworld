@@ -14,7 +14,6 @@ import {
 } from '../utils/solarAndTime';
 import { soundEngine, triggerHeartbeatHaptic } from '../utils/soundAndHaptics';
 import { CuteOvuloAvatar } from './characters/CuteOvuloAvatar';
-import { HandDrawnBox } from './ui/HandDrawnBox';
 
 const KISS_ICONS: Record<KissIconType, { emoji: string; label: string }> = {
   corazones: { emoji: '❤️', label: 'Corazones clásicos' },
@@ -51,7 +50,9 @@ export const PlanetHUD: React.FC<PlanetHUDProps> = ({ solar, hasUnreadDiary }) =
     setActiveUser,
     mediaItems,
     lunarMode,
+    lunarOwner,
     lunarA,
+    lunarB,
     setActiveBuilding,
   } = useWorldStore();
 
@@ -137,15 +138,18 @@ export const PlanetHUD: React.FC<PlanetHUDProps> = ({ solar, hasUnreadDiary }) =
       .reduce((acc, m) => acc + m.durationMin * Math.max(1, m.episode), 0) / 60
   );
 
+  // Perfil lunar principal para el Óvulo Cute Mensajero
+  const primaryLunar = lunarOwner === 'userB' ? lunarB : lunarA;
+
   // Mensaje empático del Óvulo Cute
   const ovuloMessage =
-    lunarA.phase === 'menstruacion' || lunarA.cramps !== 'Sin dolor'
-      ? `¡Hola! Hoy estamos en días de regla con ${lunarA.cramps.toLowerCase()}. Es el momento ideal para traernos algo calentito (${lunarA.craving.toLowerCase()}), dar muchos mimos y no hacer planes pesados 💕`
-      : `¡Hola! Hoy estamos con humor ${lunarA.mood.toLowerCase()} y antojo de ${lunarA.craving.toLowerCase()} ✨`;
+    primaryLunar.phase === 'menstruacion' || primaryLunar.cramps !== 'Sin dolor'
+      ? `¡Hola! Hoy ${primaryLunar.ownerName} está en días de regla (día ${primaryLunar.dayOfCycle}) con ${primaryLunar.cramps.toLowerCase()}. Ideal llevarle ${primaryLunar.craving.toLowerCase()} y darle muchos mimos 💕`
+      : `¡Hola! Hoy ${primaryLunar.ownerName} está en fase ${primaryLunar.phase} con humor ${primaryLunar.mood.toLowerCase()} y antojo de ${primaryLunar.craving.toLowerCase()} ✨`;
 
   return (
     <>
-      {/* 1. CABECERA FIJA DEL PLANETA */}
+      {/* 1. CABECERA FIJA DEL PLANETA (Limpia, sin marco RoughJS desbordado) */}
       <div className="fixed top-0 left-0 right-0 z-30 p-3 pointer-events-none flex flex-col gap-2 max-w-md mx-auto">
         <div className="flex items-center justify-between gap-2 pointer-events-auto">
           {/* Botón de Silencio Rápido */}
@@ -158,21 +162,20 @@ export const PlanetHUD: React.FC<PlanetHUDProps> = ({ solar, hasUnreadDiary }) =
             {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
           </motion.button>
 
-          {/* Contador de Tiempo de Relación y Nombre del Planeta con Borde Rough.js */}
-          <div className="flex-1">
-            <HandDrawnBox
-              onClick={() => setAnniversaryModalOpen(true)}
-              className="bg-[var(--bg-card)] px-3 py-1.5 text-center cursor-pointer"
-            >
-              <div className="flex items-center justify-center gap-1.5">
-                <span className="text-xs">🪐</span>
-                <span className="font-bold text-sm truncate">{planetName}</span>
-              </div>
-              <p className="text-[11px] font-medium text-[var(--text-muted)]">
-                {duration.years} años, {duration.months} meses, {duration.days} días 💕
-              </p>
-            </HandDrawnBox>
-          </div>
+          {/* Contador de Tiempo de Relación y Nombre del Planeta (Nativo y sin artefactos blancos) */}
+          <motion.button
+            whileTap={{ scale: 0.97 }}
+            onClick={() => setAnniversaryModalOpen(true)}
+            className="flex-1 min-w-0 hand-card bg-[var(--bg-card)] px-3 py-1.5 text-center cursor-pointer overflow-hidden"
+          >
+            <div className="flex items-center justify-center gap-1.5">
+              <span className="text-xs shrink-0">🪐</span>
+              <span className="font-bold text-sm truncate">{planetName}</span>
+            </div>
+            <p className="text-[11px] font-medium text-[var(--text-muted)] truncate">
+              {duration.years} años, {duration.months} meses, {duration.days} días 💕
+            </p>
+          </motion.button>
 
           {/* Botón de Ajustes */}
           <motion.button
@@ -209,7 +212,7 @@ export const PlanetHUD: React.FC<PlanetHUDProps> = ({ solar, hasUnreadDiary }) =
       </div>
 
       {/* 2. ASOMO DEL ÓVULO CUTE (ESQUINA DEL HUD) */}
-      {(lunarA.sensitiveAlertActive || lunarA.phase === 'menstruacion') &&
+      {(primaryLunar.sensitiveAlertActive || primaryLunar.phase === 'menstruacion') &&
         lunarMode !== 'hidden' && (
           <motion.div
             initial={{ x: 90, opacity: 0 }}
@@ -231,7 +234,7 @@ export const PlanetHUD: React.FC<PlanetHUDProps> = ({ solar, hasUnreadDiary }) =
                 >
                   <div className="flex items-center justify-between gap-1 mb-0.5">
                     <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-pink-200/80 text-pink-950">
-                      Óvulo Cute · Consejo 💕
+                      Óvulo Cute · Mensajero 💕
                     </span>
                     <button
                       onClick={(e) => {
@@ -256,12 +259,12 @@ export const PlanetHUD: React.FC<PlanetHUDProps> = ({ solar, hasUnreadDiary }) =
               className="-mr-4 cursor-pointer"
               title="Toca al Óvulo Cute"
             >
-              <CuteOvuloAvatar phase={lunarA.phase} size={74} />
+              <CuteOvuloAvatar phase={primaryLunar.phase} size={74} />
             </div>
           </motion.div>
         )}
 
-      {/* 3. LLUVIA FÍSICA DE BESOS Y NOTA FLOTANTE SOBRE EL PLANETA 3D */}
+      {/* 3. LLUVIA FÍSICA DE BESOS Y NOTA FLOTANTE DESLIZABLE (SWIPE-TO-DISMISS) */}
       <AnimatePresence>
         {activeRainBursts.length > 0 && (
           <motion.div
@@ -275,19 +278,41 @@ export const PlanetHUD: React.FC<PlanetHUDProps> = ({ solar, hasUnreadDiary }) =
               const drops = Array.from({ length: Math.min(45, Math.max(14, burst.count)) });
               return (
                 <React.Fragment key={burst.id}>
-                  {/* Nota flotante en el centro superior */}
+                  {/* Nota flotante deslizable (Swipe-to-dismiss con físicas spring Emil Kowalski) */}
                   <motion.div
+                    drag="x"
+                    dragConstraints={{ left: 0, right: 0 }}
+                    dragElastic={0.85}
+                    onDragEnd={(_, info) => {
+                      if (Math.abs(info.offset.x) > 55 || Math.abs(info.velocity.x) > 260) {
+                        soundEngine.playPop(0.9);
+                        setActiveRainBursts((prev) => prev.filter((b) => b.id !== burst.id));
+                      }
+                    }}
                     initial={{ y: -50, scale: 0.8, opacity: 0 }}
-                    animate={{ y: 115, scale: 1, opacity: 1 }}
-                    exit={{ y: 60, opacity: 0 }}
-                    transition={{ type: 'spring', stiffness: 260, damping: 18 }}
-                    className="mx-auto w-fit hand-card px-5 py-3 bg-[var(--bg-card)] text-center shadow-xl"
+                    animate={{ y: 112, scale: 1, opacity: 1 }}
+                    exit={{ x: 260, opacity: 0, scale: 0.85 }}
+                    transition={{ type: 'spring', stiffness: 350, damping: 25 }}
+                    className="mx-auto w-fit max-w-[90vw] hand-card px-5 py-3 bg-[var(--bg-card)] text-center shadow-xl pointer-events-auto cursor-grab active:cursor-grabbing relative"
                   >
-                    <p className="text-xs font-bold text-[var(--text-muted)]">
+                    <button
+                      onClick={() => {
+                        soundEngine.playPop(0.9);
+                        setActiveRainBursts((prev) => prev.filter((b) => b.id !== burst.id));
+                      }}
+                      className="absolute top-1.5 right-2 text-[11px] opacity-55 hover:opacity-100 px-1 cursor-pointer"
+                      aria-label="Cerrar aviso de besos"
+                    >
+                      ✕
+                    </button>
+                    <p className="text-xs font-bold text-[var(--text-muted)] pr-3">
                       ¡Lluvia de {burst.count} {KISS_ICONS[burst.iconType].label.toLowerCase()}!
                     </p>
                     <p className="font-hand text-2xl font-bold mt-0.5">
                       «{burst.miniNote}» {iconEmoji}
+                    </p>
+                    <p className="text-[9px] font-semibold text-[var(--text-muted)] opacity-70 mt-0.5">
+                      ↔ Desliza hacia un lado para descartar
                     </p>
                   </motion.div>
 

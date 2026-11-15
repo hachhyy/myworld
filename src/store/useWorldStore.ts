@@ -291,6 +291,7 @@ export interface WorldState {
   savingsGoals: SavingsGoal[];
 
   lunarMode: 'single' | 'dual' | 'hidden';
+  lunarOwner: 'userA' | 'userB';
   lunarA: LunarProfileState;
   lunarB: LunarProfileState;
 
@@ -319,6 +320,7 @@ export interface WorldState {
   // Besos
   sendKissBurst: (count: number, iconType: KissIconType, miniNote: string) => void;
   consumePendingKissesForActiveUser: () => PendingKissBurst[];
+  resetKissCounter: () => void;
 
   // Mascotas
   updatePetProfile: (user: 'userA' | 'userB', partial: Partial<PetProfile>) => void;
@@ -327,12 +329,15 @@ export interface WorldState {
 
   // Diario Postal
   addDiaryPage: (page: Omit<DiaryPage, 'id' | 'readByUserA' | 'readByUserB'>) => void;
+  updateDiaryPagePhoto: (id: string, photoDataUrl: string, photoSizeKB?: number) => void;
+  deleteDiaryPage: (id: string) => void;
   addStrokeToDiaryPage: (pageId: string, stroke: DrawingStroke) => void;
   addStickerToDiaryPage: (pageId: string, sticker: DiarySticker) => void;
   markDiaryPagesRead: (user: 'userA' | 'userB') => void;
 
   // Cine Retro
   addMediaItem: (item: Omit<MediaItem, 'id'>) => void;
+  deleteMediaItem: (id: string) => void;
   submitMediaReview: (id: string, user: 'userA' | 'userB', rating: number, review: string) => void;
   incrementSeriesProgress: (id: string, field: 'season' | 'episode') => void;
   moveWatchlistToWatched: (id: string) => void;
@@ -340,6 +345,7 @@ export interface WorldState {
 
   // Mapa 2D
   addMapPin: (pin: Omit<MapPinItem, 'id'>) => void;
+  deleteMapPin: (id: string) => void;
   toggleMapPinStatus: (id: string) => void;
   setMapVisualStyle: (style: 'vintage' | 'pastel') => void;
 
@@ -350,12 +356,14 @@ export interface WorldState {
   // Hucha / Tricount
   setCurrency: (curr: '€' | '$' | '£' | '¥') => void;
   addExpense: (exp: Omit<ExpenseItem, 'id' | 'settled'>) => void;
+  deleteExpense: (id: string) => void;
   settleAllExpenses: () => void;
   addSavingsContribution: (goalId: string, amount: number) => void;
   addSavingsGoal: (title: string, emoji: string, targetAmount: number) => void;
 
   // Invernadero Lunar
   setLunarMode: (mode: 'single' | 'dual' | 'hidden') => void;
+  setLunarOwner: (owner: 'userA' | 'userB') => void;
   updateLunarProfile: (which: 'A' | 'B', partial: Partial<LunarProfileState>) => void;
 }
 
@@ -431,49 +439,11 @@ export const useWorldStore = create<WorldState>()(
           author: 'userB',
           title: 'Nuestro domingo de lluvia y tortitas',
           caption: 'Me encanta cómo te ríes cuando intentamos dar la vuelta a las tortitas en el aire 🥞💕',
-          photoDataUrl: createCozySvgDataUrl('#FFE5EC', '#FFF3B0', '🥞🍓☕', 'Mañana de tortitas juntos'),
-          photoSizeKB: 42.8,
-          frameStyle: 'vichy',
-          canvasBgColor: '#FFF9F0',
-          strokes: [
-            {
-              id: 's-init-heart',
-              tool: 'acuarela',
-              color: '#E88B84',
-              size: 12,
-              points: [
-                [140, 95],
-                [125, 75],
-                [102, 80],
-                [98, 102],
-                [140, 136],
-                [182, 102],
-                [178, 80],
-                [155, 75],
-                [140, 95],
-              ],
-              author: 'userB',
-            },
-            {
-              id: 's-init-sun',
-              tool: 'rotulador',
-              color: '#FFE066',
-              size: 10,
-              points: [
-                [60, 50],
-                [72, 46],
-                [80, 56],
-                [72, 68],
-                [58, 64],
-                [60, 50],
-              ],
-              author: 'userA',
-            },
-          ],
-          stickers: [
-            { id: 'st-1', emoji: '🥞', x: 78, y: 20 },
-            { id: 'st-2', emoji: '✨', x: 18, y: 24 },
-          ],
+          photoDataUrl: undefined,
+          frameStyle: 'clasico',
+          canvasBgColor: '#FFFDF9',
+          strokes: [],
+          stickers: [],
           readByUserA: false,
           readByUserB: true,
         },
@@ -483,28 +453,11 @@ export const useWorldStore = create<WorldState>()(
           author: 'userA',
           title: 'Atardecer mágico en el mirador',
           caption: 'Prometimos volver cada otoño con nuestra mantita de cuadros y chocolate caliente.',
-          photoDataUrl: createCozySvgDataUrl('#F6B89E', '#C9B8E8', '🌅🌲🧣', 'Mirador de Otoño'),
-          photoSizeKB: 38.4,
-          frameStyle: 'flores',
-          canvasBgColor: '#FDF8F2',
-          strokes: [
-            {
-              id: 's-init-star',
-              tool: 'cera',
-              color: '#88C9A1',
-              size: 8,
-              points: [
-                [90, 110],
-                [140, 85],
-                [190, 110],
-              ],
-              author: 'userA',
-            },
-          ],
-          stickers: [
-            { id: 'st-3', emoji: '🍂', x: 80, y: 72 },
-            { id: 'st-4', emoji: '💌', x: 16, y: 76 },
-          ],
+          photoDataUrl: undefined,
+          frameStyle: 'clasico',
+          canvasBgColor: '#FFFDF9',
+          strokes: [],
+          stickers: [],
           readByUserA: true,
           readByUserB: true,
         },
@@ -518,7 +471,7 @@ export const useWorldStore = create<WorldState>()(
           durationMin: 86,
           category: 'Anime',
           genre: 'Fantasía Cozy',
-          posterUrl: createCozySvgDataUrl('#A8D5BA', '#FFF3B0', '🌳🐾☂️', 'Mi Vecino Totoro'),
+          posterUrl: 'https://image.tmdb.org/t/p/w500/rtGDOeG9LzoerkDGZF9dnVeLppL.jpg',
           status: 'watched',
           season: 1,
           episode: 1,
@@ -534,7 +487,7 @@ export const useWorldStore = create<WorldState>()(
           durationMin: 24,
           category: 'Anime',
           genre: 'Aventura / Fantasía',
-          posterUrl: createCozySvgDataUrl('#C9B8E8', '#CFE8F9', '🪄✨🌸', 'Frieren'),
+          posterUrl: 'https://image.tmdb.org/t/p/w500/dqZENchTd7lp5zht7BdlqM7RBhD.jpg',
           status: 'watched',
           season: 1,
           episode: 18,
@@ -548,19 +501,19 @@ export const useWorldStore = create<WorldState>()(
           durationMin: 119,
           category: 'Película',
           genre: 'Fantasía / Romance',
-          posterUrl: createCozySvgDataUrl('#F6B89E', '#FFE5EC', '🏰🔥✨', 'Castillo Ambulante'),
+          posterUrl: 'https://image.tmdb.org/t/p/w500/TkTPELv4kC3u1lkloush8skOjE.jpg',
           status: 'watchlist',
           season: 1,
           episode: 1,
         },
         {
           id: 'media-pending-2',
-          title: 'Ponyo en el Acantilado',
-          year: '2008',
-          durationMin: 85,
+          title: 'Mi Vecino Totoro',
+          year: '1988',
+          durationMin: 86,
           category: 'Película',
           genre: 'Fantasía Rápida',
-          posterUrl: createCozySvgDataUrl('#8CC5E3', '#FFF3B0', '🐠🌊🍜', 'Ponyo (<90m)'),
+          posterUrl: 'https://image.tmdb.org/t/p/w500/rtGDOeG9LzoerkDGZF9dnVeLppL.jpg',
           status: 'watchlist',
           season: 1,
           episode: 1,
@@ -572,7 +525,7 @@ export const useWorldStore = create<WorldState>()(
           durationMin: 24,
           category: 'Anime',
           genre: 'Comedia / Familia',
-          posterUrl: createCozySvgDataUrl('#FFB5C2', '#FFFDF9', '🕵️‍♂️🥜🐶', 'Spy x Family'),
+          posterUrl: 'https://image.tmdb.org/t/p/w500/3r4LYFuXrg3G8fepysr4xSLWnQL.jpg',
           status: 'watchlist',
           season: 2,
           episode: 4,
@@ -584,7 +537,7 @@ export const useWorldStore = create<WorldState>()(
           durationMin: 88,
           category: 'Película',
           genre: 'Romance / Viaje',
-          posterUrl: createCozySvgDataUrl('#F9DF92', '#F6B89E', '🚂🌅💑', 'Antes del Amanecer'),
+          posterUrl: 'https://image.tmdb.org/t/p/w500/kf1Jb1c2JAOqjuzA3H4oDM263uB.jpg',
           status: 'watchlist',
           season: 1,
           episode: 1,
@@ -603,8 +556,6 @@ export const useWorldStore = create<WorldState>()(
           date: '14 Mayo 2025',
           note: 'Remamos en círculos pero nos reímos durante dos horas seguidas con helado de pistacho.',
           rating: 5,
-          photoDataUrl: createCozySvgDataUrl('#8CC5E3', '#A8D5BA', '🚣‍♀️🍨🦆', 'Retiro · Madrid'),
-          photoSizeKB: 36.2,
         },
         {
           id: 'pin-visited-2',
@@ -616,8 +567,6 @@ export const useWorldStore = create<WorldState>()(
           date: '19 Agosto 2025',
           note: 'Croissants recién horneados, música de acordeón y las luces encendiéndose.',
           rating: 5,
-          photoDataUrl: createCozySvgDataUrl('#FFB5C2', '#F9DF92', '🗼🥐🎶', 'Montmartre · París'),
-          photoSizeKB: 41.0,
         },
         {
           id: 'pin-visited-3',
@@ -629,8 +578,6 @@ export const useWorldStore = create<WorldState>()(
           date: '12 Febrero 2026',
           note: 'El tranvía amarillo pasando detrás mientras compartíamos pastéis de nata calentitos.',
           rating: 5,
-          photoDataUrl: createCozySvgDataUrl('#F9DF92', '#8CC5E3', '🚋🥧🌊', 'Santa Luzia · Lisboa'),
-          photoSizeKB: 39.5,
         },
         {
           id: 'pin-pending-1',
@@ -642,8 +589,6 @@ export const useWorldStore = create<WorldState>()(
           date: 'Nuestro gran sueño',
           note: 'El viaje para el que estamos ahorrando juntos en la Hucha Cerdito ⛩️✨',
           rating: 5,
-          photoDataUrl: createCozySvgDataUrl('#A8D5BA', '#FFD6E0', '⛩️🎍🍵', 'Kioto · Japón'),
-          photoSizeKB: 37.8,
         },
         {
           id: 'pin-pending-2',
@@ -655,8 +600,6 @@ export const useWorldStore = create<WorldState>()(
           date: 'Próxima escapada',
           note: 'Pasear de la mano por las callejuelas iluminadas con guirnaldas.',
           rating: 5,
-          photoDataUrl: createCozySvgDataUrl('#F6B89E', '#FFE066', '🛵🍝🍨', 'Trastevere · Roma'),
-          photoSizeKB: 35.1,
         },
       ],
       mapVisualStyle: 'vintage',
@@ -771,6 +714,7 @@ export const useWorldStore = create<WorldState>()(
       ],
 
       lunarMode: 'single',
+      lunarOwner: 'userA',
       lunarA: {
         ownerName: 'Alex',
         phase: 'menstruacion',
@@ -949,6 +893,24 @@ export const useWorldStore = create<WorldState>()(
         }
       },
 
+      resetKissCounter: () => {
+        soundEngine.playPop(0.95);
+        triggerHeartbeatHaptic('reset-kisses');
+        set({
+          totalKissesHistory: 0,
+          pendingKissBursts: [],
+          kissCooldownUntil: 0,
+        });
+        const wid = get().worldId;
+        if (wid) {
+          broadcastChannel?.postMessage({
+            type: 'SYNC',
+            worldId: wid,
+            state: { totalKissesHistory: 0, pendingKissBursts: [] },
+          });
+        }
+      },
+
       consumePendingKissesForActiveUser: () => {
         const current = get().activeUser;
         const all = get().pendingKissBursts;
@@ -1014,6 +976,22 @@ export const useWorldStore = create<WorldState>()(
         }));
       },
 
+      updateDiaryPagePhoto: (pageId, photoDataUrl) => {
+        soundEngine.playChime();
+        set((state) => ({
+          diaryPages: state.diaryPages.map((p) =>
+            p.id === pageId ? { ...p, photoDataUrl } : p
+          ),
+        }));
+      },
+
+      deleteDiaryPage: (pageId) => {
+        soundEngine.playPop(0.85);
+        set((state) => ({
+          diaryPages: state.diaryPages.filter((p) => p.id !== pageId),
+        }));
+      },
+
       addStrokeToDiaryPage: (pageId, stroke) => {
         set((state) => ({
           diaryPages: state.diaryPages.map((p) =>
@@ -1050,6 +1028,13 @@ export const useWorldStore = create<WorldState>()(
         soundEngine.playPop(1.1);
         set((state) => ({
           mediaItems: [{ ...item, id: `media-${Date.now()}` }, ...state.mediaItems],
+        }));
+      },
+
+      deleteMediaItem: (id) => {
+        soundEngine.playPop(0.85);
+        set((state) => ({
+          mediaItems: state.mediaItems.filter((m) => m.id !== id),
         }));
       },
 
@@ -1095,6 +1080,13 @@ export const useWorldStore = create<WorldState>()(
         soundEngine.playChime();
         set((state) => ({
           mapPins: [{ ...pin, id: `pin-${Date.now()}` }, ...state.mapPins],
+        }));
+      },
+
+      deleteMapPin: (id) => {
+        soundEngine.playPop(0.85);
+        set((state) => ({
+          mapPins: state.mapPins.filter((p) => p.id !== id),
         }));
       },
 
@@ -1157,6 +1149,13 @@ export const useWorldStore = create<WorldState>()(
         }));
       },
 
+      deleteExpense: (id) => {
+        soundEngine.playPop(0.85);
+        set((state) => ({
+          expenses: state.expenses.filter((e) => e.id !== id),
+        }));
+      },
+
       settleAllExpenses: () => {
         soundEngine.playChime();
         triggerHeartbeatHaptic('settle-piggy');
@@ -1210,6 +1209,11 @@ export const useWorldStore = create<WorldState>()(
 
       setLunarMode: (lunarMode) => set({ lunarMode }),
 
+      setLunarOwner: (lunarOwner) => {
+        soundEngine.playPop(1.1);
+        set({ lunarOwner });
+      },
+
       updateLunarProfile: (which, partial) => {
         soundEngine.playPop(1.1);
         set((state) => {
@@ -1225,6 +1229,24 @@ export const useWorldStore = create<WorldState>()(
         if (!state) return;
         if (state.onboardingCompleted && state.worldId) {
           state.hasCompletedLanding = false;
+        }
+        state.lunarOwner = state.lunarOwner || 'userA';
+        // Limpiar cuadrados verdes inventados (data:image/svg+xml) de versiones anteriores
+        if (Array.isArray(state.diaryPages)) {
+          state.diaryPages = state.diaryPages.map((p) => ({
+            ...p,
+            photoDataUrl: p.photoDataUrl?.startsWith('data:image/svg+xml')
+              ? undefined
+              : p.photoDataUrl,
+          }));
+        }
+        if (Array.isArray(state.mapPins)) {
+          state.mapPins = state.mapPins.map((p) => ({
+            ...p,
+            photoDataUrl: p.photoDataUrl?.startsWith('data:image/svg+xml')
+              ? undefined
+              : p.photoDataUrl,
+          }));
         }
         // Limpieza automática de nombres antiguos por defecto ("Usuario A / B")
         if (!state.petA.ownerName || state.petA.ownerName.includes('Usuario A')) {

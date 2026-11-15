@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Search, Lock, Dices, Plus } from 'lucide-react';
+import { ArrowLeft, Search, Lock, Dices, Plus, Trash2 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { MediaItem, useWorldStore } from '../../store/useWorldStore';
 import { soundEngine } from '../../utils/soundAndHaptics';
@@ -834,12 +834,14 @@ export const CineRetro: React.FC<CineRetroProps> = ({ onClose }) => {
     petB,
     mediaItems,
     addMediaItem,
+    deleteMediaItem,
     submitMediaReview,
     incrementSeriesProgress,
     moveWatchlistToWatched,
   } = useWorldStore();
 
   const [tab, setTab] = useState<'watched' | 'watchlist' | 'search'>('watched');
+  const [confirmDeleteMediaId, setConfirmDeleteMediaId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchCategoryFilter, setSearchCategoryFilter] = useState<'Todo' | 'Película' | 'Serie' | 'Anime'>('Todo');
   const [searchResults, setSearchResults] = useState<Omit<MediaItem, 'id' | 'status'>[]>(() =>
@@ -1170,12 +1172,43 @@ export const CineRetro: React.FC<CineRetroProps> = ({ onClose }) => {
 
                     <div className="flex-1 flex flex-col justify-between">
                       <div>
-                        <div className="flex items-center gap-1.5 text-[10px] font-bold text-[var(--text-muted)]">
-                          <span className="hand-pill px-2 py-0.2 bg-[var(--bg-secondary)]">
-                            {item.category}
-                          </span>
-                          <span>{item.year}</span>
-                          <span>· {item.durationMin} min</span>
+                        <div className="flex items-center justify-between gap-1.5 text-[10px] font-bold text-[var(--text-muted)]">
+                          <div className="flex items-center gap-1.5">
+                            <span className="hand-pill px-2 py-0.2 bg-[var(--bg-secondary)]">
+                              {item.category}
+                            </span>
+                            <span>{item.year}</span>
+                            <span>· {item.durationMin} min</span>
+                          </div>
+                          {confirmDeleteMediaId === item.id ? (
+                            <div className="flex items-center gap-1 bg-rose-50 px-1.5 py-0.5 rounded-lg border border-rose-300">
+                              <span className="text-[9px] font-bold text-rose-700">¿Borrar?</span>
+                              <button
+                                onClick={() => {
+                                  soundEngine.playPop();
+                                  deleteMediaItem(item.id);
+                                  setConfirmDeleteMediaId(null);
+                                }}
+                                className="px-1.5 py-0.5 rounded bg-rose-500 text-white text-[9px] font-bold cursor-pointer"
+                              >
+                                Sí
+                              </button>
+                              <button
+                                onClick={() => setConfirmDeleteMediaId(null)}
+                                className="px-1 py-0.5 rounded bg-white text-[9px] font-bold text-[var(--text-muted)] cursor-pointer"
+                              >
+                                No
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => setConfirmDeleteMediaId(item.id)}
+                              className="p-1 rounded-full text-[var(--text-muted)] hover:text-rose-500 hover:bg-rose-50/70 transition-colors cursor-pointer"
+                              title="Eliminar de Vistas"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
                         </div>
                         <h3 className="text-sm font-bold mt-1">{item.title}</h3>
                         <p className="text-[11px] text-[var(--text-muted)]">{item.genre}</p>
@@ -1417,15 +1450,46 @@ export const CineRetro: React.FC<CineRetroProps> = ({ onClose }) => {
                       </p>
                     </div>
                   </div>
-                  <button
-                    onClick={() => {
-                      moveWatchlistToWatched(item.id);
-                      setTab('watched');
-                    }}
-                    className="hand-pill px-2.5 py-1 bg-[var(--accent-primary)] text-[11px] font-bold cursor-pointer shrink-0"
-                  >
-                    Pasar a Vistas ✨
-                  </button>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <button
+                      onClick={() => {
+                        moveWatchlistToWatched(item.id);
+                        setTab('watched');
+                      }}
+                      className="hand-pill px-2.5 py-1 bg-[var(--accent-primary)] text-[11px] font-bold cursor-pointer shrink-0"
+                    >
+                      Pasar a Vistas ✨
+                    </button>
+                    {confirmDeleteMediaId === item.id ? (
+                      <div className="flex items-center gap-1 bg-rose-50 px-1.5 py-1 rounded-lg border border-rose-300">
+                        <span className="text-[9px] font-bold text-rose-700">¿Borrar?</span>
+                        <button
+                          onClick={() => {
+                            soundEngine.playPop();
+                            deleteMediaItem(item.id);
+                            setConfirmDeleteMediaId(null);
+                          }}
+                          className="px-1.5 py-0.5 rounded bg-rose-500 text-white text-[9px] font-bold cursor-pointer"
+                        >
+                          Sí
+                        </button>
+                        <button
+                          onClick={() => setConfirmDeleteMediaId(null)}
+                          className="px-1 py-0.5 rounded bg-white text-[9px] font-bold text-[var(--text-muted)] cursor-pointer"
+                        >
+                          No
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => setConfirmDeleteMediaId(item.id)}
+                        className="p-1.5 rounded-full text-[var(--text-muted)] hover:text-rose-500 hover:bg-rose-50/70 transition-colors cursor-pointer"
+                        title="Eliminar de Pendientes"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
