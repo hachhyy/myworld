@@ -261,7 +261,7 @@ export const App: React.FC = () => {
 
   return (
     <div
-      className={`relative w-full h-full overflow-hidden select-none transition-[background,transform] duration-500 ${
+      className={`relative flex-1 min-h-0 w-full flex flex-col overflow-hidden select-none transition-[background,transform] duration-500 ${
         hapticVisualPulse ? 'scale-[1.008]' : ''
       }`}
       style={{

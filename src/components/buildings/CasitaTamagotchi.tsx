@@ -368,7 +368,7 @@ export const CasitaTamagotchi: React.FC<CasitaTamagotchiProps> = ({ solar, onClo
     bedModel === 'dosel' ? '#F4ACB7' : bedModel === 'futon' ? '#74C69D' : '#F4845F';
 
   return (
-    <div className="fixed inset-0 z-40 h-full w-full flex flex-col justify-between watercolor-paper overflow-hidden select-none">
+    <div className="fixed inset-0 z-40 flex flex-col justify-between watercolor-paper overflow-hidden select-none">
       {/* Cabecera compacta con Safe Area superior de iOS */}
       <div className="safe-top-header px-3 pb-2 shrink-0 flex items-center justify-between gap-2 border-b-2 border-[var(--border-ink)] bg-[var(--bg-card)] z-30">
         <motion.button

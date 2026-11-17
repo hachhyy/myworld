@@ -1,4 +1,4 @@
-const CACHE_NAME = 'myworld-cozy-v6';
+const CACHE_NAME = 'myworld-cozy-v7';
 
 self.addEventListener('install', () => {
   self.skipWaiting();

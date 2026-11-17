@@ -1360,7 +1360,7 @@ export const Planet3DScene: React.FC<Planet3DSceneProps> = ({
   const isNarrowMobile = typeof window !== 'undefined' && window.innerWidth < 640;
 
   return (
-    <div className="relative w-full h-full overflow-hidden">
+    <div className="absolute inset-0 overflow-hidden">
       <Canvas
         camera={{
           position: isNarrowMobile ? [0, 0.22, 9.7] : [0, 0.22, 8.1],

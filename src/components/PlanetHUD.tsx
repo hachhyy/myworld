@@ -168,7 +168,7 @@ export const PlanetHUD: React.FC<PlanetHUDProps> = ({ solar, hasUnreadDiary, chi
   return (
     <>
       {/* ESTRUCTURA FLEX VERTICAL EN 3 ZONAS ANCLADA AL 100% FÍSICO DE LA PANTALLA */}
-      <div className="flex flex-col justify-between h-full w-full overflow-hidden">
+      <div className="flex-1 min-h-0 w-full flex flex-col justify-between overflow-hidden">
         {/* ZONA 1 (SUPERIOR): HEADER PEGADO A LA SAFE AREA REAL (px-3) */}
         <header className="shrink-0 z-30 safe-top-header px-3 flex flex-col gap-1.5 max-w-md mx-auto w-full box-border">
           <div className="flex items-center justify-between gap-2 w-full">
@@ -417,7 +417,7 @@ export const PlanetHUD: React.FC<PlanetHUDProps> = ({ solar, hasUnreadDiary, chi
                 ).padStart(2, '0')}`;
 
                 return (
-                  <div className="relative flex items-center justify-center -mt-5 -mb-0.5 w-[76px] h-[76px] shrink-0">
+                  <div className="relative flex items-center justify-center -mt-5 w-[76px] h-[76px] shrink-0">
                     {/* Corazoncitos flotando desde el propio botón hacia el planeta al pulsar */}
                     <AnimatePresence>
                       {tapFloatingHearts.map((h) => (
