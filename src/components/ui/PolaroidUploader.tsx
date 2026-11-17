@@ -9,6 +9,7 @@ interface PolaroidUploaderProps {
   initialDataUrl?: string;
   captionPreview?: string;
   onPhotoChange: (dataUrl: string, sizeKB: number, washi: WashiTapeStyle) => void;
+  onProcessingChange?: (processing: boolean) => void;
 }
 
 const WASHI_STYLES: { id: WashiTapeStyle; label: string; bg: string; pattern?: string }[] = [
@@ -23,6 +24,7 @@ export const PolaroidUploader: React.FC<PolaroidUploaderProps> = ({
   initialDataUrl,
   captionPreview = 'Nuestro recuerdo especial 💕',
   onPhotoChange,
+  onProcessingChange,
 }) => {
   const [rawImageSrc, setRawImageSrc] = useState<string | null>(initialDataUrl || null);
   const [zoom, setZoom] = useState<number>(1);
@@ -32,73 +34,140 @@ export const PolaroidUploader: React.FC<PolaroidUploaderProps> = ({
   const [filter, setFilter] = useState<PolaroidFilter>('original');
   const [isDraggingOver, setIsDraggingOver] = useState(false);
   const [sizeKB, setSizeKB] = useState<number>(0);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const onPhotoChangeRef = useRef(onPhotoChange);
+  onPhotoChangeRef.current = onPhotoChange;
+  const onProcessingChangeRef = useRef(onProcessingChange);
+  onProcessingChangeRef.current = onProcessingChange;
 
-  // Procesa y encuadra la imagen en un Canvas WebP cuando cambia foto, zoom, encuadre o filtro
+  // Procesa y encuadra la imagen en un Canvas compacto (WebP o JPEG en iOS Safari)
   useEffect(() => {
     if (!rawImageSrc) return;
+    let cancelled = false;
+    setIsProcessing(true);
+    onProcessingChangeRef.current?.(true);
+
     const img = new Image();
     img.crossOrigin = 'anonymous';
     img.onload = () => {
-      const canvas = document.createElement('canvas');
-      const targetW = 640;
-      const targetH = 520;
-      canvas.width = targetW;
-      canvas.height = targetH;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return;
+      if (cancelled) return;
+      try {
+        const canvas = document.createElement('canvas');
+        const targetW = 640;
+        const targetH = 520;
+        canvas.width = targetW;
+        canvas.height = targetH;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
 
-      ctx.fillStyle = '#FFFDF9';
-      ctx.fillRect(0, 0, targetW, targetH);
-
-      // Aplicar filtro suave
-      if (filter === 'vintage') {
-        ctx.filter = 'sepia(0.28) contrast(1.05) brightness(1.04) saturate(1.12)';
-      } else if (filter === 'pastel') {
-        ctx.filter = 'brightness(1.08) contrast(0.94) saturate(1.18)';
-      } else {
-        ctx.filter = 'none';
-      }
-
-      // Calcular cover + zoom + desplazamiento
-      const scaleBase = Math.max(targetW / img.width, targetH / img.height);
-      const finalScale = scaleBase * zoom;
-      const drawW = img.width * finalScale;
-      const drawH = img.height * finalScale;
-      const dx = (targetW - drawW) / 2 + (offsetX / 100) * (drawW * 0.35);
-      const dy = (targetH - drawH) / 2 + (offsetY / 100) * (drawH * 0.35);
-
-      ctx.drawImage(img, dx, dy, drawW, drawH);
-
-      // Cálido velo vintage opcional
-      if (filter === 'vintage') {
-        ctx.filter = 'none';
-        ctx.fillStyle = 'rgba(244, 162, 97, 0.08)';
+        ctx.fillStyle = '#FFFDF9';
         ctx.fillRect(0, 0, targetW, targetH);
-      }
 
-      const webpUrl = canvas.toDataURL('image/webp', 0.82);
-      const kb = Math.round(((webpUrl.length * 3) / 4 / 1024) * 10) / 10;
-      setSizeKB(kb);
-      onPhotoChange(webpUrl, kb, washi);
+        // Aplicar filtro suave
+        if (filter === 'vintage') {
+          ctx.filter = 'sepia(0.28) contrast(1.05) brightness(1.04) saturate(1.12)';
+        } else if (filter === 'pastel') {
+          ctx.filter = 'brightness(1.08) contrast(0.94) saturate(1.18)';
+        } else {
+          ctx.filter = 'none';
+        }
+
+        // Calcular cover + zoom + desplazamiento
+        const scaleBase = Math.max(targetW / img.width, targetH / img.height);
+        const finalScale = scaleBase * zoom;
+        const drawW = img.width * finalScale;
+        const drawH = img.height * finalScale;
+        const dx = (targetW - drawW) / 2 + (offsetX / 100) * (drawW * 0.35);
+        const dy = (targetH - drawH) / 2 + (offsetY / 100) * (drawH * 0.35);
+
+        ctx.drawImage(img, dx, dy, drawW, drawH);
+
+        // Cálido velo vintage opcional
+        if (filter === 'vintage') {
+          ctx.filter = 'none';
+          ctx.fillStyle = 'rgba(244, 162, 97, 0.08)';
+          ctx.fillRect(0, 0, targetW, targetH);
+        }
+
+        let encodedUrl = canvas.toDataURL('image/webp', 0.82);
+        if (!encodedUrl.startsWith('data:image/webp')) {
+          encodedUrl = canvas.toDataURL('image/jpeg', 0.8);
+        }
+        const kb = Math.round(((encodedUrl.length * 3) / 4 / 1024) * 10) / 10;
+        setSizeKB(kb);
+        setUploadError(null);
+        onPhotoChangeRef.current(encodedUrl, kb, washi);
+      } finally {
+        setIsProcessing(false);
+        onProcessingChangeRef.current?.(false);
+      }
+    };
+    img.onerror = () => {
+      if (cancelled) return;
+      setIsProcessing(false);
+      onProcessingChangeRef.current?.(false);
+      setUploadError('No se pudo leer esta imagen. Prueba con una foto JPG o PNG.');
     };
     img.src = rawImageSrc;
+
+    return () => {
+      cancelled = true;
+    };
   }, [rawImageSrc, zoom, offsetX, offsetY, filter, washi]);
+
+  const objectUrlRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (objectUrlRef.current) {
+        URL.revokeObjectURL(objectUrlRef.current);
+      }
+    };
+  }, []);
 
   const handleFileSelected = (file?: File | null) => {
     if (!file) return;
     soundEngine.playPop(1.15);
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      if (typeof ev.target?.result === 'string') {
-        setRawImageSrc(ev.target.result);
-        setZoom(1);
-        setOffsetX(0);
-        setOffsetY(0);
-      }
-    };
-    reader.readAsDataURL(file);
+    setUploadError(null);
+    setIsProcessing(true);
+    onProcessingChangeRef.current?.(true);
+
+    if (objectUrlRef.current) {
+      URL.revokeObjectURL(objectUrlRef.current);
+      objectUrlRef.current = null;
+    }
+
+    try {
+      const objectUrl = URL.createObjectURL(file);
+      objectUrlRef.current = objectUrl;
+      setRawImageSrc(objectUrl);
+      setZoom(1);
+      setOffsetX(0);
+      setOffsetY(0);
+    } catch {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        if (typeof ev.target?.result === 'string') {
+          setRawImageSrc(ev.target.result);
+          setZoom(1);
+          setOffsetX(0);
+          setOffsetY(0);
+        } else {
+          setIsProcessing(false);
+          onProcessingChangeRef.current?.(false);
+          setUploadError('No se pudo cargar la foto seleccionada.');
+        }
+      };
+      reader.onerror = () => {
+        setIsProcessing(false);
+        onProcessingChangeRef.current?.(false);
+        setUploadError('Error al leer el archivo de imagen.');
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   const activeWashiObj = WASHI_STYLES.find((w) => w.id === washi) || WASHI_STYLES[0];
@@ -109,7 +178,10 @@ export const PolaroidUploader: React.FC<PolaroidUploaderProps> = ({
         ref={fileInputRef}
         type="file"
         accept="image/*"
-        onChange={(e) => handleFileSelected(e.target.files?.[0])}
+        onChange={(e) => {
+          handleFileSelected(e.target.files?.[0]);
+          e.target.value = '';
+        }}
         className="hidden"
       />
 
@@ -182,6 +254,17 @@ export const PolaroidUploader: React.FC<PolaroidUploaderProps> = ({
         <p className="font-hand text-lg text-center mt-2.5 leading-tight text-[#3D312A] truncate">
           {captionPreview || 'Nuestro recuerdo especial 💕'}
         </p>
+
+        {isProcessing && (
+          <p className="text-[11px] font-bold text-center text-[#FF7A9E] mt-1 animate-pulse">
+            Revelando foto... ✨
+          </p>
+        )}
+        {uploadError && (
+          <p className="text-[11px] font-bold text-center text-rose-600 mt-1">
+            {uploadError}
+          </p>
+        )}
       </div>
 
       {/* CONTROLES DE ENCUADRE, CELO WASHI-TAPE Y FILTROS CUANDO HAY FOTO */}

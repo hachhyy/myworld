@@ -15,12 +15,17 @@ export async function compressImageToWebP(file: File): Promise<CompressedImageRe
     const options = {
       maxSizeMB: 0.11, // < 120 KB
       maxWidthOrHeight: 1080,
-      useWebWorker: true,
+      useWebWorker: false,
       fileType: 'image/webp',
       initialQuality: 0.82,
     };
 
-    const compressedFile = await imageCompression(file, options);
+    const compressedFile = await Promise.race([
+      imageCompression(file, options),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('Image compression timeout')), 3000)
+      ),
+    ]);
     const dataUrl = await imageCompression.getDataUrlFromFile(compressedFile);
 
     // Obtener dimensiones
@@ -32,7 +37,7 @@ export async function compressImageToWebP(file: File): Promise<CompressedImageRe
       height: dims.height,
     };
   } catch {
-    // Fallback por Canvas directo a WebP < 120KB
+    // Fallback por Canvas directo a WebP/JPEG < 120KB
     return fallbackCanvasWebP(file);
   }
 }
@@ -72,7 +77,10 @@ function fallbackCanvasWebP(file: File): Promise<CompressedImageResult> {
           return;
         }
         ctx.drawImage(img, 0, 0, width, height);
-        const dataUrl = canvas.toDataURL('image/webp', 0.78);
+        let dataUrl = canvas.toDataURL('image/webp', 0.78);
+        if (!dataUrl.startsWith('data:image/webp')) {
+          dataUrl = canvas.toDataURL('image/jpeg', 0.78);
+        }
         const approxBytes = Math.round((dataUrl.length * 3) / 4);
         resolve({
           dataUrl,

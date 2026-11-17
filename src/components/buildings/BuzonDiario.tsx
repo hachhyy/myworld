@@ -56,6 +56,9 @@ export const BuzonDiario: React.FC<BuzonDiarioProps> = ({ onClose }) => {
   const [newFrame, setNewFrame] = useState<PolaroidFrameStyle>('vichy');
   const [newPhotoUrl, setNewPhotoUrl] = useState<string | undefined>(undefined);
   const [newPhotoKB, setNewPhotoKB] = useState<number | undefined>(undefined);
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saveSuccess, setSaveSuccess] = useState(false);
   const [uploadingExistingPhoto, setUploadingExistingPhoto] = useState(false);
   const existingPhotoInputRef = useRef<HTMLInputElement>(null);
 
@@ -84,11 +87,22 @@ export const BuzonDiario: React.FC<BuzonDiarioProps> = ({ onClose }) => {
       updateDiaryPagePhoto(currentPage.id, result.dataUrl);
     } finally {
       setUploadingExistingPhoto(false);
+      e.target.value = '';
     }
   };
 
   const handleSaveNewPage = () => {
-    if (!newTitle.trim() && !newCaption.trim() && !newPhotoUrl) return;
+    if (isUploadingPhoto) {
+      setSaveError('Espera un segundito mientras se termina de revelar la foto... 📸');
+      soundEngine.playPop(0.8);
+      return;
+    }
+    if (!newTitle.trim() && !newCaption.trim() && !newPhotoUrl) {
+      setSaveError('Sube una foto o escribe un título/nota antes de guardarla en el buzón 💌');
+      soundEngine.playPop(0.8);
+      return;
+    }
+    setSaveError(null);
     const todayStr = new Date().toLocaleDateString('es-ES', {
       day: 'numeric',
       month: 'long',
@@ -106,12 +120,15 @@ export const BuzonDiario: React.FC<BuzonDiarioProps> = ({ onClose }) => {
       strokes: [],
       stickers: [],
     });
+    soundEngine.playChime();
     setNewTitle('');
     setNewCaption('');
     setNewPhotoUrl(undefined);
     setNewPhotoKB(undefined);
     setCreatingNew(false);
     setPageIndex(0);
+    setSaveSuccess(true);
+    setTimeout(() => setSaveSuccess(false), 3200);
   };
 
   return (
@@ -164,7 +181,10 @@ export const BuzonDiario: React.FC<BuzonDiarioProps> = ({ onClose }) => {
             <input
               type="text"
               value={newTitle}
-              onChange={(e) => setNewTitle(e.target.value)}
+              onChange={(e) => {
+                setNewTitle(e.target.value);
+                if (saveError) setSaveError(null);
+              }}
               placeholder="Título del recuerdo (ej. Domingo de tortitas)..."
               className="w-full px-3 py-2 rounded-xl border border-[var(--border-ink)] bg-[var(--bg-paper)] text-sm font-bold"
             />
@@ -173,9 +193,11 @@ export const BuzonDiario: React.FC<BuzonDiarioProps> = ({ onClose }) => {
             <div className="space-y-2">
               <PolaroidUploader
                 captionPreview={newCaption || newTitle || 'Nuestro recuerdo en el buzón 💌'}
+                onProcessingChange={setIsUploadingPhoto}
                 onPhotoChange={(dataUrl, kb) => {
                   setNewPhotoUrl(dataUrl);
                   setNewPhotoKB(kb);
+                  if (saveError) setSaveError(null);
                 }}
               />
 
@@ -198,18 +220,29 @@ export const BuzonDiario: React.FC<BuzonDiarioProps> = ({ onClose }) => {
 
             <textarea
               value={newCaption}
-              onChange={(e) => setNewCaption(e.target.value)}
+              onChange={(e) => {
+                setNewCaption(e.target.value);
+                if (saveError) setSaveError(null);
+              }}
               rows={3}
               placeholder="Escribe el pie de foto con letra manuscrita Caveat..."
               className="w-full px-3 py-2 rounded-xl border border-[var(--border-ink)] bg-[var(--bg-paper)] font-hand text-2xl"
             />
 
+            {saveError && (
+              <p className="text-xs font-bold text-rose-600 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2 text-center">
+                {saveError}
+              </p>
+            )}
+
             <motion.button
-              whileTap={{ scale: 0.95 }}
+              type="button"
+              whileTap={{ scale: isUploadingPhoto ? 1 : 0.95 }}
+              disabled={isUploadingPhoto}
               onClick={handleSaveNewPage}
-              className="w-full hand-button py-2.5 bg-[var(--accent-primary)] font-bold text-sm cursor-pointer"
+              className="w-full hand-button py-2.5 bg-[var(--accent-primary)] font-bold text-sm cursor-pointer disabled:opacity-60"
             >
-              Guardar Polaroid y meter en el Buzón 📮
+              {isUploadingPhoto ? 'Revelando foto... 📸' : 'Guardar Polaroid y meter en el Buzón 📮'}
             </motion.button>
           </motion.div>
         ) : diaryPages.length === 0 ? (
@@ -229,6 +262,12 @@ export const BuzonDiario: React.FC<BuzonDiarioProps> = ({ onClose }) => {
         ) : (
           currentPage && (
             <div className="w-full max-w-md flex flex-col gap-3">
+              {saveSuccess && (
+                <div className="w-full rounded-2xl border border-emerald-300 bg-emerald-50/90 px-3 py-2 text-center text-xs font-bold text-emerald-700 shadow-sm">
+                  ¡Polaroid guardada y metida en el Buzón! 📮✨
+                </div>
+              )}
+
               {/* Navegador de páginas del libro con sonido de papel */}
               <div className="flex items-center justify-between px-1">
                 <motion.button
