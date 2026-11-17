@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Plus, Sparkles, CheckCircle2, Archive } from 'lucide-react';
+import { ArrowLeft, Plus, Sparkles, CheckCircle2, Archive, Trash2 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { CravingItem, useWorldStore } from '../../store/useWorldStore';
 import { soundEngine } from '../../utils/soundAndHaptics';
@@ -12,7 +12,8 @@ interface FuenteDeseosProps {
 const EMOJI_CHOICES = ['🍜', '💆‍♀️', '🥐', '🍕', '🍦', '🎬', '🏕️', '🍣', '💐', '🧸', '🥞', '🍷'];
 
 export const FuenteDeseos: React.FC<FuenteDeseosProps> = ({ onClose }) => {
-  const { activeUser, petA, petB, cravings, addCraving, fulfillCraving } = useWorldStore();
+  const { activeUser, petA, petB, cravings, addCraving, fulfillCraving, deleteCraving } =
+    useWorldStore();
 
   const [tab, setTab] = useState<'activos' | 'baul'>('activos');
   const [composerOpen, setComposerOpen] = useState(false);
@@ -205,18 +206,29 @@ export const FuenteDeseos: React.FC<FuenteDeseosProps> = ({ onClose }) => {
                       ? { duration: 1.8, repeat: Infinity, repeatDelay: 0.8 }
                       : {}
                   }
-                  className={`hand-card p-3.5 flex items-center justify-between gap-3 ${
+                  className={`relative hand-card p-3.5 flex items-center justify-between gap-3 ${
                     isEmergency
                       ? 'bg-gradient-to-r from-[var(--bg-card)] to-rose-100/80 ring-2 ring-rose-400/70'
                       : 'bg-[var(--bg-card)]'
                   }`}
                 >
-                  <div className="flex items-center gap-3">
+                  <motion.button
+                    whileTap={{ scale: 0.86 }}
+                    type="button"
+                    onClick={() => deleteCraving(c.id)}
+                    aria-label="Eliminar deseo"
+                    title="Eliminar deseo"
+                    className="absolute top-2 right-2 w-7 h-7 rounded-full bg-[#FFEAF0]/90 hover:bg-[#FFD2DE] border border-[#FFB7C5]/60 text-[#8E4A5D] flex items-center justify-center shadow-xs cursor-pointer transition-colors"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </motion.button>
+
+                  <div className="flex items-center gap-3 min-w-0">
                     <div className="w-14 h-14 rounded-2xl bg-[var(--bg-secondary)] border-2 border-[var(--border-ink)] flex items-center justify-center text-3xl shrink-0 shadow-xs">
                       {c.emoji}
                     </div>
-                    <div>
-                      <div className="flex flex-wrap items-center gap-1 mb-1">
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-1 mb-1 pr-7">
                         <span className="hand-pill px-2 py-0.5 text-[10px] font-bold bg-[var(--bg-secondary)]">
                           {c.timeTag}
                         </span>
@@ -230,7 +242,7 @@ export const FuenteDeseos: React.FC<FuenteDeseosProps> = ({ onClose }) => {
                           {isEmergency ? 'Emergencia de antojo 🚨' : 'Me apetece un poco'}
                         </span>
                       </div>
-                      <h3 className="text-sm font-bold leading-snug">{c.title}</h3>
+                      <h3 className="text-sm font-bold leading-snug pr-6">{c.title}</h3>
                       <p className="text-[11px] text-[var(--text-muted)] mt-0.5">
                         Pedido por {c.creator === 'userA' ? petA.ownerName : petB.ownerName} · {c.createdAt}
                       </p>
@@ -240,7 +252,7 @@ export const FuenteDeseos: React.FC<FuenteDeseosProps> = ({ onClose }) => {
                   <motion.button
                     whileTap={{ scale: 0.9 }}
                     onClick={() => handleFulfill(c.id)}
-                    className="hand-button px-3 py-2 bg-[var(--accent-primary)] text-xs font-bold flex flex-col items-center gap-0.5 shrink-0 cursor-pointer"
+                    className="hand-button mt-6 px-3 py-2 bg-[var(--accent-primary)] text-xs font-bold flex flex-col items-center gap-0.5 shrink-0 cursor-pointer"
                   >
                     <CheckCircle2 className="w-4 h-4" />
                     <span>¡Cumplido!</span>
@@ -257,20 +269,32 @@ export const FuenteDeseos: React.FC<FuenteDeseosProps> = ({ onClose }) => {
             {completedCravings.map((c) => (
               <div
                 key={c.id}
-                className="hand-card p-3 bg-[var(--bg-card)] flex items-center justify-between gap-3 opacity-90"
+                className="hand-card p-3 bg-[var(--bg-card)] flex items-center justify-between gap-2.5 opacity-95"
               >
-                <div className="flex items-center gap-3">
-                  <span className="text-3xl">{c.emoji}</span>
-                  <div>
-                    <h3 className="text-sm font-bold">{c.title}</h3>
+                <div className="flex items-center gap-3 min-w-0">
+                  <span className="text-3xl shrink-0">{c.emoji}</span>
+                  <div className="min-w-0">
+                    <h3 className="text-sm font-bold truncate">{c.title}</h3>
                     <p className="text-[11px] text-[var(--text-muted)]">
                       De {c.creator === 'userA' ? petA.ownerName : petB.ownerName} · Cumplido el {c.completedAt} 💕
                     </p>
                   </div>
                 </div>
-                <span className="hand-pill px-2.5 py-1 text-[10px] font-bold bg-emerald-200 text-emerald-950">
-                  Hecho realidad ✨
-                </span>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <span className="hand-pill px-2.5 py-1 text-[10px] font-bold bg-emerald-200 text-emerald-950">
+                    Hecho realidad ✨
+                  </span>
+                  <motion.button
+                    whileTap={{ scale: 0.86 }}
+                    type="button"
+                    onClick={() => deleteCraving(c.id)}
+                    aria-label="Eliminar deseo cumplido"
+                    title="Eliminar deseo cumplido"
+                    className="w-7 h-7 rounded-full bg-[#FFEAF0]/90 hover:bg-[#FFD2DE] border border-[#FFB7C5]/60 text-[#8E4A5D] flex items-center justify-center shadow-xs cursor-pointer transition-colors"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </motion.button>
+                </div>
               </div>
             ))}
           </div>

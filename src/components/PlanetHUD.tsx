@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Volume2, VolumeX, Settings, Sparkles, Heart, Send, RotateCcw } from 'lucide-react';
+import { Volume2, VolumeX, Settings, Sparkles, Heart, Send, RotateCcw, Pencil } from 'lucide-react';
 import {
   BuildingId,
   KissIconType,
@@ -33,6 +33,7 @@ export const PlanetHUD: React.FC<PlanetHUDProps> = ({ solar, hasUnreadDiary, chi
   const {
     planetName,
     anniversaryDate,
+    setAnniversaryDate,
     activeUser,
     isMuted,
     toggleMute,
@@ -296,9 +297,9 @@ export const PlanetHUD: React.FC<PlanetHUDProps> = ({ solar, hasUnreadDiary, chi
         </main>
 
         {/* ZONA 3 (INFERIOR): 1 SOLA FILA DESLIZABLE DE EDIFICIOS + DOCK FLOTANTE GLOSSY */}
-        <footer className="shrink-0 z-30 safe-bottom-dock px-3 flex flex-col items-center gap-1.5 max-w-md mx-auto w-full box-border">
-          {/* 1 única fila horizontal con scroll táctil suave */}
-          <div className="w-full flex overflow-x-auto no-scrollbar items-center gap-2 py-0.5">
+        <footer className="shrink-0 z-30 safe-bottom-dock px-3 flex flex-col items-center max-w-md mx-auto w-full box-border">
+          {/* 1 única fila horizontal con scroll táctil suave y separación limpia del dock */}
+          <div className="w-full flex overflow-x-auto no-scrollbar items-center gap-2 py-0.5 mb-5">
             {[
               { id: 'casita', label: '🏡 Casita', badge: false },
               { id: 'correos', label: '📮 Correos', badge: hasUnreadDiary },
@@ -334,7 +335,7 @@ export const PlanetHUD: React.FC<PlanetHUDProps> = ({ solar, hasUnreadDiary, chi
                 animate={{ y: 0, opacity: 1, scale: 1 }}
                 exit={{ y: 20, opacity: 0, scale: 0.9 }}
                 transition={{ type: 'spring', stiffness: 360, damping: 20 }}
-                className="hand-card p-3 w-full max-w-xs"
+                className="hand-card p-3 w-full max-w-xs mb-3"
               >
                 <div className="flex items-center justify-between mb-1.5">
                   <span className="text-xs font-bold">
@@ -363,23 +364,23 @@ export const PlanetHUD: React.FC<PlanetHUDProps> = ({ solar, hasUnreadDiary, chi
             )}
           </AnimatePresence>
 
-          {/* DOCK FLOTANTE COMPACTO GLASSMORPHISM TIPO PASTILLA iOS */}
+          {/* DOCK FLOTANTE PROPORCIONADO GLOSSY iOS */}
           <div className="w-full flex justify-center">
-            <div className="w-full rounded-full bg-[var(--glass-bg-strong)] backdrop-blur-xl border-[1.5px] border-[var(--glass-border)] shadow-[0_10px_28px_rgba(255,158,187,0.34),inset_0_1.5px_0_rgba(255,255,255,0.9)] px-3 py-1.5 flex items-center justify-between gap-2 relative">
-              {/* Izquierda: Selector de emoji de la lluvia */}
+            <div className="w-full py-2.5 px-3.5 rounded-[34px] bg-white/85 backdrop-blur-md shadow-[0_10px_28px_rgba(255,143,163,0.25)] border-2 border-white flex items-center justify-between gap-[10px] relative">
+              {/* Izquierda: Selector de emoji de la lluvia con mayor presencia */}
               <div className="relative">
                 <motion.button
-                  whileTap={{ scale: 0.9, rotate: -2 }}
+                  whileTap={{ scale: 0.92, rotate: -2 }}
                   transition={{ type: 'spring', stiffness: 380, damping: 16 }}
                   onClick={() => {
                     soundEngine.playPop();
                     setIconPickerOpen(!iconPickerOpen);
                   }}
-                  className="px-3 py-1.5 rounded-full bg-[var(--glass-bg)] border border-[var(--glass-border)] shadow-[0_4px_10px_rgba(255,158,187,0.2),inset_0_1px_0_rgba(255,255,255,0.85)] text-xs font-bold flex items-center gap-1 cursor-pointer transition-colors"
+                  className="min-w-[118px] h-[52px] px-4 rounded-2xl bg-pink-50/90 hover:bg-pink-100 border border-pink-200/80 shadow-sm text-[#4A3F35] flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
                   title="Elegir icono de lluvia"
                 >
-                  <span className="text-sm leading-none">{KISS_ICONS[selectedIcon].emoji}</span>
-                  <span className="text-[11px] text-[var(--text-main)]">Lluvia ▾</span>
+                  <span className="text-[22px] leading-none">{KISS_ICONS[selectedIcon].emoji}</span>
+                  <span className="text-base font-bold leading-none whitespace-nowrap">Lluvia ▾</span>
                 </motion.button>
 
                 <AnimatePresence>
@@ -389,7 +390,7 @@ export const PlanetHUD: React.FC<PlanetHUDProps> = ({ solar, hasUnreadDiary, chi
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: 12, scale: 0.92 }}
                       transition={{ type: 'spring', stiffness: 360, damping: 22 }}
-                      className="absolute bottom-12 left-0 w-52 hand-card p-2 flex flex-col gap-1 z-50"
+                      className="absolute bottom-14 left-0 w-52 hand-card p-2 flex flex-col gap-1 z-50"
                     >
                       {(Object.keys(KISS_ICONS) as KissIconType[]).map((k) => (
                         <button
@@ -414,13 +415,13 @@ export const PlanetHUD: React.FC<PlanetHUDProps> = ({ solar, hasUnreadDiary, chi
                 </AnimatePresence>
               </div>
 
-              {/* Centro: Hero Button Gominola Glossy 3D (76x76px, siempre visible incluso durante recarga) */}
+              {/* Centro: Hero Button Gominola Glossy 3D (70x70px, siempre visible incluso durante recarga) */}
               {(() => {
                 const isCoolingDown = cooldownRemainingSec > 0;
                 const progressRatio = isCoolingDown
                   ? Math.max(0.03, Math.min(1, 1 - cooldownRemainingSec / 300))
                   : 1;
-                const ringRadius = 35;
+                const ringRadius = 32;
                 const ringCircumference = 2 * Math.PI * ringRadius;
                 const ringOffset = ringCircumference * (1 - progressRatio);
                 const cooldownFormatted = `${Math.floor(cooldownRemainingSec / 60)}:${String(
@@ -428,7 +429,7 @@ export const PlanetHUD: React.FC<PlanetHUDProps> = ({ solar, hasUnreadDiary, chi
                 ).padStart(2, '0')}`;
 
                 return (
-                  <div className="relative flex items-center justify-center -mt-5 w-[76px] h-[76px] shrink-0">
+                  <div className="relative flex items-center justify-center -mt-3 w-[70px] h-[70px] shrink-0">
                     {/* Corazoncitos flotando desde el propio botón hacia el planeta al pulsar */}
                     <AnimatePresence>
                       {tapFloatingHearts.map((h) => (
@@ -473,7 +474,7 @@ export const PlanetHUD: React.FC<PlanetHUDProps> = ({ solar, hasUnreadDiary, chi
                           ? `Corazón recargando (${cooldownFormatted})`
                           : 'Enviar lluvia de besos'
                       }
-                      className={`w-[76px] h-[76px] rounded-full text-white border-[2.5px] border-white/85 flex flex-col items-center justify-center cursor-pointer relative select-none overflow-hidden transition-colors duration-300 ${
+                      className={`w-[70px] h-[70px] rounded-full text-white border-[2.5px] border-white/85 flex flex-col items-center justify-center cursor-pointer relative select-none overflow-hidden transition-colors duration-300 ${
                         isCoolingDown
                           ? 'bg-gradient-to-b from-[#FFE6EE] via-[#FFC5D4] to-[#FFB7C5] shadow-[0_8px_16px_rgba(255,158,187,0.42),inset_0_2px_4px_rgba(255,255,255,0.85)]'
                           : 'bg-gradient-to-b from-[#FFD2DF] via-[#FF9EBB] to-[#FF78A1] shadow-[0_10px_22px_rgba(255,130,170,0.52),inset_0_3px_4px_rgba(255,255,255,0.9),inset_0_-3px_6px_rgba(255,95,145,0.28)]'
@@ -482,20 +483,20 @@ export const PlanetHUD: React.FC<PlanetHUDProps> = ({ solar, hasUnreadDiary, chi
                       {/* Anillo de progreso circular integrado durante la recarga */}
                       {isCoolingDown && (
                         <svg
-                          viewBox="0 0 76 76"
+                          viewBox="0 0 70 70"
                           className="pointer-events-none absolute inset-0 w-full h-full -rotate-90 z-10"
                         >
                           <circle
-                            cx="38"
-                            cy="38"
+                            cx="35"
+                            cy="35"
                             r={ringRadius}
                             fill="none"
                             stroke="rgba(255,255,255,0.55)"
                             strokeWidth="4"
                           />
                           <circle
-                            cx="38"
-                            cy="38"
+                            cx="35"
+                            cy="35"
                             r={ringRadius}
                             fill="none"
                             stroke="#FF5E8E"
@@ -509,13 +510,13 @@ export const PlanetHUD: React.FC<PlanetHUDProps> = ({ solar, hasUnreadDiary, chi
                       )}
 
                       {/* Reflejo superior tipo burbuja glossy */}
-                      <span className="pointer-events-none absolute top-1.5 left-1/2 -translate-x-1/2 w-12 h-4.5 rounded-full bg-gradient-to-b from-white/75 to-white/10" />
+                      <span className="pointer-events-none absolute top-1 left-1/2 -translate-x-1/2 w-11 h-4 rounded-full bg-gradient-to-b from-white/75 to-white/10" />
 
                       {/* Icono de corazón 3D/SVG expresivo en el centro */}
                       <div className={`relative flex items-center justify-center mt-0.5 ${isCoolingDown ? 'opacity-92' : ''}`}>
                         <svg
                           viewBox="0 0 36 34"
-                          className="w-8 h-8 drop-shadow-[0_2px_4px_rgba(255,105,150,0.45)]"
+                          className="w-7 h-7 drop-shadow-[0_2px_4px_rgba(255,105,150,0.45)]"
                         >
                           <defs>
                             <radialGradient id="heroHeartGrad" cx="35%" cy="28%" r="70%">
@@ -548,7 +549,7 @@ export const PlanetHUD: React.FC<PlanetHUDProps> = ({ solar, hasUnreadDiary, chi
                         )}
                       </div>
 
-                      <span className="text-[11px] font-extrabold tracking-tight text-white tabular-nums drop-shadow-[0_1px_2px_rgba(195,70,115,0.65)] leading-none mt-0.5 z-10">
+                      <span className="text-[10.5px] font-extrabold tracking-tight text-white tabular-nums drop-shadow-[0_1px_2px_rgba(195,70,115,0.65)] leading-none mt-0.5 z-10">
                         {isCoolingDown
                           ? cooldownFormatted
                           : spamCount > 0
@@ -577,18 +578,18 @@ export const PlanetHUD: React.FC<PlanetHUDProps> = ({ solar, hasUnreadDiary, chi
                 );
               })()}
 
-              {/* Derecha: Contador numérico limpio e integrado en la pastilla */}
+              {/* Derecha: Contador numérico protagonista del mismo peso visual */}
               <div
-                className="px-3 py-1 rounded-full bg-[var(--glass-bg)] border border-[var(--glass-border)] shadow-[inset_0_1px_0_rgba(255,255,255,0.85)] flex items-center gap-1.5"
+                className="min-w-[118px] h-[52px] px-4 rounded-2xl bg-pink-50/90 border border-pink-200/80 shadow-sm flex items-center justify-center gap-2"
                 title="Total de besos enviados y recibidos en vuestro planeta"
               >
-                <Heart className="w-3.5 h-3.5 fill-[#FF6B9A] text-[#FF6B9A] shrink-0" />
-                <div className="flex flex-col leading-none text-right">
-                  <span className="text-xs font-extrabold text-[var(--text-main)] tabular-nums">
+                <Heart className="w-[22px] h-[22px] fill-[#FF6B9A] text-[#FF6B9A] shrink-0" />
+                <div className="flex flex-col items-start justify-center leading-none">
+                  <span className="text-xl font-extrabold text-[#4A3F35] tabular-nums leading-none">
                     {totalKissesHistory.toLocaleString('es-ES')}
                   </span>
-                  <span className="text-[8px] font-bold text-[var(--text-muted)] uppercase tracking-wider">
-                    besos
+                  <span className="text-[9px] font-extrabold text-[#8C786C] uppercase tracking-wider mt-0.5">
+                    BESOS
                   </span>
                 </div>
               </div>
@@ -708,14 +709,29 @@ export const PlanetHUD: React.FC<PlanetHUDProps> = ({ solar, hasUnreadDiary, chi
               </div>
 
               <div className="hand-card p-3.5 mb-4 text-center bg-[var(--bg-secondary)]">
-                <p className="text-xs font-semibold text-[var(--text-muted)]">
-                  Desde el{' '}
-                  {new Date(anniversaryDate).toLocaleDateString('es-ES', {
-                    day: 'numeric',
-                    month: 'long',
-                    year: 'numeric',
-                  })}
-                </p>
+                <label className="inline-flex items-center justify-center gap-1.5 text-xs font-semibold text-[var(--text-muted)] cursor-pointer relative">
+                  <span>
+                    Desde el{' '}
+                    {new Date(`${anniversaryDate}T12:00:00`).toLocaleDateString('es-ES', {
+                      day: 'numeric',
+                      month: 'long',
+                      year: 'numeric',
+                    })}
+                  </span>
+                  <Pencil className="w-3 h-3 text-[#FF7A9E] shrink-0" />
+                  <input
+                    type="date"
+                    aria-label="Editar fecha de inicio de la relación"
+                    value={anniversaryDate}
+                    onChange={(e) => {
+                      if (e.target.value) {
+                        setAnniversaryDate(e.target.value);
+                        soundEngine.playPop(1.1);
+                      }
+                    }}
+                    className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
+                  />
+                </label>
                 <p className="text-2xl font-bold mt-1">
                   {duration.years} años · {duration.months} meses · {duration.days} días
                 </p>
@@ -724,25 +740,52 @@ export const PlanetHUD: React.FC<PlanetHUDProps> = ({ solar, hasUnreadDiary, chi
                 </p>
               </div>
 
-              {/* Cuenta atrás para cumpleaños */}
+              {/* Cuenta atrás para cumpleaños (editables al instante con un toque) */}
               <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)] mb-2">
                 🎂 Cuenta atrás de Cumpleaños
               </h3>
               <div className="grid grid-cols-2 gap-2.5 mb-4">
-                <div className="hand-card p-2.5 text-center">
-                  <p className="text-xs font-bold">{petA.ownerName}</p>
-                  <p className="text-lg font-bold text-[var(--accent-secondary)]">
-                    Faltan {daysUntilNextDate(petA.birthday)} días
-                  </p>
-                  <p className="text-[10px] text-[var(--text-muted)]">{petA.birthday}</p>
-                </div>
-                <div className="hand-card p-2.5 text-center">
-                  <p className="text-xs font-bold">{petB.ownerName}</p>
-                  <p className="text-lg font-bold text-[var(--accent-secondary)]">
-                    Faltan {daysUntilNextDate(petB.birthday)} días
-                  </p>
-                  <p className="text-[10px] text-[var(--text-muted)]">{petB.birthday}</p>
-                </div>
+                {(
+                  [
+                    { key: 'userA' as const, pet: petA },
+                    { key: 'userB' as const, pet: petB },
+                  ] as const
+                ).map(({ key, pet }) => {
+                  const daysLeft = daysUntilNextDate(pet.birthday);
+                  return (
+                    <label
+                      key={key}
+                      className="hand-card p-2.5 text-center relative cursor-pointer hover:ring-2 hover:ring-[#FFB7C5]/80 transition-all block"
+                    >
+                      <p className="text-xs font-bold flex items-center justify-center gap-1">
+                        <span>{pet.ownerName}</span>
+                        <Pencil className="w-3 h-3 text-[#FF7A9E] shrink-0" />
+                      </p>
+                      <p className="text-lg font-bold text-[var(--accent-secondary)] leading-tight mt-0.5">
+                        {daysLeft === 0
+                          ? '¡Es hoy! 🎂'
+                          : daysLeft === 1
+                            ? 'Falta 1 día'
+                            : `Faltan ${daysLeft} días`}
+                      </p>
+                      <p className="text-[10px] text-[var(--text-muted)] mt-0.5">
+                        {pet.birthday}
+                      </p>
+                      <input
+                        type="date"
+                        aria-label={`Editar cumpleaños de ${pet.ownerName}`}
+                        value={pet.birthday}
+                        onChange={(e) => {
+                          if (e.target.value) {
+                            updatePetProfile(key, { birthday: e.target.value });
+                            soundEngine.playPop(1.15);
+                          }
+                        }}
+                        className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
+                      />
+                    </label>
+                  );
+                })}
               </div>
 
               {/* Hitos Automáticos Calculados */}

@@ -353,6 +353,7 @@ export interface WorldState {
   // Deseos / Antojos
   addCraving: (item: Omit<CravingItem, 'id' | 'completed' | 'createdAt'>) => void;
   fulfillCraving: (id: string) => void;
+  deleteCraving: (id: string) => void;
 
   // Hucha / Tricount
   setCurrency: (curr: '€' | '$' | '£' | '¥') => void;
@@ -1146,6 +1147,13 @@ export const useWorldStore = create<WorldState>()(
             affection: 100,
             celebrationBounceUntil: Date.now() + 6000,
           },
+        }));
+      },
+
+      deleteCraving: (id) => {
+        soundEngine.playPop(0.85);
+        set((state) => ({
+          cravings: state.cravings.filter((c) => c.id !== id),
         }));
       },
 
