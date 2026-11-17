@@ -1,0 +1,260 @@
+{
+  "package.json": {
+    "mtime": 1794940536.1568189,
+    "seen": 1794940539.276426,
+    "ast_hash": "e77b8d1c6de39c9da4601321602cd0ae",
+    "semantic_hash": ""
+  },
+  "public/manifest.json": {
+    "mtime": 1794940536.1568189,
+    "seen": 1794940539.2764308,
+    "ast_hash": "dc82d4889121088ecd36ed08301d1517",
+    "semantic_hash": ""
+  },
+  "public/sw.js": {
+    "mtime": 1794940536.1568189,
+    "seen": 1794940539.2764328,
+    "ast_hash": "8bd051b75eba4ff2e136e2e6a961db47",
+    "semantic_hash": ""
+  },
+  "skills-lock.json": {
+    "mtime": 1794940536.1708188,
+    "seen": 1794940539.2764342,
+    "ast_hash": "3e43abdb30dc3470a52b2548bab456b1",
+    "semantic_hash": ""
+  },
+  "src/App.tsx": {
+    "mtime": 1794940536.1578188,
+    "seen": 1794940539.2764354,
+    "ast_hash": "fa8cd6f58d16b87d860a8238addbd86e",
+    "semantic_hash": ""
+  },
+  "src/components/LoadingScreen.tsx": {
+    "mtime": 1794940536.1578188,
+    "seen": 1794940539.2764368,
+    "ast_hash": "62eeef2b879ede9b783131b751c12c89",
+    "semantic_hash": ""
+  },
+  "src/components/OnboardingFlow.tsx": {
+    "mtime": 1794940536.1578188,
+    "seen": 1794940539.276438,
+    "ast_hash": "f8f74894edbd3f6aeac6f30d4b002d29",
+    "semantic_hash": ""
+  },
+  "src/components/Planet3DScene.tsx": {
+    "mtime": 1794940536.1578188,
+    "seen": 1794940539.2764404,
+    "ast_hash": "dd63afd115bcab458bd0f77e28c725bc",
+    "semantic_hash": ""
+  },
+  "src/components/PlanetHUD.tsx": {
+    "mtime": 1794940536.1578188,
+    "seen": 1794940539.2764423,
+    "ast_hash": "3d621c9f58bd6b8df2c157b70cecd62f",
+    "semantic_hash": ""
+  },
+  "src/components/SettingsModal.tsx": {
+    "mtime": 1794940536.158819,
+    "seen": 1794940539.2764435,
+    "ast_hash": "0c2ee90cdfbbfdaf546eeffb73dda999",
+    "semantic_hash": ""
+  },
+  "src/components/buildings/BuzonDiario.tsx": {
+    "mtime": 1794940536.158819,
+    "seen": 1794940539.2764444,
+    "ast_hash": "252d05d97dd8db9bca12cea1cd5c1c4a",
+    "semantic_hash": ""
+  },
+  "src/components/buildings/CasitaTamagotchi.tsx": {
+    "mtime": 1794940536.158819,
+    "seen": 1794940539.2764456,
+    "ast_hash": "f93a750f878a87fa558fd7cc76dbe2a1",
+    "semantic_hash": ""
+  },
+  "src/components/buildings/CineRetro.tsx": {
+    "mtime": 1794940536.158819,
+    "seen": 1794940539.2764468,
+    "ast_hash": "6458332b8991024c6a4464cef1ecb5c6",
+    "semantic_hash": ""
+  },
+  "src/components/buildings/EdificioCerdito.tsx": {
+    "mtime": 1794940536.159819,
+    "seen": 1794940539.2764475,
+    "ast_hash": "a37b9bec19cb27f2414019db724dcba5",
+    "semantic_hash": ""
+  },
+  "src/components/buildings/FaroMapaViajes.tsx": {
+    "mtime": 1794940536.159819,
+    "seen": 1794940539.2764485,
+    "ast_hash": "17588807b4d678d5eff8bf454f2614d3",
+    "semantic_hash": ""
+  },
+  "src/components/buildings/FuenteDeseos.tsx": {
+    "mtime": 1794940536.159819,
+    "seen": 1794940539.2764492,
+    "ast_hash": "57bf555e642504d5897bac57dd0239fe",
+    "semantic_hash": ""
+  },
+  "src/components/buildings/InvernaderoLunar.tsx": {
+    "mtime": 1794940536.159819,
+    "seen": 1794940539.2764504,
+    "ast_hash": "7cd4308ddc88b2d2e507544c2dcbc92b",
+    "semantic_hash": ""
+  },
+  "src/components/characters/CuteOvuloAvatar.tsx": {
+    "mtime": 1794940536.159819,
+    "seen": 1794940539.276451,
+    "ast_hash": "ce4287b95bf099fa54c35ece6e7e1889",
+    "semantic_hash": ""
+  },
+  "src/components/characters/CutePetAvatar.tsx": {
+    "mtime": 1794940536.159819,
+    "seen": 1794940539.276452,
+    "ast_hash": "d9ca2dfc8fe3baff402e7a07e569f73b",
+    "semantic_hash": ""
+  },
+  "src/components/ui/HandDrawnBox.tsx": {
+    "mtime": 1794940536.1608188,
+    "seen": 1794940539.2764528,
+    "ast_hash": "2e0857b7616d6edbfafd506b3a130260",
+    "semantic_hash": ""
+  },
+  "src/components/ui/PolaroidUploader.tsx": {
+    "mtime": 1794940536.1608188,
+    "seen": 1794940539.276454,
+    "ast_hash": "ca11ab455ab4d66a08d01f4697c35fdd",
+    "semantic_hash": ""
+  },
+  "src/lib/supabaseClient.ts": {
+    "mtime": 1794940536.1608188,
+    "seen": 1794940539.276455,
+    "ast_hash": "727e8647ac366f8aed2b25e60955b3ab",
+    "semantic_hash": ""
+  },
+  "src/main.tsx": {
+    "mtime": 1794940536.1608188,
+    "seen": 1794940539.276456,
+    "ast_hash": "7c5044802625f21381d00759ccf97738",
+    "semantic_hash": ""
+  },
+  "src/store/useWorldStore.ts": {
+    "mtime": 1794940536.1608188,
+    "seen": 1794940539.2764573,
+    "ast_hash": "abc6f740e45142d8d9a782fc7d8e14f8",
+    "semantic_hash": ""
+  },
+  "src/utils/imageCompression.ts": {
+    "mtime": 1794940536.1608188,
+    "seen": 1794940539.276458,
+    "ast_hash": "d53e6ea22bfbbed93f993fe32e5dbe96",
+    "semantic_hash": ""
+  },
+  "src/utils/solarAndTime.ts": {
+    "mtime": 1794940536.1608188,
+    "seen": 1794940539.276459,
+    "ast_hash": "90c9ea535c84b575682e7512dd60643c",
+    "semantic_hash": ""
+  },
+  "src/utils/soundAndHaptics.ts": {
+    "mtime": 1794940536.1618187,
+    "seen": 1794940539.2764602,
+    "ast_hash": "dff69a4f8b2c10b9aa1d0f236dc7ff0e",
+    "semantic_hash": ""
+  },
+  "src/vite-env.d.ts": {
+    "mtime": 1794940536.1618187,
+    "seen": 1794940539.2764614,
+    "ast_hash": "0352474ba2918efe13895edbc3780d94",
+    "semantic_hash": ""
+  },
+  "tsconfig.json": {
+    "mtime": 1794940536.1618187,
+    "seen": 1794940539.2764623,
+    "ast_hash": "e463301c586ce323389b34acc486fa26",
+    "semantic_hash": ""
+  },
+  "vercel.json": {
+    "mtime": 1794940536.1618187,
+    "seen": 1794940539.276463,
+    "ast_hash": "0937aa3e49618734dfd3d6acc8340704",
+    "semantic_hash": ""
+  },
+  "vite.config.ts": {
+    "mtime": 1794940536.1618187,
+    "seen": 1794940539.2764642,
+    "ast_hash": "97c02f016afe99fb079f29dd741b0499",
+    "semantic_hash": ""
+  },
+  ".agents/rules/brain.md": {
+    "mtime": 1794940536.1668189,
+    "seen": 1794940539.2764652,
+    "ast_hash": "191662ee6f6556cb9dc379138afc945e",
+    "semantic_hash": ""
+  },
+  "README.md": {
+    "mtime": 1794940536.1548188,
+    "seen": 1794940539.276466,
+    "ast_hash": "ff5144546507083acf3c81c4a25fbf7e",
+    "semantic_hash": ""
+  },
+  "docs/superpowers/plans/2026-11-14-actualizacion-v5-produccion.md": {
+    "mtime": 1794940536.155819,
+    "seen": 1794940539.2764668,
+    "ast_hash": "516bef1dff725b9b6fea330297085c1f",
+    "semantic_hash": ""
+  },
+  "docs/superpowers/plans/2026-11-14-actualizacion-v6-pulido-crud.md": {
+    "mtime": 1794940536.155819,
+    "seen": 1794940539.276468,
+    "ast_hash": "b8ff78d63163d7c3fe12ceb296e7f3e3",
+    "semantic_hash": ""
+  },
+  "docs/superpowers/plans/2026-11-16-viewport-login-casita-kiss-hero.md": {
+    "mtime": 1794940536.155819,
+    "seen": 1794940539.276469,
+    "ast_hash": "c85a55292ad4a5b28105dc15d1fe6491",
+    "semantic_hash": ""
+  },
+  "index.html": {
+    "mtime": 1794940536.155819,
+    "seen": 1794940539.27647,
+    "ast_hash": "7c50ad3f6aa1623f09f49e44ac2a3417",
+    "semantic_hash": ""
+  },
+  "public/apple-touch-icon.png": {
+    "mtime": 1794940536.1568189,
+    "seen": 1794940539.2764711,
+    "ast_hash": "8b735d8f2994f52e045ba050b3390925",
+    "semantic_hash": ""
+  },
+  "public/icon-192.svg": {
+    "mtime": 1794940536.1568189,
+    "seen": 1794940539.2764723,
+    "ast_hash": "f69672811583ca7bc5e58a1e3e44ada1",
+    "semantic_hash": ""
+  },
+  "public/icon-192x192.png": {
+    "mtime": 1794940536.1568189,
+    "seen": 1794940539.276473,
+    "ast_hash": "75d45f5f463f439d6814f9ddece02649",
+    "semantic_hash": ""
+  },
+  "public/icon-512.svg": {
+    "mtime": 1794940536.1568189,
+    "seen": 1794940539.276474,
+    "ast_hash": "bb8048a8e99b913c46b6e8e52755c74c",
+    "semantic_hash": ""
+  },
+  "public/icon-512x512.png": {
+    "mtime": 1794940536.1568189,
+    "seen": 1794940539.2764752,
+    "ast_hash": "278a689193746fa8d0257458cccf7499",
+    "semantic_hash": ""
+  },
+  "package-lock.json": {
+    "mtime": 1794940536.155819,
+    "seen": 1794940539.2764761,
+    "ast_hash": "d34403a00b34bc5513aff2b322a88868",
+    "semantic_hash": ""
+  }
+}
