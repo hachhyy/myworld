@@ -216,9 +216,9 @@ export const OnboardingFlow: React.FC = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 watercolor-paper overflow-y-auto flex flex-col items-center justify-between px-4 safe-modal-inset select-none">
+    <div className="fixed inset-0 w-screen h-[100dvh] z-50 watercolor-paper overflow-y-auto overscroll-none flex flex-col justify-between px-4 safe-modal-inset select-none">
       {/* Indicador superior de pasos */}
-      <div className="w-full max-w-md flex items-center justify-between pt-1 shrink-0">
+      <div className="w-full max-w-md mx-auto flex items-center justify-between pt-1 shrink-0">
         <div className="flex items-center gap-1.5">
           <span className="text-xl">🪐</span>
           <span className="font-bold text-sm">MyWorld</span>
@@ -242,7 +242,7 @@ export const OnboardingFlow: React.FC = () => {
       </div>
 
       {/* CONTENEDOR CENTRAL PASO A PASO */}
-      <div className="w-full max-w-md my-auto py-3">
+      <div className="w-full max-w-md mx-auto flex-1 flex flex-col justify-evenly py-2">
         <AnimatePresence mode="wait">
           {/* ==========================================================
               PASO 1: BIENVENIDA, REGISTRO O INICIAR SESIÓN
@@ -381,8 +381,8 @@ export const OnboardingFlow: React.FC = () => {
                       maxLength={6}
                       value={quickRoomCodeInput}
                       onChange={(e) => setQuickRoomCodeInput(e.target.value.toUpperCase())}
-                      placeholder="CÓDIGO (Ej. MIEL26)"
-                      className="flex-1 rounded-2xl border border-slate-300 px-4 py-3 bg-[var(--bg-paper)] text-[#4A3F35] font-mono text-sm font-bold tracking-widest uppercase text-center focus:outline-none focus:border-[#A8D5BA]"
+                      placeholder="EJ. MIEL26"
+                      className="flex-1 min-w-0 rounded-2xl border border-slate-300 px-2.5 py-3 bg-[var(--bg-paper)] text-[#4A3F35] font-mono text-xs sm:text-sm font-bold tracking-wider uppercase text-center focus:outline-none focus:border-[#A8D5BA]"
                     />
                     <motion.button
                       whileTap={{ scale: 0.96 }}

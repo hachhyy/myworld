@@ -368,20 +368,20 @@ export const CasitaTamagotchi: React.FC<CasitaTamagotchiProps> = ({ solar, onClo
     bedModel === 'dosel' ? '#F4ACB7' : bedModel === 'futon' ? '#74C69D' : '#F4845F';
 
   return (
-    <div className="fixed inset-0 z-40 flex flex-col justify-between watercolor-paper overflow-hidden select-none">
+    <div className="fixed inset-0 w-screen h-[100dvh] z-40 flex flex-col justify-between watercolor-paper overflow-hidden overscroll-none select-none">
       {/* Cabecera compacta con Safe Area superior de iOS */}
-      <div className="safe-top-header px-3 pb-2 shrink-0 flex items-center justify-between gap-2 border-b-2 border-[var(--border-ink)] bg-[var(--bg-card)] z-30">
+      <div className="safe-top-header px-3 pb-2 shrink-0 flex items-center justify-between gap-1.5 border-b-2 border-[var(--border-ink)] bg-[var(--bg-card)] z-30">
         <motion.button
           whileTap={{ scale: 0.92 }}
           onClick={onClose}
-          className="hand-button px-3 py-1.5 bg-[var(--bg-paper)] text-xs font-bold flex items-center gap-1 cursor-pointer"
+          className="hand-button px-2.5 py-1.5 bg-[var(--bg-paper)] text-xs font-bold flex items-center gap-1 cursor-pointer shrink-0"
         >
           <ArrowLeft className="w-4 h-4" />
           Planeta
         </motion.button>
 
         {/* Barras de cuidados de las mascotas */}
-        <div className="flex items-center gap-2.5 bg-[var(--bg-paper)] px-3.5 py-1.5 rounded-full border-2 border-[var(--border-ink)]">
+        <div className="flex items-center justify-center gap-2 bg-[var(--bg-paper)] px-2.5 py-1.5 rounded-full border-2 border-[var(--border-ink)] min-w-0">
           {[
             { icon: '🍕', val: petCare.hunger, color: '#F4A261' },
             {
@@ -393,8 +393,8 @@ export const CasitaTamagotchi: React.FC<CasitaTamagotchiProps> = ({ solar, onClo
             { icon: '💕', val: petCare.affection, color: '#E07A5F' },
           ].map((stat, idx) => (
             <div key={idx} className="flex items-center gap-1">
-              <span className="text-xs">{stat.icon}</span>
-              <div className="w-9 h-2 rounded-full bg-black/10 overflow-hidden border border-[var(--border-ink)]">
+              <span className="text-xs leading-none">{stat.icon}</span>
+              <div className="w-7 sm:w-9 h-2 rounded-full bg-black/10 overflow-hidden border border-[var(--border-ink)]">
                 <div
                   className="h-full transition-all duration-300"
                   style={{ width: `${stat.val}%`, backgroundColor: stat.color }}
@@ -404,7 +404,7 @@ export const CasitaTamagotchi: React.FC<CasitaTamagotchiProps> = ({ solar, onClo
           ))}
         </div>
 
-        <div className="px-2.5 py-1 rounded-full bg-[var(--bg-paper)] border-2 border-[var(--border-ink)] text-[11px] font-bold">
+        <div className="hidden sm:block px-2.5 py-1 rounded-full bg-[var(--bg-paper)] border-2 border-[var(--border-ink)] text-[11px] font-bold shrink-0">
           🏡 Salón 2.5D
         </div>
       </div>

@@ -261,7 +261,7 @@ export const App: React.FC = () => {
 
   return (
     <div
-      className={`relative flex-1 min-h-0 w-full flex flex-col overflow-hidden select-none transition-[background,transform] duration-500 ${
+      className={`fixed inset-0 w-screen h-[100dvh] flex flex-col overflow-hidden overscroll-none select-none transition-[background,transform] duration-500 ${
         hapticVisualPulse ? 'scale-[1.008]' : ''
       }`}
       style={{
@@ -289,7 +289,7 @@ export const App: React.FC = () => {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.94, y: 24 }}
             transition={{ type: 'spring', stiffness: 300, damping: 22 }}
-            className="fixed inset-0 z-40"
+            className="fixed inset-0 w-screen h-[100dvh] z-40 flex flex-col overflow-hidden overscroll-none"
           >
             {activeBuilding === 'casita' && (
               <CasitaTamagotchi solar={solar} onClose={() => setActiveBuilding(null)} />

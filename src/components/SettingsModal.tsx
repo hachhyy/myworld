@@ -222,15 +222,15 @@ export const SettingsModal: React.FC = () => {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           onClick={() => setSettingsOpen(false)}
-          className="fixed inset-0 z-50 bg-black/45 backdrop-blur-xs flex items-center justify-center px-4 safe-modal-inset"
+          className="fixed inset-0 w-screen h-[100dvh] z-50 bg-black/45 backdrop-blur-xs flex flex-col justify-start px-3 safe-modal-inset overflow-hidden"
         >
           <motion.div
-            initial={{ scale: 0.9, y: 20 }}
+            initial={{ scale: 0.94, y: 16 }}
             animate={{ scale: 1, y: 0 }}
-            exit={{ scale: 0.9, y: 20 }}
-            transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+            exit={{ scale: 0.94, y: 16 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 22 }}
             onClick={(e) => e.stopPropagation()}
-            className="hand-card watercolor-paper w-full max-w-md p-4 max-h-[88vh] overflow-y-auto space-y-4"
+            className="hand-card watercolor-paper w-full max-w-md mx-auto p-4 flex-1 min-h-0 overflow-y-auto space-y-4"
           >
             {/* Cabecera */}
             <div className="flex items-center justify-between border-b border-[var(--border-ink)]/20 pb-2">

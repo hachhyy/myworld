@@ -141,7 +141,7 @@ export const EdificioCerdito: React.FC<EdificioCerditoProps> = ({ onClose }) => 
     stops.length > 0 ? `conic-gradient(${stops.join(', ')})` : 'conic-gradient(#F6B89E 0deg 360deg)';
 
   return (
-    <div className="fixed inset-0 z-40 flex flex-col watercolor-paper overflow-hidden">
+    <div className="fixed inset-0 w-screen h-[100dvh] z-40 flex flex-col watercolor-paper overflow-hidden overscroll-none">
       {/* Cabecera con Safe Area superior de iOS */}
       <div className="safe-top-header px-4 pb-3 flex items-center justify-between gap-2 border-b-2 border-[var(--border-ink)] bg-[var(--bg-card)]">
         <motion.button

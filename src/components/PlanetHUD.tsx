@@ -168,7 +168,7 @@ export const PlanetHUD: React.FC<PlanetHUDProps> = ({ solar, hasUnreadDiary, chi
   return (
     <>
       {/* ESTRUCTURA FLEX VERTICAL EN 3 ZONAS ANCLADA AL 100% FÍSICO DE LA PANTALLA */}
-      <div className="flex-1 min-h-0 w-full flex flex-col justify-between overflow-hidden">
+      <div className="w-full h-full flex-1 min-h-0 flex flex-col justify-between overflow-hidden">
         {/* ZONA 1 (SUPERIOR): HEADER PEGADO A LA SAFE AREA REAL (px-3) */}
         <header className="shrink-0 z-30 safe-top-header px-3 flex flex-col gap-1.5 max-w-md mx-auto w-full box-border">
           <div className="flex items-center justify-between gap-2 w-full">
