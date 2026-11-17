@@ -228,8 +228,8 @@ export const App: React.FC = () => {
     document.documentElement.setAttribute('data-theme', theme);
     document.documentElement.setAttribute('data-night', solar.isNightMode ? 'true' : 'false');
 
-    const topColor = hasActiveLinkedSession ? solar.skyTopColor : '#FDF8F2';
-    const bottomColor = hasActiveLinkedSession ? solar.skyBottomColor : '#FDF8F2';
+    const topColor = hasActiveLinkedSession ? solar.skyTopColor : '#FFF5EE';
+    const bottomColor = hasActiveLinkedSession ? solar.skyBottomColor : '#FFF5EE';
     document.documentElement.style.backgroundColor = topColor;
     document.body.style.backgroundColor = bottomColor;
 

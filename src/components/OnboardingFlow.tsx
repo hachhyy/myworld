@@ -219,20 +219,20 @@ export const OnboardingFlow: React.FC = () => {
     <div className="fixed inset-0 w-screen h-[100dvh] z-50 watercolor-paper overflow-y-auto overscroll-none flex flex-col justify-between px-4 safe-modal-inset select-none">
       {/* Indicador superior de pasos */}
       <div className="w-full max-w-md mx-auto flex items-center justify-between pt-1 shrink-0">
-        <div className="flex items-center gap-1.5">
-          <span className="text-xl">🪐</span>
+        <div className="flex items-center gap-1.5 hand-pill px-3 py-1">
+          <span className="text-lg">🪐</span>
           <span className="font-bold text-sm">MyWorld</span>
         </div>
         <div className="flex items-center gap-1.5">
           {[1, 2, 3].map((st) => (
             <span
               key={st}
-              className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold border border-black/15 transition-all ${
+              className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold border transition-all ${
                 onboardingStep === st
-                  ? 'bg-[var(--accent-primary)] scale-105'
+                  ? 'glossy-pink-cta scale-105'
                   : onboardingStep > st
-                  ? 'bg-[#A8D5BA]'
-                  : 'bg-white/80 opacity-60'
+                  ? 'glossy-mint-cta'
+                  : 'bg-white/70 backdrop-blur-md border-white/75 opacity-70'
               }`}
             >
               Paso {st}
@@ -258,10 +258,10 @@ export const OnboardingFlow: React.FC = () => {
             >
               {/* Logo artesanal de MyWorld */}
               <div className="text-center space-y-1">
-                <div className="w-20 h-20 mx-auto rounded-3xl bg-white/95 border border-black/10 shadow-sm flex items-center justify-center text-4xl animate-float-slow">
+                <div className="w-20 h-20 mx-auto rounded-3xl bg-white/75 backdrop-blur-xl border border-white/80 shadow-[0_12px_28px_rgba(255,158,187,0.3)] flex items-center justify-center text-4xl animate-float-slow">
                   🪐💕
                 </div>
-                <h1 className="text-2xl font-bold tracking-tight mt-2">
+                <h1 className="text-2xl font-bold tracking-tight mt-2 text-[var(--text-ink)]">
                   Bienvenidos a MyWorld
                 </h1>
                 <p className="font-hand text-xl text-[var(--text-muted)]">
@@ -269,45 +269,49 @@ export const OnboardingFlow: React.FC = () => {
                 </p>
               </div>
 
-              <div className="bg-white/95 rounded-3xl shadow-sm p-5 border border-black/5">
+              <div className="hand-card p-5">
                 {/* Pestañas: Crear cuenta nueva vs Iniciar sesión */}
                 <div className="grid grid-cols-2 gap-2 mb-4">
-                  <button
+                  <motion.button
+                    whileTap={{ scale: 0.92, rotate: -1 }}
+                    transition={{ type: 'spring', stiffness: 420, damping: 16 }}
                     type="button"
                     onClick={() => {
                       soundEngine.playPop();
                       setAuthTab('signup');
                       setAuthError(null);
                     }}
-                    className={`py-2.5 px-3 rounded-2xl text-xs font-bold border transition-all cursor-pointer ${
+                    className={`py-2.5 px-2 rounded-2xl text-[11.5px] font-bold border whitespace-nowrap transition-all cursor-pointer ${
                       authTab === 'signup'
-                        ? 'bg-[var(--accent-primary)] border-black/15 shadow-xs'
-                        : 'bg-[var(--bg-paper)] border-black/5 opacity-80'
+                        ? 'glossy-pink-cta shadow-sm'
+                        : 'bg-[var(--glass-bg)] border-[var(--glass-border)] opacity-85'
                     }`}
                   >
                     🌱 Crear cuenta nueva
-                  </button>
-                  <button
+                  </motion.button>
+                  <motion.button
+                    whileTap={{ scale: 0.92, rotate: -1 }}
+                    transition={{ type: 'spring', stiffness: 420, damping: 16 }}
                     type="button"
                     onClick={() => {
                       soundEngine.playPop();
                       setAuthTab('login');
                       setAuthError(null);
                     }}
-                    className={`py-2.5 px-3 rounded-2xl text-xs font-bold border transition-all cursor-pointer ${
+                    className={`py-2.5 px-2 rounded-2xl text-[11.5px] font-bold border whitespace-nowrap transition-all cursor-pointer ${
                       authTab === 'login'
-                        ? 'bg-[var(--accent-primary)] border-black/15 shadow-xs'
-                        : 'bg-[var(--bg-paper)] border-black/5 opacity-80'
+                        ? 'glossy-pink-cta shadow-sm'
+                        : 'bg-[var(--glass-bg)] border-[var(--glass-border)] opacity-85'
                     }`}
                   >
                     🔑 Iniciar sesión
-                  </button>
+                  </motion.button>
                 </div>
 
                 <form onSubmit={handleAuthSubmit} className="space-y-3 text-xs">
                   {authTab === 'signup' && (
                     <div>
-                      <label className="block font-bold mb-1 text-[#4A3F35]">
+                      <label className="block font-bold mb-1 text-[var(--text-ink)]">
                         Tu nombre o apodo cariñoso:
                       </label>
                       <input
@@ -315,46 +319,47 @@ export const OnboardingFlow: React.FC = () => {
                         value={nameInput}
                         onChange={(e) => setNameInput(e.target.value)}
                         placeholder="Ej. Lucía"
-                        className="w-full rounded-2xl border border-slate-300 px-4 py-3 bg-[var(--bg-paper)] text-[#4A3F35] font-semibold focus:outline-none focus:border-[#E88B84]"
+                        className="w-full rounded-2xl border border-[#FFB7C5]/55 px-4 py-3 bg-[#FFF5EE]/85 text-[#4A3F35] font-semibold focus:outline-none focus:ring-2 focus:ring-[#FF9EBB]"
                       />
                     </div>
                   )}
 
                   <div>
-                    <label className="block font-bold mb-1 text-[#4A3F35]">Correo electrónico:</label>
+                    <label className="block font-bold mb-1 text-[var(--text-ink)]">Correo electrónico:</label>
                     <input
                       type="email"
                       value={emailInput}
                       onChange={(e) => setEmailInput(e.target.value)}
                       placeholder="tu@correo.com"
-                      className="w-full rounded-2xl border border-slate-300 px-4 py-3 bg-[var(--bg-paper)] text-[#4A3F35] font-semibold focus:outline-none focus:border-[#E88B84]"
+                      className="w-full rounded-2xl border border-[#FFB7C5]/55 px-4 py-3 bg-[#FFF5EE]/85 text-[#4A3F35] font-semibold focus:outline-none focus:ring-2 focus:ring-[#FF9EBB]"
                     />
                   </div>
 
                   <div>
-                    <label className="block font-bold mb-1 text-[#4A3F35]">Contraseña:</label>
+                    <label className="block font-bold mb-1 text-[var(--text-ink)]">Contraseña:</label>
                     <input
                       type="password"
                       value={passwordInput}
                       onChange={(e) => setPasswordInput(e.target.value)}
                       placeholder="••••••••"
-                      className="w-full rounded-2xl border border-slate-300 px-4 py-3 bg-[var(--bg-paper)] text-[#4A3F35] font-semibold focus:outline-none focus:border-[#E88B84]"
+                      className="w-full rounded-2xl border border-[#FFB7C5]/55 px-4 py-3 bg-[#FFF5EE]/85 text-[#4A3F35] font-semibold focus:outline-none focus:ring-2 focus:ring-[#FF9EBB]"
                     />
                   </div>
 
                   {authError && (
-                    <div className="p-2.5 rounded-2xl bg-rose-100 border border-rose-300 text-rose-950 font-semibold">
+                    <div className="p-2.5 rounded-2xl bg-[#FFEAF0] border border-[#FFB7C5] text-[#6B3B4B] font-semibold">
                       {authError}
                     </div>
                   )}
 
                   <motion.button
-                    whileTap={{ scale: 0.97 }}
+                    whileTap={{ scale: 0.92, rotate: -1.5 }}
+                    transition={{ type: 'spring', stiffness: 420, damping: 16 }}
                     type="submit"
                     disabled={loading}
-                    className="w-full rounded-2xl py-3 px-4 bg-[var(--accent-secondary)] text-[#4A3F35] font-bold text-sm shadow-sm border border-black/10 flex items-center justify-center gap-1.5 cursor-pointer"
+                    className="hand-button glossy-pink-cta w-full rounded-full py-3.5 px-4 font-bold text-sm flex items-center justify-center gap-1.5 cursor-pointer"
                   >
-                    <Heart className="w-4 h-4 fill-current" />
+                    <Heart className="w-4 h-4 fill-[#FF5E8E] text-[#FF5E8E]" />
                     <span>
                       {loading
                         ? 'Preparando tu rincón...'
@@ -367,11 +372,11 @@ export const OnboardingFlow: React.FC = () => {
               </div>
 
               {/* Acceso directo por Código de Pareja de 6 letras (Aislamiento por world_id) */}
-              <div className="bg-white/95 rounded-3xl shadow-sm p-5 border border-black/5">
+              <div className="hand-card p-5">
                 <div className="space-y-2.5 text-xs">
                   <div className="flex items-center justify-between">
-                    <span className="font-bold flex items-center gap-1.5 text-[#4A3F35]">
-                      <KeyRound className="w-3.5 h-3.5 text-rose-500" />
+                    <span className="font-bold flex items-center gap-1.5 text-[var(--text-ink)]">
+                      <KeyRound className="w-3.5 h-3.5 text-[#FF7A9E]" />
                       ¿Ya tenéis código de 6 letras de vuestro planeta?
                     </span>
                   </div>
@@ -382,14 +387,15 @@ export const OnboardingFlow: React.FC = () => {
                       value={quickRoomCodeInput}
                       onChange={(e) => setQuickRoomCodeInput(e.target.value.toUpperCase())}
                       placeholder="EJ. MIEL26"
-                      className="flex-1 min-w-0 rounded-2xl border border-slate-300 px-2.5 py-3 bg-[var(--bg-paper)] text-[#4A3F35] font-mono text-xs sm:text-sm font-bold tracking-wider uppercase text-center focus:outline-none focus:border-[#A8D5BA]"
+                      className="flex-1 min-w-0 rounded-2xl border border-[#A8E6CF]/75 px-2.5 py-3 bg-[#FFF5EE]/85 text-[#4A3F35] font-mono text-xs sm:text-sm font-bold tracking-wider uppercase text-center focus:outline-none focus:ring-2 focus:ring-[#A8E6CF]"
                     />
                     <motion.button
-                      whileTap={{ scale: 0.96 }}
+                      whileTap={{ scale: 0.92, rotate: -1.5 }}
+                      transition={{ type: 'spring', stiffness: 420, damping: 16 }}
                       type="button"
                       disabled={loading}
                       onClick={handleQuickCodeEnter}
-                      className="rounded-2xl px-4 py-3 bg-[#A8D5BA] text-[#2B3A30] font-bold shadow-sm border border-black/10 flex items-center gap-1 cursor-pointer shrink-0"
+                      className="hand-button glossy-mint-cta rounded-full px-4 py-3 font-bold flex items-center gap-1 cursor-pointer shrink-0"
                     >
                       <span>Aterrizar 🪐</span>
                     </motion.button>
@@ -421,20 +427,20 @@ export const OnboardingFlow: React.FC = () => {
               </div>
 
               {step2Error && (
-                <div className="p-3 rounded-2xl bg-rose-100 border border-rose-300 text-rose-950 text-xs font-bold text-center">
+                <div className="p-3 rounded-2xl bg-[#FFEAF0] border border-[#FFB7C5] text-[#6B3B4B] text-xs font-bold text-center">
                   {step2Error}
                 </div>
               )}
 
               {/* TARJETA GRANDE OPCIÓN A: CREAR NUESTRO PLANETA */}
-              <div className="bg-white/95 rounded-3xl shadow-sm p-5 border border-black/5">
+              <div className="hand-card p-5">
                 <div className="space-y-3 text-xs">
                   <div className="flex items-center gap-2.5">
-                    <span className="w-9 h-9 rounded-2xl bg-[var(--accent-primary)] border border-black/10 flex items-center justify-center text-base shrink-0">
+                    <span className="w-9 h-9 rounded-2xl bg-[#FFD6E4]/85 border border-white/80 shadow-xs flex items-center justify-center text-base shrink-0">
                       🪐
                     </span>
                     <div>
-                      <h3 className="text-sm font-bold text-[#4A3F35]">Opción A · Crear nuestro Planeta</h3>
+                      <h3 className="text-sm font-bold text-[var(--text-ink)]">Opción A · Crear nuestro Planeta</h3>
                       <p className="text-[11px] text-[var(--text-muted)]">
                         Bautiza vuestro mundo y genera el código para tu pareja
                       </p>
@@ -444,7 +450,7 @@ export const OnboardingFlow: React.FC = () => {
                   {!generatedWorld ? (
                     <>
                       <div>
-                        <label className="block font-bold mb-1 text-[#4A3F35]">
+                        <label className="block font-bold mb-1 text-[var(--text-ink)]">
                           Nombre personalizado del Planeta:
                         </label>
                         <input
@@ -452,27 +458,28 @@ export const OnboardingFlow: React.FC = () => {
                           value={newPlanetName}
                           onChange={(e) => setNewPlanetName(e.target.value)}
                           placeholder="Ej. Planeta Canela y Miel"
-                          className="w-full rounded-2xl border border-slate-300 px-4 py-3 bg-[var(--bg-paper)] text-[#4A3F35] font-bold focus:outline-none"
+                          className="w-full rounded-2xl border border-[#FFB7C5]/55 px-4 py-3 bg-[#FFF5EE]/85 text-[#4A3F35] font-bold focus:outline-none focus:ring-2 focus:ring-[#FF9EBB]"
                         />
                       </div>
 
                       <div>
-                        <label className="block font-bold mb-1 text-[#4A3F35]">
+                        <label className="block font-bold mb-1 text-[var(--text-ink)]">
                           Fecha de inicio de vuestra relación:
                         </label>
                         <input
                           type="date"
                           value={newAnniversaryDate}
                           onChange={(e) => setNewAnniversaryDate(e.target.value)}
-                          className="w-full rounded-2xl border border-slate-300 px-4 py-3 bg-[var(--bg-paper)] text-[#4A3F35] font-bold focus:outline-none"
+                          className="w-full rounded-2xl border border-[#FFB7C5]/55 px-4 py-3 bg-[#FFF5EE]/85 text-[#4A3F35] font-bold focus:outline-none focus:ring-2 focus:ring-[#FF9EBB]"
                         />
                       </div>
 
                       <motion.button
-                        whileTap={{ scale: 0.97 }}
+                        whileTap={{ scale: 0.92, rotate: -1.5 }}
+                        transition={{ type: 'spring', stiffness: 420, damping: 16 }}
                         onClick={handleCreateWorldOptionA}
                         disabled={loading}
-                        className="w-full rounded-2xl py-3 px-4 bg-[var(--accent-primary)] text-[#4A3F35] font-bold shadow-sm border border-black/10 flex items-center justify-center gap-1.5 cursor-pointer"
+                        className="hand-button glossy-pink-cta w-full rounded-full py-3 px-4 font-bold flex items-center justify-center gap-1.5 cursor-pointer"
                       >
                         <Globe className="w-4 h-4" />
                         <span>Generar nuestro Planeta y Código Único</span>
@@ -483,31 +490,33 @@ export const OnboardingFlow: React.FC = () => {
                     <motion.div
                       initial={{ scale: 0.92, opacity: 0 }}
                       animate={{ scale: 1, opacity: 1 }}
-                      className="p-3.5 rounded-2xl bg-[var(--bg-secondary)] border border-black/10 text-center space-y-2.5"
+                      className="p-3.5 rounded-3xl bg-[#FFEAF0]/80 border border-white/80 text-center space-y-2.5"
                     >
                       <p className="text-[11px] font-bold text-[var(--text-muted)]">
                         ¡Planeta «{generatedWorld.name}» creado! Comparte este código con tu pareja:
                       </p>
-                      <div className="py-2.5 px-4 rounded-2xl bg-white border border-dashed border-slate-400 flex items-center justify-between">
+                      <div className="py-2.5 px-4 rounded-2xl bg-white/85 border border-dashed border-[#FF9EBB]/80 flex items-center justify-between">
                         <span className="text-2xl font-bold tracking-[0.25em] font-mono text-[#4A3F35]">
                           {generatedWorld.roomCode}
                         </span>
-                        <button
+                        <motion.button
+                          whileTap={{ scale: 0.9 }}
                           type="button"
                           onClick={() => {
                             navigator.clipboard?.writeText(generatedWorld.roomCode);
                             setCopiedCode(true);
                             setTimeout(() => setCopiedCode(false), 2000);
                           }}
-                          className="rounded-full px-3 py-1 bg-[var(--accent-highlight)] text-[#4A3F35] text-[11px] font-bold border border-black/10 flex items-center gap-1 cursor-pointer"
+                          className="hand-pill px-3 py-1 bg-[#FFE5B4] text-[#4A3F35] text-[11px] font-bold flex items-center gap-1 cursor-pointer"
                         >
                           {copiedCode ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
                           {copiedCode ? '¡Copiado!' : 'Copiar'}
-                        </button>
+                        </motion.button>
                       </div>
 
                       <motion.button
-                        whileTap={{ scale: 0.97 }}
+                        whileTap={{ scale: 0.92, rotate: -1 }}
+                        transition={{ type: 'spring', stiffness: 420, damping: 16 }}
                         onClick={() =>
                           setLinkedWorld(
                             generatedWorld.id,
@@ -516,7 +525,7 @@ export const OnboardingFlow: React.FC = () => {
                             generatedWorld.anniversaryDate
                           )
                         }
-                        className="w-full rounded-2xl py-3 px-4 bg-[var(--accent-secondary)] text-[#4A3F35] font-bold shadow-sm border border-black/10 flex items-center justify-center gap-1.5 cursor-pointer"
+                        className="hand-button glossy-pink-cta w-full rounded-full py-3 px-4 font-bold flex items-center justify-center gap-1.5 cursor-pointer"
                       >
                         <span>Continuar a elegir mi mascota</span>
                         <ArrowRight className="w-4 h-4" />
@@ -527,14 +536,14 @@ export const OnboardingFlow: React.FC = () => {
               </div>
 
               {/* TARJETA GRANDE OPCIÓN B: TENGO EL CÓDIGO DE MI PAREJA */}
-              <div className="bg-white/95 rounded-3xl shadow-sm p-5 border border-black/5">
+              <div className="hand-card p-5">
                 <div className="space-y-3 text-xs">
                   <div className="flex items-center gap-2.5">
-                    <span className="w-9 h-9 rounded-2xl bg-[#A8D5BA] border border-black/10 flex items-center justify-center text-base shrink-0">
+                    <span className="w-9 h-9 rounded-2xl bg-[#C4F1DF]/85 border border-white/80 shadow-xs flex items-center justify-center text-base shrink-0">
                       💌
                     </span>
                     <div>
-                      <h3 className="text-sm font-bold text-[#4A3F35]">
+                      <h3 className="text-sm font-bold text-[var(--text-ink)]">
                         Opción B · Tengo el código de mi pareja
                       </h3>
                       <p className="text-[11px] text-[var(--text-muted)]">
@@ -550,13 +559,14 @@ export const OnboardingFlow: React.FC = () => {
                       value={partnerCodeInput}
                       onChange={(e) => setPartnerCodeInput(e.target.value.toUpperCase())}
                       placeholder="Ej. MIEL26"
-                      className="flex-1 rounded-2xl border border-slate-300 px-4 py-3 bg-[var(--bg-paper)] text-[#4A3F35] font-mono text-base font-bold tracking-widest uppercase text-center focus:outline-none"
+                      className="flex-1 rounded-2xl border border-[#A8E6CF]/75 px-4 py-3 bg-[#FFF5EE]/85 text-[#4A3F35] font-mono text-base font-bold tracking-widest uppercase text-center focus:outline-none focus:ring-2 focus:ring-[#A8E6CF]"
                     />
                     <motion.button
-                      whileTap={{ scale: 0.96 }}
+                      whileTap={{ scale: 0.92, rotate: -1.5 }}
+                      transition={{ type: 'spring', stiffness: 420, damping: 16 }}
                       onClick={handleJoinWorldOptionB}
                       disabled={loading}
-                      className="rounded-2xl px-4 py-3 bg-[#A8D5BA] text-[#2B3A30] font-bold shadow-sm border border-black/10 flex items-center gap-1.5 cursor-pointer shrink-0"
+                      className="hand-button glossy-mint-cta rounded-full px-4 py-3 font-bold flex items-center gap-1.5 cursor-pointer shrink-0"
                     >
                       <KeyRound className="w-4 h-4" />
                       <span>Vincular</span>
@@ -588,10 +598,10 @@ export const OnboardingFlow: React.FC = () => {
                 </p>
               </div>
 
-              <div className="bg-white/95 rounded-3xl shadow-sm p-5 border border-black/5">
+              <div className="hand-card p-5">
                 <div className="flex flex-col items-center space-y-3 text-xs">
                   {/* Vista previa viva del avatar mascota */}
-                  <div className="p-3 rounded-3xl bg-[var(--bg-secondary)] border border-black/10 flex flex-col items-center">
+                  <div className="p-3.5 rounded-3xl bg-[#FFEAF0]/80 backdrop-blur-md border border-white/80 shadow-[0_8px_20px_rgba(255,158,187,0.2)] flex flex-col items-center">
                     <CutePetAvatar
                       species={selectedSpecies}
                       hat="rana"
@@ -605,12 +615,13 @@ export const OnboardingFlow: React.FC = () => {
 
                   {/* Catálogo de especies */}
                   <div className="w-full">
-                    <label className="block font-bold mb-1 text-[#4A3F35]">
+                    <label className="block font-bold mb-1 text-[var(--text-ink)]">
                       Elige tu especie favorita ({PET_CATALOG.length} disponibles):
                     </label>
-                    <div className="grid grid-cols-3 gap-1.5 max-h-36 overflow-y-auto p-1.5 rounded-2xl bg-[var(--bg-paper)] border border-slate-300">
+                    <div className="grid grid-cols-3 gap-1.5 max-h-36 overflow-y-auto p-1.5 rounded-2xl bg-[#FFF5EE]/75 border border-[#FFB7C5]/45">
                       {PET_CATALOG.map((spec) => (
-                        <button
+                        <motion.button
+                          whileTap={{ scale: 0.92 }}
                           key={spec.id}
                           type="button"
                           onClick={() => {
@@ -619,19 +630,19 @@ export const OnboardingFlow: React.FC = () => {
                           }}
                           className={`py-1.5 px-2 rounded-xl text-[11px] font-bold border transition-all cursor-pointer truncate ${
                             selectedSpecies === spec.id
-                              ? 'bg-[var(--accent-primary)] border-black/20 shadow-xs text-[#4A3F35]'
-                              : 'bg-white border-black/5 text-[#4A3F35]/80'
+                              ? 'glossy-pink-cta shadow-xs'
+                              : 'bg-white/75 border-white/80 text-[#4A3F35]/85'
                           }`}
                         >
                           {spec.name} {spec.inWaterBubble ? '🫧' : ''}
-                        </button>
+                        </motion.button>
                       ))}
                     </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-2.5 w-full">
                     <div>
-                      <label className="block font-bold mb-1 text-[#4A3F35]">
+                      <label className="block font-bold mb-1 text-[var(--text-ink)]">
                         Tu mote cariñoso:
                       </label>
                       <input
@@ -639,11 +650,11 @@ export const OnboardingFlow: React.FC = () => {
                         value={myNickname}
                         onChange={(e) => setMyNickname(e.target.value)}
                         placeholder="Ej. Alex"
-                        className="w-full rounded-2xl border border-slate-300 px-3.5 py-2.5 bg-[var(--bg-paper)] text-[#4A3F35] font-bold focus:outline-none"
+                        className="w-full rounded-2xl border border-[#FFB7C5]/55 px-3.5 py-2.5 bg-[#FFF5EE]/85 text-[#4A3F35] font-bold focus:outline-none focus:ring-2 focus:ring-[#FF9EBB]"
                       />
                     </div>
                     <div>
-                      <label className="block font-bold mb-1 text-[#4A3F35]">
+                      <label className="block font-bold mb-1 text-[var(--text-ink)]">
                         Mote de tu pareja:
                       </label>
                       <input
@@ -651,14 +662,14 @@ export const OnboardingFlow: React.FC = () => {
                         value={partnerNickname}
                         onChange={(e) => setPartnerNickname(e.target.value)}
                         placeholder="Ej. Cris"
-                        className="w-full rounded-2xl border border-slate-300 px-3.5 py-2.5 bg-[var(--bg-paper)] text-[#4A3F35] font-bold focus:outline-none"
+                        className="w-full rounded-2xl border border-[#FFB7C5]/55 px-3.5 py-2.5 bg-[#FFF5EE]/85 text-[#4A3F35] font-bold focus:outline-none focus:ring-2 focus:ring-[#FF9EBB]"
                       />
                     </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-2.5 w-full">
                     <div>
-                      <label className="block font-bold mb-1 text-[#4A3F35]">
+                      <label className="block font-bold mb-1 text-[var(--text-ink)]">
                         Nombre de tu mascota:
                       </label>
                       <input
@@ -666,31 +677,32 @@ export const OnboardingFlow: React.FC = () => {
                         value={petNameInput}
                         onChange={(e) => setPetNameInput(e.target.value)}
                         placeholder="Ej. Mochi"
-                        className="w-full rounded-2xl border border-slate-300 px-3.5 py-2.5 bg-[var(--bg-paper)] text-[#4A3F35] font-bold focus:outline-none"
+                        className="w-full rounded-2xl border border-[#FFB7C5]/55 px-3.5 py-2.5 bg-[#FFF5EE]/85 text-[#4A3F35] font-bold focus:outline-none focus:ring-2 focus:ring-[#FF9EBB]"
                       />
                     </div>
                     <div>
-                      <label className="block font-bold mb-1 flex items-center gap-1 text-[#4A3F35]">
-                        <Cake className="w-3.5 h-3.5 text-rose-500" />
+                      <label className="block font-bold mb-1 flex items-center gap-1 text-[var(--text-ink)]">
+                        <Cake className="w-3.5 h-3.5 text-[#FF7A9E]" />
                         Tu fecha de cumpleaños:
                       </label>
                       <input
                         type="date"
                         value={birthdayInput}
                         onChange={(e) => setBirthdayInput(e.target.value)}
-                        className="w-full rounded-2xl border border-slate-300 px-3 py-2.5 bg-[var(--bg-paper)] text-[#4A3F35] font-bold focus:outline-none"
+                        className="w-full rounded-2xl border border-[#FFB7C5]/55 px-3 py-2.5 bg-[#FFF5EE]/85 text-[#4A3F35] font-bold focus:outline-none focus:ring-2 focus:ring-[#FF9EBB]"
                       />
                     </div>
                   </div>
 
                   <motion.button
-                    whileTap={{ scale: 0.96 }}
+                    whileTap={{ scale: 0.92, rotate: -1.5 }}
+                    transition={{ type: 'spring', stiffness: 420, damping: 16 }}
                     onClick={() => {
                       setCoupleNames(myNickname, partnerNickname);
                       handleFinishOnboardingStep3();
                     }}
                     disabled={loading}
-                    className="w-full rounded-2xl py-3.5 px-4 bg-[var(--accent-secondary)] text-[#4A3F35] font-bold text-sm shadow-sm border border-black/10 flex items-center justify-center gap-2 cursor-pointer mt-1"
+                    className="hand-button glossy-pink-cta w-full rounded-full py-3.5 px-4 font-bold text-sm flex items-center justify-center gap-2 cursor-pointer mt-1"
                   >
                     <span>¡Ir a nuestro mundo! 🪐✨</span>
                   </motion.button>

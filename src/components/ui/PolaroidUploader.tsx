@@ -243,7 +243,7 @@ export const PolaroidUploader: React.FC<PolaroidUploaderProps> = ({
                   title={w.label}
                   style={{ backgroundColor: w.bg }}
                   className={`w-6 h-6 rounded-full border-2 cursor-pointer transition-transform ${
-                    washi === w.id ? 'border-[#3D312A] scale-115 shadow-xs' : 'border-black/30 opacity-75'
+                    washi === w.id ? 'border-[#FF7A9E] ring-2 ring-[#FFB7C5] scale-115 shadow-xs' : 'border-white/80 opacity-80'
                   }`}
                 />
               ))}

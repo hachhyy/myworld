@@ -59,10 +59,10 @@ export function computeSolarEnvironment(
       timeOfDay: 'night',
       isNightMode: true,
       weather,
-      skyTopColor: '#171C2C',
-      skyBottomColor: '#28314E',
-      ambientIntensity: 0.65,
-      sunColor: '#F4C97A',
+      skyTopColor: '#212748',
+      skyBottomColor: '#3B3863',
+      ambientIntensity: 0.78,
+      sunColor: '#FFE5B4',
       label: 'Noche Estrellada 🌙',
     };
   }
@@ -72,10 +72,10 @@ export function computeSolarEnvironment(
       timeOfDay: 'sunset',
       isNightMode: false,
       weather,
-      skyTopColor: '#F7A8B8',
-      skyBottomColor: '#FFE5C4',
-      ambientIntensity: 1.05,
-      sunColor: '#FFE0B2',
+      skyTopColor: '#FFB7C5',
+      skyBottomColor: '#FFF5EE',
+      ambientIntensity: 1.08,
+      sunColor: '#FFE4D6',
       label: 'Atardecer Rosado 🌅',
     };
   }
@@ -84,10 +84,10 @@ export function computeSolarEnvironment(
     timeOfDay: 'day',
     isNightMode: false,
     weather,
-    skyTopColor: '#CFE8F9',
-    skyBottomColor: '#FDF8F2',
-    ambientIntensity: 1.05,
-    sunColor: '#FFF4D4',
+    skyTopColor: '#CDEEFF',
+    skyBottomColor: '#FFF5EE',
+    ambientIntensity: 1.12,
+    sunColor: '#FFF7E0',
     label: 'Día Soleado ☀️',
   };
 }

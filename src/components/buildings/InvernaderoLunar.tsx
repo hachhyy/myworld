@@ -352,9 +352,9 @@ export const InvernaderoLunar: React.FC<InvernaderoLunarProps> = ({ onClose }) =
       <div className="flex-1 overflow-y-auto p-3 space-y-3 max-w-md mx-auto w-full">
         {/* Banner informativo de Permisos cuando entra la pareja en Modo Solo-Lectura */}
         {!canEdit && (
-          <div className="hand-card p-3 bg-[#FFF3E6] border-2 border-[var(--border-ink)] flex items-center justify-between gap-2 text-xs">
+          <div className="hand-card p-3 bg-[var(--bg-secondary)] border-2 border-[var(--border-ink)] flex items-center justify-between gap-2 text-xs">
             <div className="space-y-0.5">
-              <p className="font-bold text-[#4A3F35]">
+              <p className="font-bold text-[var(--text-ink)]">
                 🔒 Modo Solo-Lectura para {activeUser === 'userA' ? petA.ownerName : petB.ownerName}
               </p>
               <p className="text-[11px] text-[var(--text-muted)]">

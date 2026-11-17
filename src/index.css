@@ -1,125 +1,170 @@
 @import "tailwindcss";
 
 :root {
-  --bg-paper: #FDF8F2;
-  --bg-card: #FFFDF9;
-  --bg-secondary: #F7EFE4;
+  --bg-paper: #FFF5EE;
+  --bg-card: rgba(255, 252, 249, 0.82);
+  --bg-secondary: #FFEAF0;
   --text-ink: #4A3F35;
-  --text-muted: #847364;
-  --accent-primary: #F6B89E;
-  --accent-secondary: #E88B84;
-  --accent-highlight: #F9DF92;
-  --border-ink: #4A3F35;
-  --shadow-ink: rgba(74, 63, 53, 0.16);
+  --text-main: #4A3F35;
+  --text-muted: #8C786C;
+  --accent-primary: #FFB7C5;
+  --accent-secondary: #FF9EBB;
+  --accent-terracotta: #FF9EBB;
+  --accent-mint: #A8E6CF;
+  --accent-lavender: #D5C6F0;
+  --accent-highlight: #FFE5B4;
+  --border-ink: rgba(255, 198, 214, 0.62);
+  --glass-bg: rgba(255, 255, 255, 0.72);
+  --glass-bg-strong: rgba(255, 250, 246, 0.84);
+  --glass-border: rgba(255, 255, 255, 0.78);
+  --input-bg: rgba(255, 245, 238, 0.9);
+  --shadow-ink: rgba(255, 158, 187, 0.34);
+  --shadow-soft: rgba(255, 158, 187, 0.25);
 }
 
 [data-theme="melocoton"] {
-  --bg-paper: #FDF8F2;
-  --bg-card: #FFFDF9;
-  --bg-secondary: #FCEEE6;
+  --bg-paper: #FFF5EE;
+  --bg-card: rgba(255, 252, 249, 0.82);
+  --bg-secondary: #FFE9EF;
   --text-ink: #4A3F35;
-  --text-muted: #8A7468;
-  --accent-primary: #F6B89E;
-  --accent-secondary: #E88B84;
-  --accent-highlight: #F9DF92;
-  --border-ink: #4A3F35;
+  --text-main: #4A3F35;
+  --text-muted: #8D786E;
+  --accent-primary: #FFB7C5;
+  --accent-secondary: #FF9EBB;
+  --accent-terracotta: #FF9EBB;
+  --accent-highlight: #FFE5B4;
+  --border-ink: rgba(255, 196, 212, 0.65);
+  --shadow-ink: rgba(255, 158, 187, 0.36);
 }
 
 [data-theme="salvia"] {
-  --bg-paper: #F8FAF5;
-  --bg-card: #FCFDFB;
-  --bg-secondary: #E8F2EC;
-  --text-ink: #354439;
-  --text-muted: #697D6E;
-  --accent-primary: #A8D5BA;
-  --accent-secondary: #76B090;
-  --accent-highlight: #F6D8AE;
-  --border-ink: #354439;
+  --bg-paper: #F6FBF8;
+  --bg-card: rgba(252, 255, 253, 0.82);
+  --bg-secondary: #E4F6EC;
+  --text-ink: #414A43;
+  --text-main: #414A43;
+  --text-muted: #708275;
+  --accent-primary: #A8E6CF;
+  --accent-secondary: #86D5B8;
+  --accent-terracotta: #86D5B8;
+  --accent-highlight: #FFE3BA;
+  --border-ink: rgba(168, 230, 207, 0.7);
+  --shadow-ink: rgba(134, 213, 184, 0.34);
 }
 
 [data-theme="lavanda"] {
-  --bg-paper: #FAF7FD;
-  --bg-card: #FDFBFF;
-  --bg-secondary: #EFEAF8;
-  --text-ink: #3F354B;
-  --text-muted: #796B8A;
-  --accent-primary: #C9B8E8;
-  --accent-secondary: #A68FD8;
-  --accent-highlight: #F8C8DC;
-  --border-ink: #3F354B;
+  --bg-paper: #FAF6FE;
+  --bg-card: rgba(253, 250, 255, 0.82);
+  --bg-secondary: #EFE6FA;
+  --text-ink: #4A3F54;
+  --text-main: #4A3F54;
+  --text-muted: #7F708F;
+  --accent-primary: #D5C6F0;
+  --accent-secondary: #FFB7C5;
+  --accent-terracotta: #C3AFEA;
+  --accent-highlight: #FFD6E4;
+  --border-ink: rgba(213, 198, 240, 0.72);
+  --shadow-ink: rgba(195, 175, 234, 0.36);
 }
 
 [data-theme="mantequilla"] {
-  --bg-paper: #FDF9EE;
-  --bg-card: #FFFEFA;
-  --bg-secondary: #F8EED3;
-  --text-ink: #4A3E2B;
-  --text-muted: #87765B;
-  --accent-primary: #F9DF92;
-  --accent-secondary: #E6BC5A;
-  --accent-highlight: #F6B89E;
-  --border-ink: #4A3E2B;
+  --bg-paper: #FFF9F0;
+  --bg-card: rgba(255, 253, 247, 0.84);
+  --bg-secondary: #FFF0D4;
+  --text-ink: #4E4234;
+  --text-main: #4E4234;
+  --text-muted: #8C7A63;
+  --accent-primary: #FFE09E;
+  --accent-secondary: #FFB7C5;
+  --accent-terracotta: #FFB7C5;
+  --accent-highlight: #FFB7C5;
+  --border-ink: rgba(255, 214, 150, 0.68);
+  --shadow-ink: rgba(255, 183, 197, 0.34);
 }
 
-/* Modo Noche Conectado (21:00 a 07:00) */
+/* Modo Noche Estrellado Pastel (luminoso, acogedor y con cristal helado) */
 [data-night="true"] {
-  --bg-paper: #1E2436;
-  --bg-card: #2A324B;
-  --bg-secondary: #232A40;
-  --text-ink: #F7E8C4;
-  --text-muted: #B8C2DC;
-  --accent-primary: #F4C97A;
-  --accent-secondary: #E8998D;
-  --accent-highlight: #9BB8ED;
-  --border-ink: #F4C97A;
-  --shadow-ink: rgba(12, 16, 28, 0.45);
+  --bg-paper: #232946;
+  --bg-card: rgba(44, 52, 86, 0.76);
+  --bg-secondary: rgba(56, 65, 106, 0.78);
+  --text-ink: #FFF5EE;
+  --text-main: #FFF5EE;
+  --text-muted: #D2C8E8;
+  --accent-primary: #FFB7C5;
+  --accent-secondary: #FF9EBB;
+  --accent-terracotta: #FF9EBB;
+  --accent-highlight: #D5C6F0;
+  --border-ink: rgba(255, 224, 236, 0.34);
+  --glass-bg: rgba(42, 49, 82, 0.72);
+  --glass-bg-strong: rgba(48, 56, 94, 0.84);
+  --glass-border: rgba(255, 230, 240, 0.32);
+  --input-bg: rgba(32, 38, 68, 0.88);
+  --shadow-ink: rgba(255, 158, 187, 0.25);
+  --shadow-soft: rgba(16, 20, 42, 0.45);
 }
 
-* {
-  box-sizing: border-box;
-  -webkit-tap-highlight-color: transparent;
-}
+@layer base {
+  * {
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+  }
 
-html,
-body {
-  width: 100vw;
-  height: 100dvh;
-  margin: 0;
-  padding: 0;
-  overflow: hidden;
-  overscroll-behavior: none;
-  touch-action: manipulation;
-  background-color: var(--bg-paper);
-  color: var(--text-ink);
-  font-family: 'Fredoka', 'Quicksand', sans-serif;
-  transition: background-color 0.7s ease, color 0.7s ease;
-}
+  html,
+  body {
+    width: 100vw;
+    height: 100dvh;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    overscroll-behavior: none;
+    touch-action: manipulation;
+    background-color: var(--bg-paper);
+    color: var(--text-ink);
+    font-family: 'Fredoka', 'Quicksand', sans-serif;
+    transition: background-color 0.65s ease, color 0.65s ease;
+  }
 
-#root {
-  position: fixed;
-  inset: 0;
-  width: 100vw;
-  height: 100dvh;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  overscroll-behavior: none;
+  #root {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100dvh;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
+
+  /* Permitir escritura deslizante (Swipe Typing) y selección nativa en campos de texto iOS */
+  input,
+  textarea,
+  select {
+    touch-action: auto;
+    -webkit-user-select: text;
+    user-select: text;
+    color: var(--text-ink);
+  }
+
+  [data-night="true"] input,
+  [data-night="true"] select {
+    color-scheme: dark;
+  }
 }
 
 /* Márgenes seguros exactos pegados a los bordes reales de iOS (Safari + PWA standalone) */
 .safe-top-header {
-  padding-top: calc(env(safe-area-inset-top, 0px) + 2px);
+  padding-top: calc(env(safe-area-inset-top, 0px) + 4px);
 }
 
 .safe-bottom-dock {
-  padding-bottom: max(6px, calc(env(safe-area-inset-bottom, 0px) * 0.45));
+  padding-bottom: max(8px, calc(env(safe-area-inset-bottom, 0px) * 0.55));
 }
 
 .safe-modal-inset {
-  padding-top: calc(env(safe-area-inset-top, 0px) + 2px);
-  padding-bottom: max(6px, calc(env(safe-area-inset-bottom, 0px) * 0.45));
+  padding-top: calc(env(safe-area-inset-top, 0px) + 4px);
+  padding-bottom: max(8px, calc(env(safe-area-inset-bottom, 0px) * 0.55));
 }
 
 .no-scrollbar::-webkit-scrollbar {
@@ -131,75 +176,109 @@ body {
   scrollbar-width: none;
 }
 
-/* Permitir escritura deslizante (Swipe Typing) y selección nativa en campos de texto iOS */
-input,
-textarea,
-select {
-  touch-action: auto;
-  -webkit-user-select: text;
-  user-select: text;
-}
-
 .font-ui {
   font-family: 'Fredoka', 'Quicksand', sans-serif;
 }
 
-.font-hand {
+.font-hand,
+.handwritten {
   font-family: 'Caveat', cursive;
 }
 
-/* Textura de papel de acuarela cremoso artesanal (Sistema Anti-IA) */
-.watercolor-paper {
-  background-color: var(--bg-paper);
-  background-image: 
-    radial-gradient(at 18% 22%, rgba(246, 184, 158, 0.14) 0px, transparent 55%),
-    radial-gradient(at 84% 78%, rgba(168, 213, 186, 0.14) 0px, transparent 55%),
-    radial-gradient(at 52% 45%, rgba(249, 223, 146, 0.10) 0px, transparent 60%),
-    url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.045'/%3E%3C/svg%3E");
-}
+@layer components {
+  /* Fondo cremoso con veladuras pastel luminosas estilo Animal Crossing */
+  .watercolor-paper {
+    background-color: var(--bg-paper);
+    background-image:
+      radial-gradient(at 15% 18%, rgba(255, 183, 197, 0.28) 0px, transparent 52%),
+      radial-gradient(at 86% 22%, rgba(213, 198, 240, 0.26) 0px, transparent 50%),
+      radial-gradient(at 78% 82%, rgba(168, 230, 207, 0.25) 0px, transparent 52%),
+      radial-gradient(at 24% 84%, rgba(255, 224, 178, 0.22) 0px, transparent 54%);
+  }
 
-/* Bordes orgánicos hechos a mano con sombra desplazada */
-.hand-card {
-  background-color: var(--bg-card);
-  color: var(--text-ink);
-  border: 2.2px solid var(--border-ink);
-  border-radius: 22px 18px 24px 19px / 19px 23px 17px 22px;
-  box-shadow: 4px 5px 0px var(--shadow-ink);
-  transition: background-color 0.5s ease, border-color 0.5s ease, box-shadow 0.3s ease;
-}
+  /* Tarjetas Glassmorphism Súper Redondeadas con brillo interior suave */
+  .hand-card {
+    background: var(--glass-bg-strong);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    color: var(--text-ink);
+    border: 1.5px solid var(--glass-border);
+    border-radius: 26px;
+    box-shadow:
+      0 10px 26px -6px var(--shadow-ink),
+      inset 0 1.5px 0 rgba(255, 255, 255, 0.85);
+    transition: background-color 0.4s ease, border-color 0.4s ease, box-shadow 0.3s ease, transform 0.2s ease;
+  }
 
-.hand-button {
-  border: 2.2px solid var(--border-ink);
-  border-radius: 18px 15px 19px 16px / 16px 19px 15px 18px;
-  box-shadow: 3px 3.5px 0px var(--shadow-ink);
-  transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.3s ease;
-}
+  /* Botones Glossy Tipo Gominola 3D con reflejo superior luminoso y sombra rosada suave */
+  .hand-button {
+    position: relative;
+    border: 1.5px solid var(--glass-border);
+    border-radius: 20px;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    box-shadow:
+      0 8px 16px -4px var(--shadow-ink),
+      inset 0 2px 2px rgba(255, 255, 255, 0.82),
+      inset 0 -2px 5px rgba(255, 138, 170, 0.14);
+    transition: transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.18s ease, background-color 0.3s ease;
+  }
 
-.hand-button:active {
-  transform: translate(2px, 2px);
-  box-shadow: 1px 1.5px 0px var(--shadow-ink);
-}
+  .hand-button:active {
+    transform: scale(0.93) translateY(1px);
+    box-shadow:
+      0 4px 10px -2px var(--shadow-ink),
+      inset 0 1px 2px rgba(255, 255, 255, 0.7);
+  }
 
-.hand-pill {
-  border: 2px solid var(--border-ink);
-  border-radius: 9999px;
-  box-shadow: 2px 3px 0px var(--shadow-ink);
+  /* Pastillas flotantes de cristal esmerilado */
+  .hand-pill {
+    background: var(--glass-bg);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    border: 1.5px solid var(--glass-border);
+    border-radius: 9999px;
+    box-shadow:
+      0 6px 16px -4px var(--shadow-ink),
+      inset 0 1.5px 0 rgba(255, 255, 255, 0.86);
+    transition: transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.18s ease, background-color 0.3s ease;
+  }
+
+  /* Botón gominola rosa pastel brillante para llamadas a la acción */
+  .glossy-pink-cta {
+    background: linear-gradient(180deg, #FFD2DE 0%, #FFB7C5 52%, #FF9EBB 100%);
+    color: #4A3F35;
+    border: 1.5px solid rgba(255, 255, 255, 0.85);
+    box-shadow:
+      0 8px 18px rgba(255, 158, 187, 0.45),
+      inset 0 2px 3px rgba(255, 255, 255, 0.9),
+      inset 0 -3px 6px rgba(255, 118, 158, 0.25);
+  }
+
+  .glossy-mint-cta {
+    background: linear-gradient(180deg, #CEF5E5 0%, #A8E6CF 55%, #8AD9BA 100%);
+    color: #3B4A41;
+    border: 1.5px solid rgba(255, 255, 255, 0.85);
+    box-shadow:
+      0 8px 18px rgba(138, 217, 186, 0.42),
+      inset 0 2px 3px rgba(255, 255, 255, 0.9);
+  }
 }
 
 /* Estilos de Mapa 2D Leaflet */
 .map-style-vintage .leaflet-tile-pane {
-  filter: sepia(0.38) hue-rotate(48deg) saturate(0.78) brightness(1.04) contrast(0.92);
+  filter: sepia(0.32) hue-rotate(48deg) saturate(0.82) brightness(1.05) contrast(0.92);
 }
 
 .map-style-pastel .leaflet-tile-pane {
-  filter: hue-rotate(155deg) saturate(0.65) brightness(1.08) contrast(0.88);
+  filter: hue-rotate(155deg) saturate(0.72) brightness(1.08) contrast(0.88);
 }
 
 [data-night="true"] .leaflet-tile-pane {
-  filter: invert(0.88) hue-rotate(185deg) saturate(0.6) brightness(0.88);
+  filter: invert(0.86) hue-rotate(185deg) saturate(0.65) brightness(0.9);
 }
 
-/* Scrollbar artesanal sutil */
+/* Scrollbar sutil redondeada */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -208,7 +287,7 @@ select {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(132, 115, 100, 0.3);
+  background: rgba(255, 158, 187, 0.35);
   border-radius: 999px;
 }
 

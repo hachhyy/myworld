@@ -61,9 +61,9 @@ export const LoadingScreen: React.FC = () => {
           className="fixed inset-0 w-screen h-[100dvh] z-50 flex flex-col justify-between px-4 safe-modal-inset watercolor-paper overflow-hidden overscroll-none select-none"
         >
           {/* Nubes decorativas superiores */}
-          <div className="w-full max-w-md mx-auto flex justify-between items-center pt-1 opacity-80 shrink-0">
+          <div className="w-full max-w-md mx-auto flex justify-between items-center pt-1 opacity-85 shrink-0">
             <span className="text-2xl animate-float-slow">☁️✨</span>
-            <span className="text-xs font-medium px-3 py-1 hand-pill bg-[var(--bg-card)]">
+            <span className="text-xs font-semibold px-3.5 py-1 hand-pill">
               Preparando el vuelo de regreso...
             </span>
             <span className="text-2xl animate-float-slow">🌸☁️</span>
@@ -78,7 +78,7 @@ export const LoadingScreen: React.FC = () => {
               className="flex items-end justify-center gap-2 mb-4"
             >
               <div className="flex flex-col items-center">
-                <span className="font-hand text-lg px-2.5 py-0.5 rounded-full bg-[var(--bg-card)] border border-[var(--border-ink)] mb-1 shadow-sm">
+                <span className="font-hand text-lg px-3 py-0.5 hand-pill bg-[var(--glass-bg-strong)] mb-1">
                   ¡Hola! Soy {petA.petName} 👋
                 </span>
                 <CutePetAvatar
@@ -94,7 +94,7 @@ export const LoadingScreen: React.FC = () => {
               <div className="text-2xl pb-12 animate-bounce">💕</div>
 
               <div className="flex flex-col items-center">
-                <span className="font-hand text-lg px-2.5 py-0.5 rounded-full bg-[var(--bg-card)] border border-[var(--border-ink)] mb-1 shadow-sm">
+                <span className="font-hand text-lg px-3 py-0.5 hand-pill bg-[var(--glass-bg-strong)] mb-1">
                   ¡Y yo {petB.petName}! ✨
                 </span>
                 <CutePetAvatar
@@ -119,10 +119,10 @@ export const LoadingScreen: React.FC = () => {
               </p>
             </div>
 
-            {/* Barra de carga artesanal */}
-            <div className="w-64 h-5 hand-pill bg-[var(--bg-card)] p-0.5 overflow-hidden">
+            {/* Barra de carga pastel glossy */}
+            <div className="w-64 h-5 hand-pill bg-[var(--glass-bg)] p-1 overflow-hidden">
               <motion.div
-                className="h-full rounded-full bg-[var(--accent-primary)]"
+                className="h-full rounded-full bg-gradient-to-r from-[#FFB7C5] via-[#FF9EBB] to-[#D5C6F0] shadow-[inset_0_1px_2px_rgba(255,255,255,0.85)]"
                 style={{ width: `${progress}%` }}
               />
             </div>
@@ -133,12 +133,13 @@ export const LoadingScreen: React.FC = () => {
 
           {/* Botón para entrar directamente con voz Animalese */}
           <motion.button
-            whileTap={{ scale: 0.94 }}
+            whileTap={{ scale: 0.9, rotate: -2 }}
+            transition={{ type: 'spring', stiffness: 420, damping: 15 }}
             onClick={() => {
               soundEngine.speakAnimalese('Bienvenidos a nuestro planeta', 460);
               completeLanding();
             }}
-            className="hand-button mx-auto shrink-0 px-6 py-2.5 bg-[var(--accent-primary)] text-[#4A3F35] font-bold text-sm mb-1 cursor-pointer"
+            className="hand-button glossy-pink-cta rounded-full mx-auto shrink-0 px-7 py-3 font-bold text-sm mb-1 cursor-pointer"
           >
             Aterrizar en nuestro mundo 🌍✨
           </motion.button>

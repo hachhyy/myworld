@@ -358,7 +358,7 @@ export const BuzonDiario: React.FC<BuzonDiarioProps> = ({ onClose }) => {
 
                       {currentPage.photoDataUrl &&
                       !currentPage.photoDataUrl.startsWith('data:image/svg+xml') ? (
-                        <div className="relative rounded-xl overflow-hidden border-2 border-[#4A3F35] bg-black/5 group">
+                        <div className="relative rounded-2xl overflow-hidden border border-[#FFB7C5]/60 bg-[#FFF5EE]/60 shadow-xs group">
                           <img
                             src={currentPage.photoDataUrl}
                             alt={currentPage.title}
@@ -367,7 +367,7 @@ export const BuzonDiario: React.FC<BuzonDiarioProps> = ({ onClose }) => {
                           <button
                             type="button"
                             onClick={() => existingPhotoInputRef.current?.click()}
-                            className="absolute bottom-2 right-2 px-2.5 py-1 rounded-full bg-[#FFFDF9]/90 border border-[#4A3F35] text-[10px] font-bold flex items-center gap-1 shadow-sm cursor-pointer"
+                            className="absolute bottom-2 right-2 px-3 py-1 rounded-full bg-white/85 backdrop-blur-md border border-white/90 text-[10px] font-bold flex items-center gap-1 shadow-sm cursor-pointer"
                           >
                             <Camera className="w-3 h-3" />
                             Cambiar foto
@@ -377,9 +377,9 @@ export const BuzonDiario: React.FC<BuzonDiarioProps> = ({ onClose }) => {
                         <button
                           type="button"
                           onClick={() => existingPhotoInputRef.current?.click()}
-                          className="w-full h-52 rounded-xl border-2 border-dashed border-[#4A3F35]/45 bg-[#FFFDF9]/90 hover:bg-[#FFFDF9] flex flex-col items-center justify-center text-center p-4 transition-colors cursor-pointer gap-1.5"
+                          className="w-full h-52 rounded-2xl border-2 border-dashed border-[#FFB7C5]/70 bg-[#FFF5EE]/90 hover:bg-[#FFEAF0]/80 flex flex-col items-center justify-center text-center p-4 transition-colors cursor-pointer gap-1.5"
                         >
-                          <Camera className="w-7 h-7 text-[#4A3F35]/70" />
+                          <Camera className="w-7 h-7 text-[#FF9EBB]" />
                           <span className="text-xs font-bold text-[#4A3F35]">
                             {uploadingExistingPhoto
                               ? 'Revelando Polaroid...'
@@ -399,7 +399,7 @@ export const BuzonDiario: React.FC<BuzonDiarioProps> = ({ onClose }) => {
                         }
                         rows={3}
                         placeholder="Toca aquí para escribir vuestra nota manuscrita..."
-                        className="w-full bg-transparent font-hand text-2xl text-[#4A3F35] text-center mt-4 px-2 py-1 leading-snug resize-none border-b border-dashed border-[#4A3F35]/25 focus:border-[#4A3F35] focus:outline-none"
+                        className="w-full bg-transparent font-hand text-2xl text-[#4A3F35] text-center mt-4 px-2 py-1 leading-snug resize-none border-b border-dashed border-[#FFB7C5]/65 focus:border-[#FF9EBB] focus:outline-none"
                       />
                     </div>
 
@@ -409,12 +409,13 @@ export const BuzonDiario: React.FC<BuzonDiarioProps> = ({ onClose }) => {
                         ✓ Guardado automático en vuestro planeta
                       </span>
                       <motion.button
-                        whileTap={{ scale: 0.94 }}
+                        whileTap={{ scale: 0.92, rotate: -1.5 }}
+                        transition={{ type: 'spring', stiffness: 420, damping: 16 }}
                         onClick={() => {
                           soundEngine.playPageTurn();
                           setCreatingNew(true);
                         }}
-                        className="hand-pill px-3 py-1.5 bg-[var(--accent-primary)] text-xs font-bold cursor-pointer shrink-0"
+                        className="hand-pill glossy-pink-cta px-3.5 py-1.5 text-xs font-bold cursor-pointer shrink-0"
                       >
                         💾 Guardar / Nueva página +
                       </motion.button>

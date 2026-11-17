@@ -183,7 +183,7 @@ export const FaroMapaViajes: React.FC<FaroMapaViajesProps> = ({ onClose }) => {
       const emoji = CATEGORY_EMOJI[pin.category] || '📍';
       const icon = L.divIcon({
         className: 'custom-cozy-pin',
-        html: `<div style="background:${bg};border:2.2px solid #4A3F35;border-radius:999px;padding:4px 8px;font-size:14px;font-weight:bold;box-shadow:2px 3px 0 rgba(74,63,53,0.3);display:flex;align-items:center;gap:3px;white-space:nowrap;">
+        html: `<div style="background:${bg};border:2px solid rgba(255,255,255,0.92);border-radius:999px;padding:4px 8px;font-size:14px;font-weight:bold;box-shadow:0 4px 12px rgba(255,158,187,0.45);display:flex;align-items:center;gap:3px;white-space:nowrap;">
           <span>${emoji}</span>
         </div>`,
         iconSize: [38, 32],

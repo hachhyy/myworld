@@ -111,6 +111,8 @@ export const CasitaTamagotchi: React.FC<CasitaTamagotchiProps> = ({ solar, onClo
   });
   const [pawHighFive, setPawHighFive] = useState(false);
   const [pettingPet, setPettingPet] = useState<'A' | 'B' | null>(null);
+  const [isSquishingA, setIsSquishingA] = useState(false);
+  const [isSquishingB, setIsSquishingB] = useState(false);
 
   // Drag & Drop de Comida
   const [draggingFood, setDraggingFood] = useState<{
@@ -225,12 +227,20 @@ export const CasitaTamagotchi: React.FC<CasitaTamagotchiProps> = ({ solar, onClo
     }, 1200);
   };
 
-  // Acariciar con el dedo / ratón sobre la barriga o cabeza de la mascota
+  // Acariciar con el dedo / ratón sobre la barriga o cabeza de la mascota + rebote squishy tipo mochi
   const handlePetBellyRub = (target: 'A' | 'B') => {
     if (spongeActive || draggingFood || petAnimState !== 'idle') return;
     const now = Date.now();
     if (now - lastPetRubRef.current < 380) return;
     lastPetRubRef.current = now;
+
+    if (target === 'A') {
+      setIsSquishingA(true);
+      setTimeout(() => setIsSquishingA(false), 480);
+    } else {
+      setIsSquishingB(true);
+      setTimeout(() => setIsSquishingB(false), 480);
+    }
 
     setPettingPet(target);
     careForPets('pamper_partner');
@@ -370,33 +380,34 @@ export const CasitaTamagotchi: React.FC<CasitaTamagotchiProps> = ({ solar, onClo
   return (
     <div className="fixed inset-0 w-screen h-[100dvh] z-40 flex flex-col justify-between watercolor-paper overflow-hidden overscroll-none select-none">
       {/* Cabecera compacta con Safe Area superior de iOS */}
-      <div className="safe-top-header px-3 pb-2 shrink-0 flex items-center justify-between gap-1.5 border-b-2 border-[var(--border-ink)] bg-[var(--bg-card)] z-30">
+      <div className="safe-top-header px-3 pb-2 shrink-0 flex items-center justify-between gap-1.5 border-b border-[var(--glass-border)] bg-[var(--glass-bg-strong)] backdrop-blur-xl shadow-[0_6px_18px_rgba(255,158,187,0.16)] z-30">
         <motion.button
-          whileTap={{ scale: 0.92 }}
+          whileTap={{ scale: 0.9, rotate: -2 }}
+          transition={{ type: 'spring', stiffness: 420, damping: 16 }}
           onClick={onClose}
-          className="hand-button px-2.5 py-1.5 bg-[var(--bg-paper)] text-xs font-bold flex items-center gap-1 cursor-pointer shrink-0"
+          className="hand-pill px-3 py-1.5 text-xs font-bold flex items-center gap-1 cursor-pointer shrink-0"
         >
           <ArrowLeft className="w-4 h-4" />
           Planeta
         </motion.button>
 
         {/* Barras de cuidados de las mascotas */}
-        <div className="flex items-center justify-center gap-2 bg-[var(--bg-paper)] px-2.5 py-1.5 rounded-full border-2 border-[var(--border-ink)] min-w-0">
+        <div className="flex items-center justify-center gap-2 bg-white/75 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/80 shadow-xs min-w-0">
           {[
             { icon: '🍕', val: petCare.hunger, color: '#F4A261' },
             {
               icon: '🫧',
               val: isDirty ? Math.round(100 - mudOpacity * 65) : petCare.hygiene,
-              color: '#4EA8DE',
+              color: '#6CE3F3',
             },
-            { icon: '💤', val: petCare.energy, color: '#9B89B3' },
-            { icon: '💕', val: petCare.affection, color: '#E07A5F' },
+            { icon: '💤', val: petCare.energy, color: '#C3AFEA' },
+            { icon: '💕', val: petCare.affection, color: '#FF9EBB' },
           ].map((stat, idx) => (
             <div key={idx} className="flex items-center gap-1">
               <span className="text-xs leading-none">{stat.icon}</span>
-              <div className="w-7 sm:w-9 h-2 rounded-full bg-black/10 overflow-hidden border border-[var(--border-ink)]">
+              <div className="w-7 sm:w-9 h-2 rounded-full bg-[#4A3F35]/10 overflow-hidden">
                 <div
-                  className="h-full transition-all duration-300"
+                  className="h-full rounded-full transition-all duration-300"
                   style={{ width: `${stat.val}%`, backgroundColor: stat.color }}
                 />
               </div>
@@ -404,7 +415,7 @@ export const CasitaTamagotchi: React.FC<CasitaTamagotchiProps> = ({ solar, onClo
           ))}
         </div>
 
-        <div className="hidden sm:block px-2.5 py-1 rounded-full bg-[var(--bg-paper)] border-2 border-[var(--border-ink)] text-[11px] font-bold shrink-0">
+        <div className="hidden sm:block hand-pill px-3 py-1 text-[11px] font-bold shrink-0">
           🏡 Salón 2.5D
         </div>
       </div>
@@ -1026,29 +1037,49 @@ export const CasitaTamagotchi: React.FC<CasitaTamagotchiProps> = ({ solar, onClo
             }}
             className="relative cursor-pointer"
           >
-            <CutePetAvatar
-              species={petA.species}
-              hat={petA.hat}
-              glasses={petA.glasses}
-              neck={petA.neck}
-              isDirty={isDirty}
-              mudOpacity={mudOpacity}
-              isSleepy={inBedSleeping}
-              isBouncing={isCelebrating || roamA.hop}
-              mouthState={
-                chewingPet === 'A' || chewingPet === 'both'
-                  ? 'chewing'
-                  : hoveredPetForFood === 'A'
-                    ? 'open'
-                    : 'normal'
+            <motion.div
+              style={{ transformOrigin: '50% 92%' }}
+              animate={
+                isSquishingA
+                  ? {
+                      scaleX: [1, 1.24, 0.88, 1.07, 1],
+                      scaleY: [1, 0.76, 1.16, 0.94, 1],
+                    }
+                  : {
+                      scaleX: [1, 0.98, 1],
+                      scaleY: [1, 1.04, 1],
+                    }
               }
-              eyesSparkle={hoveredPetForFood === 'A' || pettingPet === 'A' || pawHighFive}
-              isHappyClosedEyes={
-                inBedSleeping || scrubbingPet === 'A' || chewingPet === 'A' || pettingPet === 'A'
+              transition={
+                isSquishingA
+                  ? { duration: 0.48, ease: [0.34, 1.56, 0.64, 1] }
+                  : { duration: 2.5, repeat: Infinity, ease: 'easeInOut' }
               }
-              isShakingClean={shakingClean}
-              size={132}
-            />
+            >
+              <CutePetAvatar
+                species={petA.species}
+                hat={petA.hat}
+                glasses={petA.glasses}
+                neck={petA.neck}
+                isDirty={isDirty}
+                mudOpacity={mudOpacity}
+                isSleepy={inBedSleeping}
+                isBouncing={isCelebrating || roamA.hop}
+                mouthState={
+                  chewingPet === 'A' || chewingPet === 'both'
+                    ? 'chewing'
+                    : hoveredPetForFood === 'A'
+                      ? 'open'
+                      : 'normal'
+                }
+                eyesSparkle={hoveredPetForFood === 'A' || pettingPet === 'A' || pawHighFive}
+                isHappyClosedEyes={
+                  inBedSleeping || scrubbingPet === 'A' || chewingPet === 'A' || pettingPet === 'A'
+                }
+                isShakingClean={shakingClean}
+                size={132}
+              />
+            </motion.div>
           </div>
         </motion.div>
 
@@ -1091,29 +1122,49 @@ export const CasitaTamagotchi: React.FC<CasitaTamagotchiProps> = ({ solar, onClo
             }}
             className="relative cursor-pointer"
           >
-            <CutePetAvatar
-              species={petB.species}
-              hat={petB.hat}
-              glasses={petB.glasses}
-              neck={petB.neck}
-              isDirty={isDirty}
-              mudOpacity={mudOpacity}
-              isSleepy={inBedSleeping}
-              isBouncing={isCelebrating || roamB.hop}
-              mouthState={
-                chewingPet === 'B' || chewingPet === 'both'
-                  ? 'chewing'
-                  : hoveredPetForFood === 'B'
-                    ? 'open'
-                    : 'normal'
+            <motion.div
+              style={{ transformOrigin: '50% 92%' }}
+              animate={
+                isSquishingB
+                  ? {
+                      scaleX: [1, 1.24, 0.88, 1.07, 1],
+                      scaleY: [1, 0.76, 1.16, 0.94, 1],
+                    }
+                  : {
+                      scaleX: [1, 0.98, 1],
+                      scaleY: [1, 1.04, 1],
+                    }
               }
-              eyesSparkle={hoveredPetForFood === 'B' || pettingPet === 'B' || pawHighFive}
-              isHappyClosedEyes={
-                inBedSleeping || scrubbingPet === 'B' || chewingPet === 'B' || pettingPet === 'B'
+              transition={
+                isSquishingB
+                  ? { duration: 0.48, ease: [0.34, 1.56, 0.64, 1] }
+                  : { duration: 2.5, repeat: Infinity, ease: 'easeInOut', delay: 0.7 }
               }
-              isShakingClean={shakingClean}
-              size={132}
-            />
+            >
+              <CutePetAvatar
+                species={petB.species}
+                hat={petB.hat}
+                glasses={petB.glasses}
+                neck={petB.neck}
+                isDirty={isDirty}
+                mudOpacity={mudOpacity}
+                isSleepy={inBedSleeping}
+                isBouncing={isCelebrating || roamB.hop}
+                mouthState={
+                  chewingPet === 'B' || chewingPet === 'both'
+                    ? 'chewing'
+                    : hoveredPetForFood === 'B'
+                      ? 'open'
+                      : 'normal'
+                }
+                eyesSparkle={hoveredPetForFood === 'B' || pettingPet === 'B' || pawHighFive}
+                isHappyClosedEyes={
+                  inBedSleeping || scrubbingPet === 'B' || chewingPet === 'B' || pettingPet === 'B'
+                }
+                isShakingClean={shakingClean}
+                size={132}
+              />
+            </motion.div>
           </div>
         </motion.div>
 
@@ -1200,7 +1251,7 @@ export const CasitaTamagotchi: React.FC<CasitaTamagotchiProps> = ({ solar, onClo
                 top: '13.5%',
                 transform: 'translate(-50%, -50%)',
               }}
-              className="absolute z-40 pointer-events-none text-xs font-extrabold text-[#3D312A] bg-[#FFFDF9] px-3 py-1 rounded-full border-2 border-[#3D312A] whitespace-nowrap shadow-md"
+              className="hand-pill absolute z-40 pointer-events-none text-xs font-extrabold text-[#4A3F35] bg-white/85 px-3 py-1 whitespace-nowrap"
             >
               Zzz... 💤
             </motion.div>
@@ -1256,7 +1307,8 @@ export const CasitaTamagotchi: React.FC<CasitaTamagotchiProps> = ({ solar, onClo
               initial={{ opacity: 0, y: 12, scale: 0.9 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -10 }}
-              className="absolute top-3 left-1/2 -translate-x-1/2 z-40 bg-[var(--accent-terracotta)] text-white px-4 py-1.5 rounded-full text-xs font-bold border-2 border-[var(--border-ink)] shadow-lg whitespace-nowrap"
+              transition={{ type: 'spring', stiffness: 360, damping: 22 }}
+              className="glossy-pink-cta absolute top-3 left-1/2 -translate-x-1/2 z-40 px-4 py-1.5 rounded-full text-xs font-bold whitespace-nowrap"
             >
               {floatingFeedback}
             </motion.div>
@@ -1287,11 +1339,11 @@ export const CasitaTamagotchi: React.FC<CasitaTamagotchiProps> = ({ solar, onClo
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 240, opacity: 0 }}
             transition={{ type: 'spring', stiffness: 350, damping: 25 }}
-            className="bg-[var(--bg-card)] border-t-2 border-[var(--border-ink)] px-3 pt-2.5 pb-3 max-h-[42vh] overflow-y-auto z-30 shadow-2xl"
+            className="bg-[var(--glass-bg-strong)] backdrop-blur-xl border-t border-[var(--glass-border)] rounded-t-3xl px-3 pt-3 pb-3 max-h-[42vh] overflow-y-auto z-30 shadow-[0_-10px_30px_rgba(255,158,187,0.22)]"
           >
             {openDrawer === 'decor' && (
               <div className="space-y-2.5">
-                <div className="flex gap-1.5 overflow-x-auto pb-1">
+                <div className="flex gap-1.5 overflow-x-auto pb-1 no-scrollbar">
                   {[
                     { id: 'cama', icon: '🛏️', label: 'Cama' },
                     { id: 'alfombra', icon: '🌸', label: 'Alfombra' },
@@ -1300,21 +1352,23 @@ export const CasitaTamagotchi: React.FC<CasitaTamagotchiProps> = ({ solar, onClo
                     { id: 'guirnaldas', icon: '✨', label: 'Guirnaldas' },
                     { id: 'mascotas', icon: '🎀', label: 'Accesorios' },
                   ].map((t) => (
-                    <button
+                    <motion.button
+                      whileTap={{ scale: 0.92 }}
+                      transition={{ type: 'spring', stiffness: 420, damping: 16 }}
                       key={t.id}
                       onClick={() => {
                         setDecorTab(t.id as typeof decorTab);
                         soundEngine.playPop();
                       }}
-                      className={`px-2.5 py-1 rounded-xl border-2 text-xs font-bold shrink-0 flex items-center gap-1 cursor-pointer ${
+                      className={`px-3 py-1.5 rounded-full border text-xs font-bold shrink-0 flex items-center gap-1 cursor-pointer transition-all ${
                         decorTab === t.id
-                          ? 'bg-[var(--accent-primary)] border-[var(--border-ink)]'
-                          : 'bg-[var(--bg-paper)] border-[var(--border-ink)] opacity-80'
+                          ? 'glossy-pink-cta shadow-xs'
+                          : 'bg-white/65 border-white/75 opacity-85'
                       }`}
                     >
                       <span>{t.icon}</span>
                       <span>{t.label}</span>
-                    </button>
+                    </motion.button>
                   ))}
                 </div>
 
@@ -1325,22 +1379,25 @@ export const CasitaTamagotchi: React.FC<CasitaTamagotchiProps> = ({ solar, onClo
                       { id: 'dosel', name: 'Dosel Pastel', c: '#F4ACB7' },
                       { id: 'futon', name: 'Futón Menta', c: '#74C69D' },
                     ].map((opt) => (
-                      <button
+                      <motion.button
+                        whileTap={{ scale: 0.92, rotate: -1 }}
                         key={opt.id}
                         onClick={() => {
                           setBedModel(opt.id as typeof bedModel);
                           localStorage.setItem('mw_v4_bed', opt.id);
                           soundEngine.playPop();
                         }}
-                        className={`p-2 rounded-2xl border-2 flex flex-col items-center gap-1 cursor-pointer ${
-                          bedModel === opt.id ? 'bg-[#FFE5D9] border-[var(--accent-terracotta)]' : 'bg-[var(--bg-paper)] border-[var(--border-ink)]'
+                        className={`p-2 rounded-2xl border flex flex-col items-center gap-1 cursor-pointer transition-all ${
+                          bedModel === opt.id
+                            ? 'bg-[#FFEAF0]/90 ring-2 ring-[#FF9EBB] border-white shadow-xs'
+                            : 'bg-white/65 border-white/80'
                         }`}
                       >
-                        <div className="w-12 h-7 rounded-md border-2 border-[#3D312A] relative overflow-hidden" style={{ backgroundColor: opt.c }}>
-                          <div className="w-full h-2 bg-white border-b border-[#3D312A]" />
+                        <div className="w-12 h-7 rounded-lg border border-white/85 shadow-xs relative overflow-hidden" style={{ backgroundColor: opt.c }}>
+                          <div className="w-full h-2 bg-white/95 border-b border-black/10" />
                         </div>
                         <span className="text-[11px] font-bold">{opt.name}</span>
-                      </button>
+                      </motion.button>
                     ))}
                   </div>
                 )}
@@ -1352,19 +1409,22 @@ export const CasitaTamagotchi: React.FC<CasitaTamagotchiProps> = ({ solar, onClo
                       { id: 'vichy', name: 'Melocotón Vichy', c: '#FFE5D9' },
                       { id: 'nube', name: 'Nube Crema', c: '#FFFDF9' },
                     ].map((opt) => (
-                      <button
+                      <motion.button
+                        whileTap={{ scale: 0.92, rotate: -1 }}
                         key={opt.id}
                         onClick={() => {
                           updateRoomDecor(opt.id as 'flores' | 'vichy' | 'nube', petCare.roomLamp);
                           soundEngine.playPop();
                         }}
-                        className={`p-2 rounded-2xl border-2 flex flex-col items-center gap-1 cursor-pointer ${
-                          petCare.roomRug === opt.id ? 'bg-[#FFE5D9] border-[var(--accent-terracotta)]' : 'bg-[var(--bg-paper)] border-[var(--border-ink)]'
+                        className={`p-2 rounded-2xl border flex flex-col items-center gap-1 cursor-pointer transition-all ${
+                          petCare.roomRug === opt.id
+                            ? 'bg-[#FFEAF0]/90 ring-2 ring-[#FF9EBB] border-white shadow-xs'
+                            : 'bg-white/65 border-white/80'
                         }`}
                       >
-                        <div className="w-12 h-6 rounded-full border-2 border-[#3D312A]" style={{ backgroundColor: opt.c }} />
+                        <div className="w-12 h-6 rounded-full border border-white/85 shadow-xs" style={{ backgroundColor: opt.c }} />
                         <span className="text-[11px] font-bold">{opt.name}</span>
-                      </button>
+                      </motion.button>
                     ))}
                   </div>
                 )}
@@ -1376,20 +1436,23 @@ export const CasitaTamagotchi: React.FC<CasitaTamagotchiProps> = ({ solar, onClo
                       { id: 'cafe', name: 'Mesa Terracota', c: '#E76F51' },
                       { id: 'picnic', name: 'Mesa Menta', c: '#95D5B2' },
                     ].map((opt) => (
-                      <button
+                      <motion.button
+                        whileTap={{ scale: 0.92, rotate: -1 }}
                         key={opt.id}
                         onClick={() => {
                           setTableModel(opt.id as typeof tableModel);
                           localStorage.setItem('mw_v4_table', opt.id);
                           soundEngine.playPop();
                         }}
-                        className={`p-2 rounded-2xl border-2 flex flex-col items-center gap-1 cursor-pointer ${
-                          tableModel === opt.id ? 'bg-[#FFE5D9] border-[var(--accent-terracotta)]' : 'bg-[var(--bg-paper)] border-[var(--border-ink)]'
+                        className={`p-2 rounded-2xl border flex flex-col items-center gap-1 cursor-pointer transition-all ${
+                          tableModel === opt.id
+                            ? 'bg-[#FFEAF0]/90 ring-2 ring-[#FF9EBB] border-white shadow-xs'
+                            : 'bg-white/65 border-white/80'
                         }`}
                       >
-                        <div className="w-12 h-5 rounded-full border-2 border-[#3D312A]" style={{ backgroundColor: opt.c }} />
+                        <div className="w-12 h-5 rounded-full border border-white/85 shadow-xs" style={{ backgroundColor: opt.c }} />
                         <span className="text-[11px] font-bold">{opt.name}</span>
-                      </button>
+                      </motion.button>
                     ))}
                   </div>
                 )}
@@ -1402,20 +1465,23 @@ export const CasitaTamagotchi: React.FC<CasitaTamagotchiProps> = ({ solar, onClo
                       { id: 'estrellas', name: 'Lavanda', bg: '#F3EFFA' },
                       { id: 'madera', name: 'Cabaña', bg: '#EAD5C3' },
                     ].map((w) => (
-                      <button
+                      <motion.button
+                        whileTap={{ scale: 0.92 }}
                         key={w.id}
                         onClick={() => {
                           setWallStyle(w.id as typeof wallStyle);
                           localStorage.setItem('mw_room_wall', w.id);
                           soundEngine.playPop();
                         }}
-                        className={`p-2 rounded-2xl border-2 flex flex-col items-center gap-1 cursor-pointer ${
-                          wallStyle === w.id ? 'border-[var(--accent-terracotta)] scale-105' : 'border-[var(--border-ink)]'
+                        className={`p-2 rounded-2xl border flex flex-col items-center gap-1 cursor-pointer transition-all text-[#4A3F35] ${
+                          wallStyle === w.id
+                            ? 'ring-2 ring-[#FF9EBB] border-white scale-105 shadow-xs'
+                            : 'border-white/80'
                         }`}
                         style={{ backgroundColor: w.bg }}
                       >
                         <span className="text-[11px] font-bold">{w.name}</span>
-                      </button>
+                      </motion.button>
                     ))}
                   </div>
                 )}
@@ -1427,30 +1493,33 @@ export const CasitaTamagotchi: React.FC<CasitaTamagotchiProps> = ({ solar, onClo
                       { id: 'estrellas', name: 'Luz Celeste', c: '#A8DADC' },
                       { id: 'corazones', name: 'Luz Rosada', c: '#FF8FA3' },
                     ].map((g) => (
-                      <button
+                      <motion.button
+                        whileTap={{ scale: 0.92, rotate: -1 }}
                         key={g.id}
                         onClick={() => {
                           setGarlandStyle(g.id as typeof garlandStyle);
                           localStorage.setItem('mw_v4_garland', g.id);
                           soundEngine.playPop();
                         }}
-                        className={`p-2 rounded-2xl border-2 flex flex-col items-center gap-1 cursor-pointer ${
-                          garlandStyle === g.id ? 'bg-[#FFE5D9] border-[var(--accent-terracotta)]' : 'bg-[var(--bg-paper)] border-[var(--border-ink)]'
+                        className={`p-2 rounded-2xl border flex flex-col items-center gap-1 cursor-pointer transition-all ${
+                          garlandStyle === g.id
+                            ? 'bg-[#FFEAF0]/90 ring-2 ring-[#FF9EBB] border-white shadow-xs'
+                            : 'bg-white/65 border-white/80'
                         }`}
                       >
                         <div className="flex gap-1">
-                          <span className="w-3.5 h-3.5 rounded-full border border-[#3D312A]" style={{ backgroundColor: g.c }} />
-                          <span className="w-3.5 h-3.5 rounded-full border border-[#3D312A]" style={{ backgroundColor: g.c }} />
-                          <span className="w-3.5 h-3.5 rounded-full border border-[#3D312A]" style={{ backgroundColor: g.c }} />
+                          <span className="w-3.5 h-3.5 rounded-full border border-white/85 shadow-xs" style={{ backgroundColor: g.c }} />
+                          <span className="w-3.5 h-3.5 rounded-full border border-white/85 shadow-xs" style={{ backgroundColor: g.c }} />
+                          <span className="w-3.5 h-3.5 rounded-full border border-white/85 shadow-xs" style={{ backgroundColor: g.c }} />
                         </div>
                         <span className="text-[11px] font-bold">{g.name}</span>
-                      </button>
+                      </motion.button>
                     ))}
                   </div>
                 )}
 
                 {decorTab === 'mascotas' && (
-                  <div className="flex items-center justify-between gap-1.5 bg-[var(--bg-paper)] p-2 rounded-2xl border-2 border-[var(--border-ink)] overflow-x-auto">
+                  <div className="flex items-center justify-between gap-1.5 bg-white/55 backdrop-blur-md p-2 rounded-2xl border border-white/75 overflow-x-auto no-scrollbar">
                     {[
                       { type: 'hat', val: 'ninguno', icon: '🚫' },
                       { type: 'hat', val: 'corona', icon: '👑' },
@@ -1462,7 +1531,8 @@ export const CasitaTamagotchi: React.FC<CasitaTamagotchiProps> = ({ solar, onClo
                       { type: 'neck', val: 'bufanda', icon: '🧣' },
                       { type: 'neck', val: 'pajarita', icon: '🎀' },
                     ].map((acc, i) => (
-                      <button
+                      <motion.button
+                        whileTap={{ scale: 0.88, rotate: -3 }}
                         key={i}
                         onClick={() => {
                           if (acc.val === 'ninguno') {
@@ -1472,10 +1542,10 @@ export const CasitaTamagotchi: React.FC<CasitaTamagotchiProps> = ({ solar, onClo
                           }
                           soundEngine.playPop();
                         }}
-                        className="w-9 h-9 shrink-0 rounded-xl border-2 border-[var(--border-ink)] bg-white flex items-center justify-center text-lg cursor-pointer"
+                        className="w-9 h-9 shrink-0 rounded-2xl border border-white/85 bg-white/85 shadow-xs flex items-center justify-center text-lg cursor-pointer"
                       >
                         {acc.icon}
-                      </button>
+                      </motion.button>
                     ))}
                   </div>
                 )}
@@ -1484,25 +1554,26 @@ export const CasitaTamagotchi: React.FC<CasitaTamagotchiProps> = ({ solar, onClo
 
             {openDrawer === 'armario' && (
               <div className="space-y-2.5">
-                <div className="flex gap-2 overflow-x-auto pb-1">
+                <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
                   {PET_CATALOG.map((spec) => (
-                    <button
+                    <motion.button
+                      whileTap={{ scale: 0.9 }}
                       key={spec.id}
                       onClick={() => {
                         updatePetProfile(activeUser, { species: spec.id as PetSpecies });
                         soundEngine.playPop();
                       }}
-                      className={`shrink-0 p-1.5 rounded-2xl border-2 flex flex-col items-center cursor-pointer ${
+                      className={`shrink-0 p-1.5 rounded-2xl border flex flex-col items-center cursor-pointer transition-all ${
                         myPet.species === spec.id
-                          ? 'bg-[#FFE5D9] border-[var(--accent-terracotta)] scale-105'
-                          : 'bg-[var(--bg-paper)] border-[var(--border-ink)]'
+                          ? 'bg-[#FFEAF0]/90 ring-2 ring-[#FF9EBB] border-white scale-105 shadow-xs'
+                          : 'bg-white/65 border-white/80'
                       }`}
                     >
                       <CutePetAvatar species={spec.id} size={46} />
-                    </button>
+                    </motion.button>
                   ))}
                 </div>
-                <div className="flex items-center justify-between gap-1.5 bg-[var(--bg-paper)] p-2 rounded-2xl border-2 border-[var(--border-ink)] overflow-x-auto">
+                <div className="flex items-center justify-between gap-1.5 bg-white/55 backdrop-blur-md p-2 rounded-2xl border border-white/75 overflow-x-auto no-scrollbar">
                   {[
                     { type: 'hat', val: 'ninguno', icon: '🚫' },
                     { type: 'hat', val: 'corona', icon: '👑' },
@@ -1514,7 +1585,8 @@ export const CasitaTamagotchi: React.FC<CasitaTamagotchiProps> = ({ solar, onClo
                     { type: 'neck', val: 'bufanda', icon: '🧣' },
                     { type: 'neck', val: 'pajarita', icon: '🎀' },
                   ].map((acc, i) => (
-                    <button
+                    <motion.button
+                      whileTap={{ scale: 0.88, rotate: -3 }}
                       key={i}
                       onClick={() => {
                         if (acc.val === 'ninguno') {
@@ -1524,10 +1596,10 @@ export const CasitaTamagotchi: React.FC<CasitaTamagotchiProps> = ({ solar, onClo
                         }
                         soundEngine.playPop();
                       }}
-                      className="w-9 h-9 shrink-0 rounded-xl border-2 border-[var(--border-ink)] bg-white flex items-center justify-center text-lg cursor-pointer"
+                      className="w-9 h-9 shrink-0 rounded-2xl border border-white/85 bg-white/85 shadow-xs flex items-center justify-center text-lg cursor-pointer"
                     >
                       {acc.icon}
-                    </button>
+                    </motion.button>
                   ))}
                 </div>
               </div>
@@ -1537,21 +1609,22 @@ export const CasitaTamagotchi: React.FC<CasitaTamagotchiProps> = ({ solar, onClo
               <div className="space-y-2">
                 <div className="flex items-center justify-between gap-1.5">
                   {MOODS.map((m) => (
-                    <button
+                    <motion.button
+                      whileTap={{ scale: 0.9, rotate: -3 }}
                       key={m.id}
                       onClick={() => {
                         updatePetProfile(activeUser, { mood: m.id });
                         soundEngine.playPop();
                       }}
                       title={m.label}
-                      className={`w-10 h-10 rounded-2xl border-2 flex items-center justify-center text-xl cursor-pointer ${
+                      className={`w-10 h-10 rounded-2xl border flex items-center justify-center text-xl cursor-pointer transition-all ${
                         myPet.mood === m.id
-                          ? 'bg-[var(--accent-terracotta)] border-[var(--border-ink)] scale-110'
-                          : 'bg-[var(--bg-paper)] border-[var(--border-ink)]'
+                          ? 'glossy-pink-cta scale-110 shadow-xs'
+                          : 'bg-white/70 border-white/80'
                       }`}
                     >
                       {m.emoji}
-                    </button>
+                    </motion.button>
                   ))}
                 </div>
                 <input
@@ -1560,7 +1633,7 @@ export const CasitaTamagotchi: React.FC<CasitaTamagotchiProps> = ({ solar, onClo
                   value={myPet.speechBubble}
                   onChange={(e) => updatePetProfile(activeUser, { speechBubble: e.target.value })}
                   placeholder="Escribe qué piensa tu mascota (se verá al tocarla)..."
-                  className="w-full px-3 py-1.5 rounded-xl border-2 border-[var(--border-ink)] bg-[var(--bg-paper)] handwritten text-base"
+                  className="w-full px-3.5 py-2 rounded-2xl border border-[#FFB7C5]/55 bg-[#FFF5EE]/85 handwritten text-base focus:outline-none focus:ring-2 focus:ring-[#FF9EBB]"
                 />
               </div>
             )}
@@ -1568,20 +1641,21 @@ export const CasitaTamagotchi: React.FC<CasitaTamagotchiProps> = ({ solar, onClo
         )}
       </AnimatePresence>
 
-      {/* DOCK INFERIOR DE INTERACCIÓN FÍSICA DIRECTA (Con overflow-x-auto suave y proporción limpia sin recortes) */}
-      <div className="px-4 pt-2 safe-bottom-dock bg-[var(--bg-card)] border-t-2 border-[var(--border-ink)] z-30 overflow-x-auto">
-        <div className="flex items-center justify-between gap-2 min-w-max mx-auto max-w-md">
-          <div className="flex items-center gap-1 bg-[var(--bg-paper)] px-1.5 py-1 rounded-2xl border-2 border-[var(--border-ink)] shrink-0">
+      {/* DOCK INFERIOR DE INTERACCIÓN FÍSICA DIRECTA (Todos los iconos caben visibles en 390px sin recortes) */}
+      <div className="px-2.5 pt-2 safe-bottom-dock bg-[var(--glass-bg-strong)] backdrop-blur-xl border-t border-[var(--glass-border)] shadow-[0_-8px_24px_rgba(255,158,187,0.18)] z-30 overflow-x-auto no-scrollbar">
+        <div className="flex items-center justify-between gap-1.5 w-full max-w-md mx-auto">
+          <div className="flex items-center gap-1 bg-white/65 backdrop-blur-md px-1.5 py-1 rounded-full border border-white/80 shadow-xs shrink-0">
             {FOODS.map((food) => (
               <motion.button
                 key={food.id}
-                whileTap={{ scale: 1.18 }}
+                whileTap={{ scale: 1.18, rotate: -4 }}
+                transition={{ type: 'spring', stiffness: 450, damping: 14 }}
                 onPointerDown={(e) => startFoodDrag(food, e)}
                 onPointerMove={moveFoodDrag}
                 onPointerUp={endFoodDrag}
                 onPointerCancel={endFoodDrag}
                 title={`Arrastra ${food.name} a la boca de tu mascota`}
-                className="w-9 h-9 shrink-0 rounded-xl bg-white border-2 border-[var(--border-ink)] flex items-center justify-center text-xl shadow-xs cursor-grab active:cursor-grabbing touch-none"
+                className="w-8 h-8 shrink-0 rounded-full bg-white/90 border border-white/90 shadow-xs flex items-center justify-center text-lg cursor-grab active:cursor-grabbing touch-none"
               >
                 {food.emoji}
               </motion.button>
@@ -1590,7 +1664,8 @@ export const CasitaTamagotchi: React.FC<CasitaTamagotchiProps> = ({ solar, onClo
 
           <div className="flex items-center gap-1 shrink-0">
             <motion.button
-              whileTap={{ scale: 0.9 }}
+              whileTap={{ scale: 0.9, rotate: -2 }}
+              transition={{ type: 'spring', stiffness: 420, damping: 16 }}
               onClick={() => {
                 const next = !spongeActive;
                 setSpongeActive(next);
@@ -1603,15 +1678,18 @@ export const CasitaTamagotchi: React.FC<CasitaTamagotchiProps> = ({ solar, onClo
                 }
               }}
               title="Bañar con esponja"
-              className={`w-9 h-9 shrink-0 rounded-2xl border-2 border-[var(--border-ink)] flex items-center justify-center text-xl shadow-xs cursor-pointer ${
-                spongeActive ? 'bg-[#ADE8F4] scale-105 ring-2 ring-[#0077B6]' : 'bg-[var(--bg-paper)]'
+              className={`hand-button w-8 h-8 shrink-0 rounded-full flex items-center justify-center text-lg cursor-pointer ${
+                spongeActive
+                  ? 'bg-[#BDE8F6] scale-105 ring-2 ring-[#7AC9EC]'
+                  : 'bg-white/80'
               }`}
             >
               🧽
             </motion.button>
 
             <motion.button
-              whileTap={{ scale: 0.9 }}
+              whileTap={{ scale: 0.9, rotate: -2 }}
+              transition={{ type: 'spring', stiffness: 420, damping: 16 }}
               onClick={() => {
                 const next = !inBedSleeping;
                 setPetAnimState(next ? 'sleeping' : 'idle');
@@ -1623,15 +1701,18 @@ export const CasitaTamagotchi: React.FC<CasitaTamagotchiProps> = ({ solar, onClo
                 }
               }}
               title="Arropar en la cama"
-              className={`w-9 h-9 shrink-0 rounded-2xl border-2 border-[var(--border-ink)] flex items-center justify-center text-xl shadow-xs cursor-pointer ${
-                inBedSleeping ? 'bg-[#CDB4DB] scale-105' : 'bg-[var(--bg-paper)]'
+              className={`hand-button w-8 h-8 shrink-0 rounded-full flex items-center justify-center text-lg cursor-pointer ${
+                inBedSleeping
+                  ? 'bg-[#E5D5F5] scale-105 ring-2 ring-[#C3AFEA]'
+                  : 'bg-white/80'
               }`}
             >
               🛏️
             </motion.button>
 
             <motion.button
-              whileTap={{ scale: 0.9 }}
+              whileTap={{ scale: 0.9, rotate: -2 }}
+              transition={{ type: 'spring', stiffness: 420, damping: 16 }}
               onClick={() => {
                 setPetAnimState('idle');
                 careForPets('pamper_partner');
@@ -1643,13 +1724,13 @@ export const CasitaTamagotchi: React.FC<CasitaTamagotchiProps> = ({ solar, onClo
                 setTimeout(() => setPawHighFive(false), 1800);
               }}
               title="Dar mimos juntos"
-              className="w-9 h-9 shrink-0 rounded-2xl border-2 border-[var(--border-ink)] bg-[#FFD6E0] flex items-center justify-center text-xl shadow-xs cursor-pointer"
+              className="hand-button glossy-pink-cta w-8 h-8 shrink-0 rounded-full flex items-center justify-center text-lg cursor-pointer"
             >
               💕
             </motion.button>
           </div>
 
-          <div className="flex items-center gap-1 shrink-0 pr-0.5">
+          <div className="flex items-center gap-1 shrink-0">
             {[
               { id: 'decor', icon: '🎨', title: 'Muebles y decoración' },
               { id: 'armario', icon: '👑', title: 'Especie y accesorios' },
@@ -1657,13 +1738,14 @@ export const CasitaTamagotchi: React.FC<CasitaTamagotchiProps> = ({ solar, onClo
             ].map((tab) => (
               <motion.button
                 key={tab.id}
-                whileTap={{ scale: 0.9 }}
+                whileTap={{ scale: 0.9, rotate: -2 }}
+                transition={{ type: 'spring', stiffness: 420, damping: 16 }}
                 title={tab.title}
                 onClick={() =>
                   setOpenDrawer((prev) => (prev === tab.id ? 'none' : (tab.id as 'decor' | 'armario' | 'estado')))
                 }
-                className={`w-9 h-9 shrink-0 rounded-2xl border-2 border-[var(--border-ink)] flex items-center justify-center text-lg cursor-pointer ${
-                  openDrawer === tab.id ? 'bg-[var(--accent-terracotta)] text-white' : 'bg-[var(--bg-paper)]'
+                className={`hand-button w-8 h-8 shrink-0 rounded-full flex items-center justify-center text-base cursor-pointer ${
+                  openDrawer === tab.id ? 'glossy-pink-cta' : 'bg-white/80'
                 }`}
               >
                 {tab.icon}

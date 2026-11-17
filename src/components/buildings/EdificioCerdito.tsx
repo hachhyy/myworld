@@ -390,7 +390,7 @@ export const EdificioCerdito: React.FC<EdificioCerditoProps> = ({ onClose }) => 
                 {catTotals.map((c) => (
                   <div key={c.cat} className="flex items-center gap-1.5">
                     <span
-                      className="w-3 h-3 rounded-full border border-[#4A3F35] shrink-0"
+                      className="w-3 h-3 rounded-full border border-white/90 shadow-xs shrink-0"
                       style={{ backgroundColor: c.color }}
                     />
                     <span className="truncate font-semibold">
