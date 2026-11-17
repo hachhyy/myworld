@@ -167,10 +167,10 @@ export const PlanetHUD: React.FC<PlanetHUDProps> = ({ solar, hasUnreadDiary, chi
 
   return (
     <>
-      {/* ESTRUCTURA FLEX VERTICAL EN 3 ZONAS PROPORCIONADAS (100dvh) */}
-      <div className="flex flex-col justify-between h-[100dvh] w-full overflow-hidden">
-        {/* ZONA 1 (SUPERIOR - máx 15%): HEADER COMPACTO CON SAFE AREA Y PADDING-INLINE 20px */}
-        <header className="shrink-0 z-30 safe-top-header px-5 pb-1 flex flex-col gap-2 max-w-md mx-auto w-full box-border">
+      {/* ESTRUCTURA FLEX VERTICAL EN 3 ZONAS ANCLADA AL 100% FÍSICO DE LA PANTALLA */}
+      <div className="flex flex-col justify-between h-full w-full overflow-hidden">
+        {/* ZONA 1 (SUPERIOR): HEADER PEGADO A LA SAFE AREA REAL (px-3) */}
+        <header className="shrink-0 z-30 safe-top-header px-3 flex flex-col gap-1.5 max-w-md mx-auto w-full box-border">
           <div className="flex items-center justify-between gap-2 w-full">
             {/* Botón de Silencio Rápido */}
             <motion.button
@@ -231,7 +231,7 @@ export const PlanetHUD: React.FC<PlanetHUDProps> = ({ solar, hasUnreadDiary, chi
           </div>
         </header>
 
-        {/* ZONA 2 (CENTRAL - ~60%): ESCENARIO DEL PLANETA 3D CENTRADO + ÓVULO CUTE COMPACTO */}
+        {/* ZONA 2 (CENTRAL): ESCENARIO DEL PLANETA 3D CENTRADO + ÓVULO CUTE COMPACTO */}
         <main className="flex-1 min-h-0 w-full relative">
           {children}
 
@@ -242,7 +242,7 @@ export const PlanetHUD: React.FC<PlanetHUDProps> = ({ solar, hasUnreadDiary, chi
                 initial={{ x: 60, opacity: 0 }}
                 animate={{ x: 0, opacity: 1 }}
                 transition={{ type: 'spring', stiffness: 260, damping: 20 }}
-                className="absolute right-5 top-2 z-30 flex items-center pointer-events-auto max-w-[260px]"
+                className="absolute right-3 top-1.5 z-30 flex items-center pointer-events-auto max-w-[235px]"
               >
                 <AnimatePresence>
                   {ovuloBubbleOpen && (
@@ -254,7 +254,7 @@ export const PlanetHUD: React.FC<PlanetHUDProps> = ({ solar, hasUnreadDiary, chi
                         soundEngine.speakAnimalese(ovuloMessage, 510);
                         setActiveBuilding('luna');
                       }}
-                      className="hand-card p-2 mr-1.5 cursor-pointer bg-[var(--bg-card)] text-left shadow-lg"
+                      className="hand-card px-2.5 py-1.5 mr-1.5 cursor-pointer bg-[var(--bg-card)] text-left shadow-lg"
                     >
                       <div className="flex items-center justify-between gap-1 mb-0.5">
                         <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-pink-200/80 text-pink-950">
@@ -270,7 +270,7 @@ export const PlanetHUD: React.FC<PlanetHUDProps> = ({ solar, hasUnreadDiary, chi
                           ✕
                         </button>
                       </div>
-                      <p className="font-hand text-sm leading-tight">{ovuloMessage}</p>
+                      <p className="font-hand text-[13px] leading-tight">{ovuloMessage}</p>
                     </motion.div>
                   )}
                 </AnimatePresence>
@@ -289,10 +289,10 @@ export const PlanetHUD: React.FC<PlanetHUDProps> = ({ solar, hasUnreadDiary, chi
             )}
         </main>
 
-        {/* ZONA 3 (INFERIOR - máx 25%): 1 SOLA FILA DESLIZABLE DE EDIFICIOS + DOCK COMPACTO DE BESOS */}
-        <footer className="shrink-0 z-30 safe-bottom-dock px-5 pt-1 flex flex-col items-center gap-2 max-w-md mx-auto w-full box-border">
+        {/* ZONA 3 (INFERIOR): 1 SOLA FILA DESLIZABLE DE EDIFICIOS + DOCK ANCLADO AL BORDE INFERIOR */}
+        <footer className="shrink-0 z-30 safe-bottom-dock px-3 flex flex-col items-center gap-1.5 max-w-md mx-auto w-full box-border">
           {/* 1 única fila horizontal con scroll táctil suave */}
-          <div className="w-full flex overflow-x-auto no-scrollbar items-center gap-2 py-1">
+          <div className="w-full flex overflow-x-auto no-scrollbar items-center gap-2 py-0.5">
             {[
               { id: 'casita', label: '🏡 Casita', badge: false },
               { id: 'correos', label: '📮 Correos', badge: hasUnreadDiary },
@@ -403,121 +403,168 @@ export const PlanetHUD: React.FC<PlanetHUDProps> = ({ solar, hasUnreadDiary, chi
                 </AnimatePresence>
               </div>
 
-              {/* Centro: Hero Button de Corazón (76x76px, sobresale hacia arriba -mt-5, diseño táctil glossy y latido Emil Kowalski) */}
-              {cooldownRemainingSec > 0 ? (
-                <div className="flex items-center gap-1.5 px-2 py-0.5">
-                  <div className="w-22">
-                    <div className="flex justify-between text-[9px] font-bold mb-0.5">
-                      <span>Recargando</span>
-                      <span>
-                        {Math.floor(cooldownRemainingSec / 60)}:
-                        {String(cooldownRemainingSec % 60).padStart(2, '0')}
-                      </span>
-                    </div>
-                    <div className="w-full h-1.5 rounded-full bg-[var(--bg-secondary)] overflow-hidden border border-[var(--border-ink)]">
-                      <div
-                        className="h-full bg-[var(--accent-primary)] transition-all"
-                        style={{ width: `${Math.max(5, 100 - (cooldownRemainingSec / 300) * 100)}%` }}
-                      />
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => {
-                      useWorldStore.setState({ kissCooldownUntil: 0 });
-                      soundEngine.playPop(1.3);
-                    }}
-                    title="Recargar al instante"
-                    className="p-1 rounded-full hover:bg-black/5 cursor-pointer"
-                  >
-                    <RotateCcw className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              ) : (
-                <div className="relative flex items-center justify-center">
-                  {/* Corazoncitos flotando desde el propio botón hacia el planeta al pulsar */}
-                  <AnimatePresence>
-                    {tapFloatingHearts.map((h) => (
-                      <motion.span
-                        key={h.id}
-                        initial={{ opacity: 1, x: 0, y: -6, scale: 0.65, rotate: 0 }}
-                        animate={{
-                          opacity: [1, 1, 0],
-                          x: h.dx,
-                          y: h.dy,
-                          scale: [0.75, 1.25, 0.95],
-                          rotate: h.rot,
-                        }}
-                        exit={{ opacity: 0 }}
-                        transition={{ duration: 0.85, ease: 'easeOut' }}
-                        className="pointer-events-none absolute -top-2 z-40 text-lg select-none drop-shadow-sm"
-                      >
-                        {h.emoji}
-                      </motion.span>
-                    ))}
-                  </AnimatePresence>
+              {/* Centro: Hero Button de Corazón (76x76px, sobresale hacia arriba -mt-5, SIEMPRE visible incluso durante recarga con anillo circular) */}
+              {(() => {
+                const isCoolingDown = cooldownRemainingSec > 0;
+                const progressRatio = isCoolingDown
+                  ? Math.max(0.03, Math.min(1, 1 - cooldownRemainingSec / 300))
+                  : 1;
+                const ringRadius = 35;
+                const ringCircumference = 2 * Math.PI * ringRadius;
+                const ringOffset = ringCircumference * (1 - progressRatio);
+                const cooldownFormatted = `${Math.floor(cooldownRemainingSec / 60)}:${String(
+                  cooldownRemainingSec % 60
+                ).padStart(2, '0')}`;
 
-                  <motion.button
-                    whileTap={{ scale: 0.86, rotate: -4 }}
-                    animate={
-                      spamCount > 0
-                        ? { scale: 1.08 + Math.min(0.14, spamCount * 0.003) }
-                        : { scale: [1, 1.04, 1] }
-                    }
-                    transition={
-                      spamCount > 0
-                        ? { type: 'spring', stiffness: 420, damping: 16 }
-                        : { duration: 2.5, repeat: Infinity, ease: 'easeInOut' }
-                    }
-                    onClick={handleTapKissButton}
-                    aria-label="Enviar lluvia de besos"
-                    className="-mt-5 -mb-2 w-[76px] h-[76px] rounded-full bg-gradient-to-b from-[#FF8FA3] to-[#FF5D73] text-white border-[3px] border-[#FFF3D6] ring-2 ring-[#4A3F35]/85 shadow-[0_6px_20px_rgba(255,93,115,0.45)] flex flex-col items-center justify-center cursor-pointer relative select-none overflow-hidden"
-                  >
-                    {/* Reflejo superior tipo burbuja glossy */}
-                    <span className="pointer-events-none absolute top-1.5 left-1/2 -translate-x-1/2 w-11 h-4 rounded-full bg-gradient-to-b from-white/60 to-white/5 blur-[0.3px]" />
+                return (
+                  <div className="relative flex items-center justify-center -mt-5 -mb-0.5 w-[76px] h-[76px] shrink-0">
+                    {/* Corazoncitos flotando desde el propio botón hacia el planeta al pulsar */}
+                    <AnimatePresence>
+                      {tapFloatingHearts.map((h) => (
+                        <motion.span
+                          key={h.id}
+                          initial={{ opacity: 1, x: 0, y: -6, scale: 0.65, rotate: 0 }}
+                          animate={{
+                            opacity: [1, 1, 0],
+                            x: h.dx,
+                            y: h.dy,
+                            scale: [0.75, 1.25, 0.95],
+                            rotate: h.rot,
+                          }}
+                          exit={{ opacity: 0 }}
+                          transition={{ duration: 0.85, ease: 'easeOut' }}
+                          className="pointer-events-none absolute -top-2 z-40 text-lg select-none drop-shadow-sm"
+                        >
+                          {h.emoji}
+                        </motion.span>
+                      ))}
+                    </AnimatePresence>
 
-                    {/* Icono de corazón 3D/SVG expresivo en el centro */}
-                    <div className="relative flex items-center justify-center mt-0.5">
-                      <svg
-                        viewBox="0 0 36 34"
-                        className="w-8 h-8 drop-shadow-[0_2px_4px_rgba(164,19,60,0.45)]"
-                      >
-                        <defs>
-                          <radialGradient id="heroHeartGrad" cx="35%" cy="28%" r="70%">
-                            <stop offset="0%" stopColor="#FFF0F3" />
-                            <stop offset="45%" stopColor="#FFCCD5" />
-                            <stop offset="100%" stopColor="#FFFFFF" />
-                          </radialGradient>
-                        </defs>
-                        <path
-                          d="M18 31.5C18 31.5 3.5 22.2 3.5 11.4C3.5 5.9 7.8 2 12.8 2C15.6 2 17.3 3.4 18 4.9C18.7 3.4 20.4 2 23.2 2C28.2 2 32.5 5.9 32.5 11.4C32.5 22.2 18 31.5 18 31.5Z"
-                          fill="url(#heroHeartGrad)"
-                          stroke="#800F2F"
-                          strokeWidth="1.8"
-                          strokeLinejoin="round"
-                        />
-                        <ellipse
-                          cx="11.5"
-                          cy="9.2"
-                          rx="3.2"
-                          ry="1.8"
-                          transform="rotate(-24 11.5 9.2)"
-                          fill="#FFFFFF"
-                          opacity="0.85"
-                        />
-                      </svg>
-                      {selectedIcon !== 'corazones' && (
-                        <span className="absolute -right-2 -bottom-1 text-xs drop-shadow">
-                          {KISS_ICONS[selectedIcon].emoji}
-                        </span>
+                    <motion.button
+                      whileTap={{ scale: isCoolingDown ? 0.93 : 0.86, rotate: isCoolingDown ? 0 : -4 }}
+                      animate={
+                        isCoolingDown
+                          ? { scale: 1 }
+                          : spamCount > 0
+                            ? { scale: 1.08 + Math.min(0.14, spamCount * 0.003) }
+                            : { scale: [1, 1.04, 1] }
+                      }
+                      transition={
+                        isCoolingDown
+                          ? { duration: 0.25 }
+                          : spamCount > 0
+                            ? { type: 'spring', stiffness: 420, damping: 16 }
+                            : { duration: 2.5, repeat: Infinity, ease: 'easeInOut' }
+                      }
+                      onClick={handleTapKissButton}
+                      aria-label={
+                        isCoolingDown
+                          ? `Corazón recargando (${cooldownFormatted})`
+                          : 'Enviar lluvia de besos'
+                      }
+                      className={`w-[76px] h-[76px] rounded-full text-white border-[3px] border-[#FFF3D6] ring-2 ring-[#4A3F35]/85 flex flex-col items-center justify-center cursor-pointer relative select-none overflow-hidden transition-colors duration-300 ${
+                        isCoolingDown
+                          ? 'bg-gradient-to-b from-[#FFC4D0] to-[#F28FA4] shadow-[0_4px_14px_rgba(242,143,164,0.35)]'
+                          : 'bg-gradient-to-b from-[#FF8FA3] to-[#FF5D73] shadow-[0_6px_20px_rgba(255,93,115,0.45)]'
+                      }`}
+                    >
+                      {/* Anillo de progreso circular integrado durante la recarga */}
+                      {isCoolingDown && (
+                        <svg
+                          viewBox="0 0 76 76"
+                          className="pointer-events-none absolute inset-0 w-full h-full -rotate-90 z-10"
+                        >
+                          <circle
+                            cx="38"
+                            cy="38"
+                            r={ringRadius}
+                            fill="none"
+                            stroke="rgba(255,255,255,0.45)"
+                            strokeWidth="4"
+                          />
+                          <circle
+                            cx="38"
+                            cy="38"
+                            r={ringRadius}
+                            fill="none"
+                            stroke="#FF3B66"
+                            strokeWidth="4.2"
+                            strokeLinecap="round"
+                            strokeDasharray={ringCircumference}
+                            strokeDashoffset={ringOffset}
+                            style={{ transition: 'stroke-dashoffset 0.8s ease-out' }}
+                          />
+                        </svg>
                       )}
-                    </div>
 
-                    <span className="text-[11px] font-extrabold tracking-tight text-white drop-shadow-[0_1px_2px_rgba(128,15,47,0.6)] leading-none mt-0.5">
-                      {spamCount > 0 ? `x${spamCount}` : '¡Besos!'}
-                    </span>
-                  </motion.button>
-                </div>
-              )}
+                      {/* Reflejo superior tipo burbuja glossy */}
+                      <span className="pointer-events-none absolute top-1.5 left-1/2 -translate-x-1/2 w-11 h-4 rounded-full bg-gradient-to-b from-white/60 to-white/5 blur-[0.3px]" />
+
+                      {/* Icono de corazón 3D/SVG expresivo en el centro */}
+                      <div className={`relative flex items-center justify-center mt-0.5 ${isCoolingDown ? 'opacity-90' : ''}`}>
+                        <svg
+                          viewBox="0 0 36 34"
+                          className="w-8 h-8 drop-shadow-[0_2px_4px_rgba(164,19,60,0.45)]"
+                        >
+                          <defs>
+                            <radialGradient id="heroHeartGrad" cx="35%" cy="28%" r="70%">
+                              <stop offset="0%" stopColor="#FFF0F3" />
+                              <stop offset="45%" stopColor="#FFCCD5" />
+                              <stop offset="100%" stopColor="#FFFFFF" />
+                            </radialGradient>
+                          </defs>
+                          <path
+                            d="M18 31.5C18 31.5 3.5 22.2 3.5 11.4C3.5 5.9 7.8 2 12.8 2C15.6 2 17.3 3.4 18 4.9C18.7 3.4 20.4 2 23.2 2C28.2 2 32.5 5.9 32.5 11.4C32.5 22.2 18 31.5 18 31.5Z"
+                            fill="url(#heroHeartGrad)"
+                            stroke="#800F2F"
+                            strokeWidth="1.8"
+                            strokeLinejoin="round"
+                          />
+                          <ellipse
+                            cx="11.5"
+                            cy="9.2"
+                            rx="3.2"
+                            ry="1.8"
+                            transform="rotate(-24 11.5 9.2)"
+                            fill="#FFFFFF"
+                            opacity="0.85"
+                          />
+                        </svg>
+                        {selectedIcon !== 'corazones' && (
+                          <span className="absolute -right-2 -bottom-1 text-xs drop-shadow">
+                            {KISS_ICONS[selectedIcon].emoji}
+                          </span>
+                        )}
+                      </div>
+
+                      <span className="text-[11px] font-extrabold tracking-tight text-white tabular-nums drop-shadow-[0_1px_2px_rgba(128,15,47,0.75)] leading-none mt-0.5 z-10">
+                        {isCoolingDown
+                          ? cooldownFormatted
+                          : spamCount > 0
+                            ? `x${spamCount}`
+                            : '¡Besos!'}
+                      </span>
+                    </motion.button>
+
+                    {/* Micro botón discreto de recarga instantánea en esquina superior derecha */}
+                    {isCoolingDown && (
+                      <motion.button
+                        type="button"
+                        whileTap={{ scale: 0.85, rotate: -90 }}
+                        onClick={() => {
+                          useWorldStore.setState({ kissCooldownUntil: 0 });
+                          soundEngine.playPop(1.3);
+                        }}
+                        title="Recargar al instante"
+                        aria-label="Recargar besos al instante"
+                        className="absolute -top-0.5 -right-1 z-20 w-6 h-6 rounded-full bg-[var(--bg-card)] border-2 border-[var(--border-ink)] shadow-sm flex items-center justify-center text-[var(--text-ink)] cursor-pointer"
+                      >
+                        <RotateCcw className="w-3 h-3" />
+                      </motion.button>
+                    )}
+                  </div>
+                );
+              })()}
 
               {/* Derecha: Contador numérico limpio e integrado en la pastilla */}
               <div
@@ -564,8 +611,8 @@ export const PlanetHUD: React.FC<PlanetHUDProps> = ({ solar, hasUnreadDiary, chi
                         setActiveRainBursts((prev) => prev.filter((b) => b.id !== burst.id));
                       }
                     }}
-                    initial={{ y: -50, scale: 0.8, opacity: 0 }}
-                    animate={{ y: 128, scale: 1, opacity: 1 }}
+                    initial={{ y: -40, scale: 0.8, opacity: 0 }}
+                    animate={{ y: 102, scale: 1, opacity: 1 }}
                     exit={{ x: 260, opacity: 0, scale: 0.85 }}
                     transition={{ type: 'spring', stiffness: 350, damping: 25 }}
                     className="mx-auto w-fit max-w-[90vw] hand-card px-5 py-3 bg-[var(--bg-card)] text-center shadow-xl pointer-events-auto cursor-grab active:cursor-grabbing relative"

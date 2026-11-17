@@ -221,11 +221,23 @@ export const App: React.FC = () => {
     lunarB,
   ]);
 
-  // Sincronizar Tema Pastel y Modo Noche Conectado en el DOM global
+  // Sincronizar Tema Pastel, Modo Noche y colores de fondo/barra de estado en el DOM global (sin huecos detrás de la Isla Dinámica o Home Bar)
+  const hasActiveLinkedSession = Boolean(onboardingCompleted && worldId);
+
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
     document.documentElement.setAttribute('data-night', solar.isNightMode ? 'true' : 'false');
-  }, [theme, solar.isNightMode]);
+
+    const topColor = hasActiveLinkedSession ? solar.skyTopColor : '#FDF8F2';
+    const bottomColor = hasActiveLinkedSession ? solar.skyBottomColor : '#FDF8F2';
+    document.documentElement.style.backgroundColor = topColor;
+    document.body.style.backgroundColor = bottomColor;
+
+    const themeColorMeta = document.querySelector('meta[name="theme-color"]');
+    if (themeColorMeta) {
+      themeColorMeta.setAttribute('content', topColor);
+    }
+  }, [theme, solar.isNightMode, solar.skyTopColor, solar.skyBottomColor, hasActiveLinkedSession]);
 
   // Fallback visual de latido de corazón para iOS si Navigator.vibrate está restringido
   useEffect(() => {
@@ -243,16 +255,14 @@ export const App: React.FC = () => {
   );
 
   // Si NO hay sesión guardada o aún no tiene Planeta vinculado (`worldId`) -> Mostrar Flujo de Login / Vinculación
-  const hasActiveLinkedSession = Boolean(onboardingCompleted && worldId);
-
   if (!hasActiveLinkedSession) {
     return <OnboardingFlow />;
   }
 
   return (
     <div
-      className={`relative w-full h-[100dvh] overflow-hidden select-none transition-all duration-1000 ${
-        hapticVisualPulse ? 'scale-[1.008]' : 'scale-100'
+      className={`relative w-full h-full overflow-hidden select-none transition-[background,transform] duration-500 ${
+        hapticVisualPulse ? 'scale-[1.008]' : ''
       }`}
       style={{
         background: `linear-gradient(180deg, ${solar.skyTopColor} 0%, ${solar.skyBottomColor} 100%)`,

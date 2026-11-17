@@ -58,10 +58,10 @@ export const LoadingScreen: React.FC = () => {
           initial={{ opacity: 1 }}
           exit={{ opacity: 0, scale: 1.18, filter: 'blur(6px)' }}
           transition={{ duration: 0.85, ease: 'easeInOut' }}
-          className="fixed inset-0 z-50 flex flex-col items-center justify-between p-6 watercolor-paper select-none"
+          className="fixed inset-0 z-50 flex flex-col items-center justify-between px-4 safe-modal-inset watercolor-paper select-none"
         >
           {/* Nubes decorativas superiores */}
-          <div className="w-full flex justify-between items-center pt-3 opacity-80">
+          <div className="w-full flex justify-between items-center pt-1 opacity-80">
             <span className="text-2xl animate-float-slow">☁️✨</span>
             <span className="text-xs font-medium px-3 py-1 hand-pill bg-[var(--bg-card)]">
               Preparando el vuelo de regreso...
@@ -138,7 +138,7 @@ export const LoadingScreen: React.FC = () => {
               soundEngine.speakAnimalese('Bienvenidos a nuestro planeta', 460);
               completeLanding();
             }}
-            className="hand-button px-6 py-2.5 bg-[var(--accent-primary)] font-semibold text-sm mb-2 cursor-pointer"
+            className="hand-button px-6 py-2.5 bg-[var(--accent-primary)] text-[#4A3F35] font-bold text-sm mb-1 cursor-pointer"
           >
             Aterrizar en nuestro mundo 🌍✨
           </motion.button>
