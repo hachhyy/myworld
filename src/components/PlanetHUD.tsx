@@ -68,6 +68,9 @@ export const PlanetHUD: React.FC<PlanetHUDProps> = ({ solar, hasUnreadDiary, chi
   const [cooldownRemainingSec, setCooldownRemainingSec] = useState(0);
   const [activeRainBursts, setActiveRainBursts] = useState<PendingKissBurst[]>([]);
   const [ovuloBubbleOpen, setOvuloBubbleOpen] = useState(true);
+  const [tapFloatingHearts, setTapFloatingHearts] = useState<
+    { id: number; dx: number; dy: number; rot: number; emoji: string }[]
+  >([]);
 
   // Modal rápido de Motes de la Pareja, Mascotas y ¿Quién soy yo?
   const [motesModalOpen, setMotesModalOpen] = useState(false);
@@ -108,6 +111,20 @@ export const PlanetHUD: React.FC<PlanetHUDProps> = ({ solar, hasUnreadDiary, chi
     setSpamCount(next);
     soundEngine.playPop(0.95 + next * 0.015);
     triggerHeartbeatHaptic('kiss-tap');
+
+    // Lanzar corazoncitos flotando desde el propio botón hacia el planeta
+    const now = Date.now();
+    const emoji = KISS_ICONS[selectedIcon].emoji;
+    const spawned = [
+      { id: now + Math.random(), dx: -26 + Math.random() * 14, dy: -75 - Math.random() * 25, rot: -18, emoji },
+      { id: now + Math.random() + 1, dx: -6 + Math.random() * 12, dy: -95 - Math.random() * 30, rot: 8, emoji: '💖' },
+      { id: now + Math.random() + 2, dx: 14 + Math.random() * 16, dy: -70 - Math.random() * 25, rot: 22, emoji },
+    ];
+    setTapFloatingHearts((prev) => [...prev.slice(-15), ...spawned]);
+    setTimeout(() => {
+      setTapFloatingHearts((prev) => prev.filter((p) => !spawned.some((s) => s.id === p.id)));
+    }, 950);
+
     if (next === 50) {
       setNoteComposerOpen(true);
     }
@@ -386,7 +403,7 @@ export const PlanetHUD: React.FC<PlanetHUDProps> = ({ solar, hasUnreadDiary, chi
                 </AnimatePresence>
               </div>
 
-              {/* Centro: Botón de Corazón (Kiss Sender) compacto */}
+              {/* Centro: Hero Button de Corazón (76x76px, sobresale hacia arriba -mt-5, diseño táctil glossy y latido Emil Kowalski) */}
               {cooldownRemainingSec > 0 ? (
                 <div className="flex items-center gap-1.5 px-2 py-0.5">
                   <div className="w-22">
@@ -416,23 +433,90 @@ export const PlanetHUD: React.FC<PlanetHUDProps> = ({ solar, hasUnreadDiary, chi
                   </button>
                 </div>
               ) : (
-                <motion.button
-                  whileTap={{ scale: 0.85 }}
-                  animate={{
-                    scale: spamCount > 0 ? 1.06 + Math.min(0.14, spamCount * 0.003) : 1,
-                  }}
-                  transition={{ type: 'spring', stiffness: 420, damping: 16 }}
-                  onClick={handleTapKissButton}
-                  aria-label="Enviar lluvia de besos"
-                  className="-my-2.5 w-13 h-13 rounded-full bg-gradient-to-br from-[#FF758F] to-[#FF4D6D] text-white border-2 border-[var(--border-ink)] shadow-[0_5px_14px_rgba(255,77,109,0.42)] flex flex-col items-center justify-center cursor-pointer relative select-none"
-                >
-                  <span className="text-xl leading-none drop-shadow-xs">
-                    {KISS_ICONS[selectedIcon].emoji}
-                  </span>
-                  <span className="text-[9px] font-extrabold mt-0.5 tracking-tight text-white">
-                    {spamCount > 0 ? `x${spamCount}` : '¡Besos!'}
-                  </span>
-                </motion.button>
+                <div className="relative flex items-center justify-center">
+                  {/* Corazoncitos flotando desde el propio botón hacia el planeta al pulsar */}
+                  <AnimatePresence>
+                    {tapFloatingHearts.map((h) => (
+                      <motion.span
+                        key={h.id}
+                        initial={{ opacity: 1, x: 0, y: -6, scale: 0.65, rotate: 0 }}
+                        animate={{
+                          opacity: [1, 1, 0],
+                          x: h.dx,
+                          y: h.dy,
+                          scale: [0.75, 1.25, 0.95],
+                          rotate: h.rot,
+                        }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.85, ease: 'easeOut' }}
+                        className="pointer-events-none absolute -top-2 z-40 text-lg select-none drop-shadow-sm"
+                      >
+                        {h.emoji}
+                      </motion.span>
+                    ))}
+                  </AnimatePresence>
+
+                  <motion.button
+                    whileTap={{ scale: 0.86, rotate: -4 }}
+                    animate={
+                      spamCount > 0
+                        ? { scale: 1.08 + Math.min(0.14, spamCount * 0.003) }
+                        : { scale: [1, 1.04, 1] }
+                    }
+                    transition={
+                      spamCount > 0
+                        ? { type: 'spring', stiffness: 420, damping: 16 }
+                        : { duration: 2.5, repeat: Infinity, ease: 'easeInOut' }
+                    }
+                    onClick={handleTapKissButton}
+                    aria-label="Enviar lluvia de besos"
+                    className="-mt-5 -mb-2 w-[76px] h-[76px] rounded-full bg-gradient-to-b from-[#FF8FA3] to-[#FF5D73] text-white border-[3px] border-[#FFF3D6] ring-2 ring-[#4A3F35]/85 shadow-[0_6px_20px_rgba(255,93,115,0.45)] flex flex-col items-center justify-center cursor-pointer relative select-none overflow-hidden"
+                  >
+                    {/* Reflejo superior tipo burbuja glossy */}
+                    <span className="pointer-events-none absolute top-1.5 left-1/2 -translate-x-1/2 w-11 h-4 rounded-full bg-gradient-to-b from-white/60 to-white/5 blur-[0.3px]" />
+
+                    {/* Icono de corazón 3D/SVG expresivo en el centro */}
+                    <div className="relative flex items-center justify-center mt-0.5">
+                      <svg
+                        viewBox="0 0 36 34"
+                        className="w-8 h-8 drop-shadow-[0_2px_4px_rgba(164,19,60,0.45)]"
+                      >
+                        <defs>
+                          <radialGradient id="heroHeartGrad" cx="35%" cy="28%" r="70%">
+                            <stop offset="0%" stopColor="#FFF0F3" />
+                            <stop offset="45%" stopColor="#FFCCD5" />
+                            <stop offset="100%" stopColor="#FFFFFF" />
+                          </radialGradient>
+                        </defs>
+                        <path
+                          d="M18 31.5C18 31.5 3.5 22.2 3.5 11.4C3.5 5.9 7.8 2 12.8 2C15.6 2 17.3 3.4 18 4.9C18.7 3.4 20.4 2 23.2 2C28.2 2 32.5 5.9 32.5 11.4C32.5 22.2 18 31.5 18 31.5Z"
+                          fill="url(#heroHeartGrad)"
+                          stroke="#800F2F"
+                          strokeWidth="1.8"
+                          strokeLinejoin="round"
+                        />
+                        <ellipse
+                          cx="11.5"
+                          cy="9.2"
+                          rx="3.2"
+                          ry="1.8"
+                          transform="rotate(-24 11.5 9.2)"
+                          fill="#FFFFFF"
+                          opacity="0.85"
+                        />
+                      </svg>
+                      {selectedIcon !== 'corazones' && (
+                        <span className="absolute -right-2 -bottom-1 text-xs drop-shadow">
+                          {KISS_ICONS[selectedIcon].emoji}
+                        </span>
+                      )}
+                    </div>
+
+                    <span className="text-[11px] font-extrabold tracking-tight text-white drop-shadow-[0_1px_2px_rgba(128,15,47,0.6)] leading-none mt-0.5">
+                      {spamCount > 0 ? `x${spamCount}` : '¡Besos!'}
+                    </span>
+                  </motion.button>
+                </div>
               )}
 
               {/* Derecha: Contador numérico limpio e integrado en la pastilla */}

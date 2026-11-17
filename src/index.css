@@ -83,8 +83,10 @@
 html,
 body,
 #root {
+  position: fixed;
+  inset: 0;
   width: 100%;
-  height: 100%;
+  height: 100dvh;
   margin: 0;
   padding: 0;
   overflow: hidden;
@@ -96,18 +98,18 @@ body,
   transition: background-color 0.7s ease, color 0.7s ease;
 }
 
-/* Márgenes seguros nativos de iOS (Notch / Isla Dinámica y Home Indicator) */
+/* Márgenes seguros dinámicos y elásticos para todos los modelos de iPhone (Safari + PWA standalone) */
 .safe-top-header {
-  padding-top: max(env(safe-area-inset-top, 44px), 48px);
+  padding-top: calc(env(safe-area-inset-top, 0px) + 12px);
 }
 
 .safe-bottom-dock {
-  padding-bottom: max(env(safe-area-inset-bottom, 20px), 24px);
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
 }
 
 .safe-modal-inset {
-  padding-top: max(env(safe-area-inset-top, 44px), 48px);
-  padding-bottom: max(env(safe-area-inset-bottom, 20px), 24px);
+  padding-top: calc(env(safe-area-inset-top, 0px) + 12px);
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
 }
 
 .no-scrollbar::-webkit-scrollbar {

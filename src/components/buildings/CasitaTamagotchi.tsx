@@ -368,9 +368,9 @@ export const CasitaTamagotchi: React.FC<CasitaTamagotchiProps> = ({ solar, onClo
     bedModel === 'dosel' ? '#F4ACB7' : bedModel === 'futon' ? '#74C69D' : '#F4845F';
 
   return (
-    <div className="fixed inset-0 z-40 flex flex-col watercolor-paper overflow-hidden select-none">
+    <div className="fixed inset-0 z-40 h-[100dvh] w-full flex flex-col justify-between watercolor-paper overflow-hidden select-none">
       {/* Cabecera compacta con Safe Area superior de iOS */}
-      <div className="safe-top-header px-4 pb-2 flex items-center justify-between gap-2 border-b-2 border-[var(--border-ink)] bg-[var(--bg-card)] z-30">
+      <div className="safe-top-header px-4 pb-2 shrink-0 flex items-center justify-between gap-2 border-b-2 border-[var(--border-ink)] bg-[var(--bg-card)] z-30">
         <motion.button
           whileTap={{ scale: 0.92 }}
           onClick={onClose}
@@ -416,7 +416,7 @@ export const CasitaTamagotchi: React.FC<CasitaTamagotchiProps> = ({ solar, onClo
         ref={roomRef}
         onPointerMove={handleRoomPointerMove}
         onPointerDown={handleRoomPointerMove}
-        className={`relative flex-1 w-full flex flex-col overflow-hidden ${
+        className={`relative flex-1 min-h-0 w-full flex flex-col overflow-hidden ${
           spongeActive ? 'cursor-none' : ''
         }`}
       >
@@ -1013,26 +1013,9 @@ export const CasitaTamagotchi: React.FC<CasitaTamagotchiProps> = ({ solar, onClo
           style={{ position: 'absolute' }}
           className="z-20 flex flex-col items-center pointer-events-auto"
         >
-          {/* Globo de diálogo solo al tocar a la mascota (texto completo sin recortes) */}
-          <AnimatePresence>
-            {!inBedSleeping && (pettingPet === 'A' || pawHighFive) && (
-              <motion.div
-                initial={{ opacity: 0, y: 6, scale: 0.9 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: 4, scale: 0.9 }}
-                transition={{ type: 'spring', stiffness: 350, damping: 25 }}
-                className="mb-1.5 px-3 py-1 rounded-2xl bg-[#FFFDF9] border-2 border-[var(--border-ink)] shadow-md max-w-[185px] z-30"
-              >
-                <p className="handwritten text-sm leading-snug text-[var(--text-main)] text-center break-words">
-                  “{pawHighFive ? '¡Te quiero mucho! 🐾' : petA.speechBubble}”
-                </p>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
           {/* Sombra ovalada suave en el anclaje izquierdo de la alfombra */}
           {!inBedSleeping && (
-            <div className="absolute bottom-5 w-24 h-5 rounded-full bg-[#3D312A]/22 blur-[1px] pointer-events-none" />
+            <div className="absolute bottom-1.5 w-24 h-5 rounded-full bg-[#3D312A]/22 blur-[1px] pointer-events-none" />
           )}
 
           <div
@@ -1067,13 +1050,6 @@ export const CasitaTamagotchi: React.FC<CasitaTamagotchiProps> = ({ solar, onClo
               size={132}
             />
           </div>
-
-          {!inBedSleeping && (
-            <div className="mt-0.5 px-2.5 py-0.5 rounded-full bg-[#FFFDF9]/95 border-2 border-[var(--border-ink)] text-[11px] font-bold shadow-xs whitespace-nowrap flex items-center gap-1">
-              <span>{MOODS.find((m) => m.id === petA.mood)?.emoji || '😊'}</span>
-              <span>{petA.petName} · {petA.ownerName}</span>
-            </div>
-          )}
         </motion.div>
 
         {/* =========================================================================
@@ -1102,26 +1078,9 @@ export const CasitaTamagotchi: React.FC<CasitaTamagotchiProps> = ({ solar, onClo
           style={{ position: 'absolute' }}
           className="z-20 flex flex-col items-center pointer-events-auto"
         >
-          {/* Globo de diálogo solo al tocar a la mascota (texto completo sin recortes) */}
-          <AnimatePresence>
-            {!inBedSleeping && (pettingPet === 'B' || pawHighFive) && (
-              <motion.div
-                initial={{ opacity: 0, y: 6, scale: 0.9 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: 4, scale: 0.9 }}
-                transition={{ type: 'spring', stiffness: 350, damping: 25 }}
-                className="mb-1.5 px-3 py-1 rounded-2xl bg-[#FFFDF9] border-2 border-[var(--border-ink)] shadow-md max-w-[185px] z-30"
-              >
-                <p className="handwritten text-sm leading-snug text-[var(--text-main)] text-center break-words">
-                  “{pawHighFive ? '¡Mimitos juntos! 💕' : petB.speechBubble}”
-                </p>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
           {/* Sombra ovalada suave en el anclaje derecho de la alfombra */}
           {!inBedSleeping && (
-            <div className="absolute bottom-5 w-24 h-5 rounded-full bg-[#3D312A]/22 blur-[1px] pointer-events-none" />
+            <div className="absolute bottom-1.5 w-24 h-5 rounded-full bg-[#3D312A]/22 blur-[1px] pointer-events-none" />
           )}
 
           <div
@@ -1156,13 +1115,6 @@ export const CasitaTamagotchi: React.FC<CasitaTamagotchiProps> = ({ solar, onClo
               size={132}
             />
           </div>
-
-          {!inBedSleeping && (
-            <div className="mt-0.5 px-2.5 py-0.5 rounded-full bg-[#FFFDF9]/95 border-2 border-[var(--border-ink)] text-[11px] font-bold shadow-xs whitespace-nowrap flex items-center gap-1">
-              <span>{MOODS.find((m) => m.id === petB.mood)?.emoji || '🥰'}</span>
-              <span>{petB.petName} · {petB.ownerName}</span>
-            </div>
-          )}
         </motion.div>
 
         {/* CORAZÓN ENTRE LAS DOS ZONAS DE ANCLAJE CUANDO SE MIMAN */}
