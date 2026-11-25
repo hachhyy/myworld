@@ -5,7 +5,7 @@ import {
   signOutFromSupabase,
   type RealtimeConnectionStatus,
 } from '../lib/supabaseClient';
-import { normalizeRoomCode } from '../utils/worldSyncMerge';
+import { normalizeRoomCode, SEED_ITEM_IDS } from '../utils/worldSyncMerge';
 
 export type SyncStatus = 'connecting' | 'connected' | 'syncing' | 'error' | 'offline';
 
@@ -311,6 +311,7 @@ export interface WorldState {
   // Metadatos persistentes para merge sin sobrescritura destructiva
   deletedIds: string[];
   kissesResetAt: number;
+  lastSyncedWorldId: string | null;
 
   // Acciones de Sincronización
   setSyncMeta: (partial: {
@@ -319,6 +320,7 @@ export interface WorldState {
     lastSyncedAt?: number | null;
     realtimeStatus?: RealtimeConnectionStatus;
   }) => void;
+  clearDemoSeedItems: () => number;
 
   // Acciones de Sesión y Onboarding
   setAuthSession: (userId: string, email: string, name: string) => void;
@@ -432,6 +434,7 @@ export const useWorldStore = create<WorldState>()(
       // Tombstones persistentes y marca de reinicio de besos
       deletedIds: [],
       kissesResetAt: 0,
+      lastSyncedWorldId: null,
 
       // Si es la primera vez en el móvil, comienza en el Paso 1 del Onboarding
       authUserId: null,
@@ -453,7 +456,7 @@ export const useWorldStore = create<WorldState>()(
       anniversaryModalOpen: false,
       hasCompletedLanding: false,
 
-      totalKissesHistory: 1850,
+      totalKissesHistory: 0,
       kissCooldownUntil: 0,
       pendingKissBursts: [],
 
@@ -809,6 +812,40 @@ export const useWorldStore = create<WorldState>()(
       // ============================================================
       setSyncMeta: (partial) => set(partial),
 
+      clearDemoSeedItems: () => {
+        const st = get();
+        const removedIds: string[] = [];
+        const keepNonSeed = <T extends { id: string }>(arr: T[]): T[] =>
+          arr.filter((item) => {
+            if (SEED_ITEM_IDS.has(item.id)) {
+              removedIds.push(item.id);
+              return false;
+            }
+            return true;
+          });
+
+        const diaryPages = keepNonSeed(st.diaryPages);
+        const mediaItems = keepNonSeed(st.mediaItems);
+        const mapPins = keepNonSeed(st.mapPins);
+        const cravings = keepNonSeed(st.cravings);
+        const expenses = keepNonSeed(st.expenses);
+        const savingsGoals = keepNonSeed(st.savingsGoals);
+
+        if (removedIds.length > 0) {
+          soundEngine.playChime();
+          setSynced((state) => ({
+            diaryPages,
+            mediaItems,
+            mapPins,
+            cravings,
+            expenses,
+            savingsGoals,
+            deletedIds: Array.from(new Set([...state.deletedIds, ...removedIds])).slice(-200),
+          }));
+        }
+        return removedIds.length;
+      },
+
       // ============================================================
       // ACCIONES DE SESIÓN PERSISTENTE Y ONBOARDING (3 PASOS)
       // ============================================================
@@ -833,6 +870,7 @@ export const useWorldStore = create<WorldState>()(
         soundEngine.playChime();
         set({
           worldId,
+          lastSyncedWorldId: null,
           planetName: planetName.trim() || 'Nuestro Planeta',
           roomCode: normalizeRoomCode(roomCode),
           anniversaryDate: anniversaryDate || getSeedAnniversaryDate(),
@@ -862,6 +900,7 @@ export const useWorldStore = create<WorldState>()(
           authUserId: null,
           authUserEmail: null,
           worldId: null,
+          lastSyncedWorldId: null,
           onboardingCompleted: false,
           onboardingStep: 1,
           settingsOpen: false,

@@ -68,6 +68,7 @@ export const SettingsModal: React.FC = () => {
     syncError,
     lastSyncedAt,
     realtimeStatus,
+    clearDemoSeedItems,
   } = useWorldStore();
 
   const [joinCodeInput, setJoinCodeInput] = useState('');
@@ -475,6 +476,32 @@ export const SettingsModal: React.FC = () => {
                       ? 'Sincronizando ahora...'
                       : '🔄 Forzar sincronización ahora'}
                   </span>
+                </motion.button>
+
+                {/* Limpiar datos de ejemplo/demo que se hayan podido mezclar sin tocar los recuerdos reales */}
+                <motion.button
+                  whileTap={{ scale: 0.95 }}
+                  type="button"
+                  onClick={() => {
+                    const count = clearDemoSeedItems();
+                    if (count > 0) {
+                      setLinkFeedback({
+                        type: 'ok',
+                        text: `🧹 Se eliminaron ${count} datos de ejemplo mezclados (tus recuerdos reales siguen intactos). Sincronizando...`,
+                      });
+                      window.setTimeout(() => {
+                        window.dispatchEvent(new CustomEvent('myworld-force-sync'));
+                      }, 150);
+                    } else {
+                      setLinkFeedback({
+                        type: 'ok',
+                        text: '✨ No quedaban datos de ejemplo mezclados en vuestro planeta.',
+                      });
+                    }
+                  }}
+                  className="w-full py-2 px-3 rounded-full border border-[#FFB7C5]/65 bg-[var(--glass-bg)] hover:bg-[#FFEAF0]/70 text-[11px] font-bold flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
+                >
+                  <span>🧹 Limpiar datos de ejemplo mezclados</span>
                 </motion.button>
 
                 {/* Cambiar / Re-vincular código de 6 letras */}

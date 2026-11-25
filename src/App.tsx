@@ -55,68 +55,75 @@ function extractLocalSnapshot(): SyncedWorldSnapshot {
   };
 }
 
-function applyMergedSnapshotToStore(remoteSnap: SyncedWorldSnapshot, expectedWorldId: string) {
+function applyMergedSnapshotToStore(
+  remoteSnap: SyncedWorldSnapshot,
+  expectedWorldId: string,
+  authoritativeReplace = false
+) {
   if (!remoteSnap || (remoteSnap.worldId && remoteSnap.worldId !== expectedWorldId)) return;
   try {
-    const merged = mergeWorldSnapshots(extractLocalSnapshot(), remoteSnap);
+    const source = authoritativeReplace
+      ? remoteSnap
+      : mergeWorldSnapshots(extractLocalSnapshot(), remoteSnap);
 
     // Actualización directa con setState (NO incrementa localChangeVersion -> cero bucles Realtime -> push)
     useWorldStore.setState((prev) => ({
-      planetName: merged.planetName || prev.planetName,
-      roomCode: merged.roomCode ? normalizeRoomCode(merged.roomCode) : prev.roomCode,
-      anniversaryDate: merged.anniversaryDate || prev.anniversaryDate,
-      theme: (merged.theme as typeof prev.theme) || prev.theme,
-      currency: (merged.currency as typeof prev.currency) || prev.currency,
-      lunarMode: (merged.lunarMode as typeof prev.lunarMode) || prev.lunarMode,
-      lunarOwner: (merged.lunarOwner as typeof prev.lunarOwner) || prev.lunarOwner,
+      lastSyncedWorldId: expectedWorldId,
+      planetName: source.planetName || prev.planetName,
+      roomCode: source.roomCode ? normalizeRoomCode(source.roomCode) : prev.roomCode,
+      anniversaryDate: source.anniversaryDate || prev.anniversaryDate,
+      theme: (source.theme as typeof prev.theme) || prev.theme,
+      currency: (source.currency as typeof prev.currency) || prev.currency,
+      lunarMode: (source.lunarMode as typeof prev.lunarMode) || prev.lunarMode,
+      lunarOwner: (source.lunarOwner as typeof prev.lunarOwner) || prev.lunarOwner,
       totalKissesHistory:
-        typeof merged.totalKissesHistory === 'number'
-          ? merged.totalKissesHistory
+        typeof source.totalKissesHistory === 'number'
+          ? source.totalKissesHistory
           : prev.totalKissesHistory,
       kissesResetAt:
-        typeof merged.kissesResetAt === 'number' ? merged.kissesResetAt : prev.kissesResetAt,
-      pendingKissBursts: Array.isArray(merged.pendingKissBursts)
-        ? (merged.pendingKissBursts as unknown as typeof prev.pendingKissBursts)
+        typeof source.kissesResetAt === 'number' ? source.kissesResetAt : prev.kissesResetAt,
+      pendingKissBursts: Array.isArray(source.pendingKissBursts)
+        ? (source.pendingKissBursts as unknown as typeof prev.pendingKissBursts)
         : prev.pendingKissBursts,
       petA:
-        merged.petA && typeof merged.petA === 'object'
-          ? { ...prev.petA, ...(merged.petA as Partial<typeof prev.petA>) }
+        source.petA && typeof source.petA === 'object'
+          ? { ...prev.petA, ...(source.petA as Partial<typeof prev.petA>) }
           : prev.petA,
       petB:
-        merged.petB && typeof merged.petB === 'object'
-          ? { ...prev.petB, ...(merged.petB as Partial<typeof prev.petB>) }
+        source.petB && typeof source.petB === 'object'
+          ? { ...prev.petB, ...(source.petB as Partial<typeof prev.petB>) }
           : prev.petB,
       petCare:
-        merged.petCare && typeof merged.petCare === 'object'
-          ? { ...prev.petCare, ...(merged.petCare as Partial<typeof prev.petCare>) }
+        source.petCare && typeof source.petCare === 'object'
+          ? { ...prev.petCare, ...(source.petCare as Partial<typeof prev.petCare>) }
           : prev.petCare,
-      diaryPages: Array.isArray(merged.diaryPages)
-        ? (merged.diaryPages as unknown as typeof prev.diaryPages)
+      diaryPages: Array.isArray(source.diaryPages)
+        ? (source.diaryPages as unknown as typeof prev.diaryPages)
         : prev.diaryPages,
-      mediaItems: Array.isArray(merged.mediaItems)
-        ? (merged.mediaItems as unknown as typeof prev.mediaItems)
+      mediaItems: Array.isArray(source.mediaItems)
+        ? (source.mediaItems as unknown as typeof prev.mediaItems)
         : prev.mediaItems,
-      mapPins: Array.isArray(merged.mapPins)
-        ? (merged.mapPins as unknown as typeof prev.mapPins)
+      mapPins: Array.isArray(source.mapPins)
+        ? (source.mapPins as unknown as typeof prev.mapPins)
         : prev.mapPins,
-      cravings: Array.isArray(merged.cravings)
-        ? (merged.cravings as unknown as typeof prev.cravings)
+      cravings: Array.isArray(source.cravings)
+        ? (source.cravings as unknown as typeof prev.cravings)
         : prev.cravings,
-      expenses: Array.isArray(merged.expenses)
-        ? (merged.expenses as unknown as typeof prev.expenses)
+      expenses: Array.isArray(source.expenses)
+        ? (source.expenses as unknown as typeof prev.expenses)
         : prev.expenses,
-      savingsGoals: Array.isArray(merged.savingsGoals)
-        ? (merged.savingsGoals as unknown as typeof prev.savingsGoals)
+      savingsGoals: Array.isArray(source.savingsGoals)
+        ? (source.savingsGoals as unknown as typeof prev.savingsGoals)
         : prev.savingsGoals,
       lunarA:
-        merged.lunarA && typeof merged.lunarA === 'object'
-          ? { ...prev.lunarA, ...(merged.lunarA as Partial<typeof prev.lunarA>) }
+        source.lunarA && typeof source.lunarA === 'object'
+          ? { ...prev.lunarA, ...(source.lunarA as Partial<typeof prev.lunarA>) }
           : prev.lunarA,
       lunarB:
-        merged.lunarB && typeof merged.lunarB === 'object'
-          ? { ...prev.lunarB, ...(merged.lunarB as Partial<typeof prev.lunarB>) }
+        source.lunarB && typeof source.lunarB === 'object'
+          ? { ...prev.lunarB, ...(source.lunarB as Partial<typeof prev.lunarB>) }
           : prev.lunarB,
-      deletedIds: Array.isArray(merged.deletedIds) ? merged.deletedIds : prev.deletedIds,
+      deletedIds: Array.isArray(source.deletedIds) ? source.deletedIds : prev.deletedIds,
     }));
   } catch (err) {
     console.error('[MyWorld Sync] Error aplicando snapshot remoto:', err);
@@ -223,7 +230,17 @@ export const App: React.FC = () => {
         );
 
         if (hasRemoteContent) {
-          applyMergedSnapshotToStore(snapshot, resolvedWorldId);
+          const stNow = useWorldStore.getState();
+          const isFirstSyncForWorld = stNow.lastSyncedWorldId !== resolvedWorldId;
+          const hasNoPendingLocalEdits =
+            stNow.localChangeVersion <= lastPushedVersionRef.current;
+          // Si es la primera vez que este móvil sincroniza este worldId (o al re-vincular código)
+          // o no hay ediciones locales pendientes, la nube manda al 100% sin mezclar datos viejos/demo locales.
+          applyMergedSnapshotToStore(
+            snapshot,
+            resolvedWorldId,
+            isFirstSyncForWorld || hasNoPendingLocalEdits
+          );
         } else {
           // Planeta recién creado en Supabase sin world_state aún -> inicializar nube con estado local
           const initPush = await pushWorldStateToSupabase(
@@ -238,6 +255,7 @@ export const App: React.FC = () => {
             });
             return false;
           }
+          useWorldStore.setState({ lastSyncedWorldId: resolvedWorldId });
         }
 
         setSyncMeta({
@@ -297,7 +315,7 @@ export const App: React.FC = () => {
 
         // Aplicar también cualquier elemento nuevo que la pareja haya añadido mientras tanto
         if (latestRemote.ok && latestRemote.data) {
-          applyMergedSnapshotToStore(mergedToPush, effectiveWorldId);
+          applyMergedSnapshotToStore(mergedToPush, effectiveWorldId, true);
         }
 
         lastPushedVersionRef.current = useWorldStore.getState().localChangeVersion;
@@ -323,7 +341,10 @@ export const App: React.FC = () => {
       realtimeHandleRef.current = subscribeToWorldRealtime(
         wid,
         (remoteSnap) => {
-          applyMergedSnapshotToStore(remoteSnap, wid);
+          const stNow = useWorldStore.getState();
+          const hasNoPendingLocalEdits =
+            stNow.localChangeVersion <= lastPushedVersionRef.current;
+          applyMergedSnapshotToStore(remoteSnap, wid, hasNoPendingLocalEdits);
           setSyncMeta({
             syncStatus: 'connected',
             syncError: null,

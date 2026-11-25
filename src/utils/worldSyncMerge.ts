@@ -79,6 +79,31 @@ export interface SyncableWorldData {
 
 const MAX_TOMBSTONES = 200;
 
+export const SEED_ITEM_IDS = new Set<string>([
+  'diary-seed-1',
+  'diary-seed-2',
+  'media-watched-1',
+  'media-watched-2',
+  'media-pending-1',
+  'media-pending-2',
+  'media-pending-3',
+  'media-pending-4',
+  'pin-visited-1',
+  'pin-visited-2',
+  'pin-visited-3',
+  'pin-pending-1',
+  'pin-pending-2',
+  'crav-1',
+  'crav-2',
+  'crav-3',
+  'crav-4',
+  'exp-1',
+  'exp-2',
+  'exp-3',
+  'exp-4',
+  'goal-1',
+]);
+
 /**
  * Normalizes any 6-char room code consistently across all devices:
  * trims whitespace, uppercases, strips non-alphanumeric characters, max 6 chars.
@@ -112,6 +137,7 @@ function mergeDefinedObject<T extends Record<string, unknown>>(
  * Unions two arrays of identifiable objects by unique `id`, applying an optional
  * per-item conflict resolver and filtering out any tombstoned `deletedIds`.
  * Ordering preserves remote items first, then local-only additions.
+ * Built-in demo SEED_ITEM_IDS present only in local are NEVER resurrected into an existing remote list.
  */
 export function mergeById<T extends Identifiable>(
   localItems: T[] | undefined,
@@ -124,7 +150,8 @@ export function mergeById<T extends Identifiable>(
   const remoteMap = new Map<string, T>();
 
   const safeLocal = Array.isArray(localItems) ? localItems : [];
-  const safeRemote = Array.isArray(remoteItems) ? remoteItems : [];
+  const hasRemoteArray = Array.isArray(remoteItems);
+  const safeRemote = hasRemoteArray ? remoteItems : [];
 
   for (const item of safeLocal) {
     if (item && typeof item === 'object' && item.id && !deletedSet.has(item.id)) {
@@ -153,6 +180,10 @@ export function mergeById<T extends Identifiable>(
 
   for (const [id, localItem] of localMap.entries()) {
     if (!seen.has(id)) {
+      // Nunca resucitar datos de ejemplo/demo locales dentro de un planeta real ya sincronizado
+      if (hasRemoteArray && SEED_ITEM_IDS.has(id)) {
+        continue;
+      }
       result.push(localItem);
     }
   }

@@ -217,4 +217,45 @@ describe('mergeWorldSnapshots', () => {
     assert.equal(merged.petA?.petName, 'Mochi');
     assert.equal(merged.diaryPages?.length, 1);
   });
+
+  it('never resurrects built-in demo seed items from local into a real remote world', () => {
+    const localWithSeeds: SyncableWorldData = {
+      diaryPages: [
+        { id: 'diary-seed-1', title: 'Demo tortitas', strokes: [], stickers: [] },
+        { id: 'diary-real-local', title: 'Nuestra foto real', strokes: [], stickers: [] },
+      ],
+      mediaItems: [
+        { id: 'media-watched-1', title: 'Totoro Demo', status: 'watched' },
+        { id: 'media-real-1', title: 'Interstellar', status: 'watched' },
+      ],
+      cravings: [
+        { id: 'crav-1', title: 'Ramen demo', completed: false },
+      ],
+    };
+    const remoteRealWorld: SyncableWorldData = {
+      diaryPages: [
+        { id: 'diary-real-remote', title: 'Viaje real', strokes: [], stickers: [] },
+      ],
+      mediaItems: [
+        { id: 'media-real-2', title: 'Dune', status: 'watchlist' },
+      ],
+      cravings: [
+        { id: 'crav-real-1', title: 'Helado de pistacho', completed: false },
+      ],
+    };
+
+    const merged = mergeWorldSnapshots(localWithSeeds, remoteRealWorld);
+    assert.deepEqual(
+      merged.diaryPages?.map((d) => d.id),
+      ['diary-real-remote', 'diary-real-local']
+    );
+    assert.deepEqual(
+      merged.mediaItems?.map((m) => m.id),
+      ['media-real-2', 'media-real-1']
+    );
+    assert.deepEqual(
+      merged.cravings?.map((c) => c.id),
+      ['crav-real-1']
+    );
+  });
 });
