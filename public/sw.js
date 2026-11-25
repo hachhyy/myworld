@@ -1,4 +1,4 @@
-const CACHE_NAME = 'myworld-cozy-v9';
+const CACHE_NAME = 'myworld-cozy-v10';
 
 self.addEventListener('install', () => {
   self.skipWaiting();
@@ -10,15 +10,6 @@ self.addEventListener('activate', (event) => {
       .keys()
       .then((keys) => Promise.all(keys.map((k) => caches.delete(k))))
       .then(() => self.clients.claim())
-      .then(() =>
-        self.clients.matchAll({ type: 'window' }).then((windowClients) => {
-          windowClients.forEach((client) => {
-            if ('navigate' in client) {
-              client.navigate(client.url).catch(() => {});
-            }
-          });
-        })
-      )
   );
 });
 

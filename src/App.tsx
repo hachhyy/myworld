@@ -57,66 +57,70 @@ function extractLocalSnapshot(): SyncedWorldSnapshot {
 
 function applyMergedSnapshotToStore(remoteSnap: SyncedWorldSnapshot, expectedWorldId: string) {
   if (!remoteSnap || (remoteSnap.worldId && remoteSnap.worldId !== expectedWorldId)) return;
-  const merged = mergeWorldSnapshots(extractLocalSnapshot(), remoteSnap);
+  try {
+    const merged = mergeWorldSnapshots(extractLocalSnapshot(), remoteSnap);
 
-  // Actualización directa con setState (NO incrementa localChangeVersion -> cero bucles Realtime -> push)
-  useWorldStore.setState((prev) => ({
-    planetName: merged.planetName || prev.planetName,
-    roomCode: merged.roomCode ? normalizeRoomCode(merged.roomCode) : prev.roomCode,
-    anniversaryDate: merged.anniversaryDate || prev.anniversaryDate,
-    theme: (merged.theme as typeof prev.theme) || prev.theme,
-    currency: (merged.currency as typeof prev.currency) || prev.currency,
-    lunarMode: (merged.lunarMode as typeof prev.lunarMode) || prev.lunarMode,
-    lunarOwner: (merged.lunarOwner as typeof prev.lunarOwner) || prev.lunarOwner,
-    totalKissesHistory:
-      typeof merged.totalKissesHistory === 'number'
-        ? merged.totalKissesHistory
-        : prev.totalKissesHistory,
-    kissesResetAt:
-      typeof merged.kissesResetAt === 'number' ? merged.kissesResetAt : prev.kissesResetAt,
-    pendingKissBursts: Array.isArray(merged.pendingKissBursts)
-      ? (merged.pendingKissBursts as unknown as typeof prev.pendingKissBursts)
-      : prev.pendingKissBursts,
-    petA:
-      merged.petA && typeof merged.petA === 'object'
-        ? { ...prev.petA, ...(merged.petA as Partial<typeof prev.petA>) }
-        : prev.petA,
-    petB:
-      merged.petB && typeof merged.petB === 'object'
-        ? { ...prev.petB, ...(merged.petB as Partial<typeof prev.petB>) }
-        : prev.petB,
-    petCare:
-      merged.petCare && typeof merged.petCare === 'object'
-        ? { ...prev.petCare, ...(merged.petCare as Partial<typeof prev.petCare>) }
-        : prev.petCare,
-    diaryPages: Array.isArray(merged.diaryPages)
-      ? (merged.diaryPages as unknown as typeof prev.diaryPages)
-      : prev.diaryPages,
-    mediaItems: Array.isArray(merged.mediaItems)
-      ? (merged.mediaItems as unknown as typeof prev.mediaItems)
-      : prev.mediaItems,
-    mapPins: Array.isArray(merged.mapPins)
-      ? (merged.mapPins as unknown as typeof prev.mapPins)
-      : prev.mapPins,
-    cravings: Array.isArray(merged.cravings)
-      ? (merged.cravings as unknown as typeof prev.cravings)
-      : prev.cravings,
-    expenses: Array.isArray(merged.expenses)
-      ? (merged.expenses as unknown as typeof prev.expenses)
-      : prev.expenses,
-    savingsGoals: Array.isArray(merged.savingsGoals)
-      ? (merged.savingsGoals as unknown as typeof prev.savingsGoals)
-      : prev.savingsGoals,
-    lunarA:
-      merged.lunarA && typeof merged.lunarA === 'object'
-        ? { ...prev.lunarA, ...(merged.lunarA as Partial<typeof prev.lunarA>) }
-        : prev.lunarA,
-    lunarB:
-      merged.lunarB && typeof merged.lunarB === 'object'
-        ? { ...prev.lunarB, ...(merged.lunarB as Partial<typeof prev.lunarB>) }
-        : prev.lunarB,
-    deletedIds: Array.isArray(merged.deletedIds) ? merged.deletedIds : prev.deletedIds,
-  }));
+    // Actualización directa con setState (NO incrementa localChangeVersion -> cero bucles Realtime -> push)
+    useWorldStore.setState((prev) => ({
+      planetName: merged.planetName || prev.planetName,
+      roomCode: merged.roomCode ? normalizeRoomCode(merged.roomCode) : prev.roomCode,
+      anniversaryDate: merged.anniversaryDate || prev.anniversaryDate,
+      theme: (merged.theme as typeof prev.theme) || prev.theme,
+      currency: (merged.currency as typeof prev.currency) || prev.currency,
+      lunarMode: (merged.lunarMode as typeof prev.lunarMode) || prev.lunarMode,
+      lunarOwner: (merged.lunarOwner as typeof prev.lunarOwner) || prev.lunarOwner,
+      totalKissesHistory:
+        typeof merged.totalKissesHistory === 'number'
+          ? merged.totalKissesHistory
+          : prev.totalKissesHistory,
+      kissesResetAt:
+        typeof merged.kissesResetAt === 'number' ? merged.kissesResetAt : prev.kissesResetAt,
+      pendingKissBursts: Array.isArray(merged.pendingKissBursts)
+        ? (merged.pendingKissBursts as unknown as typeof prev.pendingKissBursts)
+        : prev.pendingKissBursts,
+      petA:
+        merged.petA && typeof merged.petA === 'object'
+          ? { ...prev.petA, ...(merged.petA as Partial<typeof prev.petA>) }
+          : prev.petA,
+      petB:
+        merged.petB && typeof merged.petB === 'object'
+          ? { ...prev.petB, ...(merged.petB as Partial<typeof prev.petB>) }
+          : prev.petB,
+      petCare:
+        merged.petCare && typeof merged.petCare === 'object'
+          ? { ...prev.petCare, ...(merged.petCare as Partial<typeof prev.petCare>) }
+          : prev.petCare,
+      diaryPages: Array.isArray(merged.diaryPages)
+        ? (merged.diaryPages as unknown as typeof prev.diaryPages)
+        : prev.diaryPages,
+      mediaItems: Array.isArray(merged.mediaItems)
+        ? (merged.mediaItems as unknown as typeof prev.mediaItems)
+        : prev.mediaItems,
+      mapPins: Array.isArray(merged.mapPins)
+        ? (merged.mapPins as unknown as typeof prev.mapPins)
+        : prev.mapPins,
+      cravings: Array.isArray(merged.cravings)
+        ? (merged.cravings as unknown as typeof prev.cravings)
+        : prev.cravings,
+      expenses: Array.isArray(merged.expenses)
+        ? (merged.expenses as unknown as typeof prev.expenses)
+        : prev.expenses,
+      savingsGoals: Array.isArray(merged.savingsGoals)
+        ? (merged.savingsGoals as unknown as typeof prev.savingsGoals)
+        : prev.savingsGoals,
+      lunarA:
+        merged.lunarA && typeof merged.lunarA === 'object'
+          ? { ...prev.lunarA, ...(merged.lunarA as Partial<typeof prev.lunarA>) }
+          : prev.lunarA,
+      lunarB:
+        merged.lunarB && typeof merged.lunarB === 'object'
+          ? { ...prev.lunarB, ...(merged.lunarB as Partial<typeof prev.lunarB>) }
+          : prev.lunarB,
+      deletedIds: Array.isArray(merged.deletedIds) ? merged.deletedIds : prev.deletedIds,
+    }));
+  } catch (err) {
+    console.error('[MyWorld Sync] Error aplicando snapshot remoto:', err);
+  }
 }
 
 export const App: React.FC = () => {
@@ -152,9 +156,9 @@ export const App: React.FC = () => {
   const solar = computeSolarEnvironment(
     solarOverride,
     weatherOverride,
-    anniversaryDate,
-    petA.birthday,
-    petB.birthday
+    anniversaryDate || '2024-06-30',
+    petA?.birthday || '1999-04-18',
+    petB?.birthday || '1998-11-24'
   );
 
   // Comprobación de Sesión Persistente de Supabase (Auto-Login)
@@ -462,9 +466,9 @@ export const App: React.FC = () => {
   }, []);
 
   // Comprobar si hay una Polaroid o dibujo nuevo sin leer en el Buzón para que asome físicamente en el 3D
-  const hasUnreadDiary = diaryPages.some((p) =>
-    activeUser === 'userA' ? !p.readByUserA : !p.readByUserB
-  );
+  const hasUnreadDiary = Array.isArray(diaryPages)
+    ? diaryPages.some((p) => p && (activeUser === 'userA' ? !p.readByUserA : !p.readByUserB))
+    : false;
 
   // Si NO hay sesión guardada o aún no tiene Planeta vinculado (`worldId`) -> Mostrar Flujo de Login / Vinculación
   if (!hasActiveLinkedSession) {

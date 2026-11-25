@@ -40,10 +40,13 @@ export function computeSolarEnvironment(
   if (weatherOverride !== 'auto') {
     weather = weatherOverride;
   } else {
+    const safeAnniv = typeof anniversaryDate === 'string' ? anniversaryDate : '';
+    const safeBdayA = typeof birthdayA === 'string' ? birthdayA : '';
+    const safeBdayB = typeof birthdayB === 'string' ? birthdayB : '';
     const isSpecialDay =
-      anniversaryDate.slice(5) === mmdd ||
-      birthdayA.slice(5) === mmdd ||
-      birthdayB.slice(5) === mmdd;
+      safeAnniv.slice(5) === mmdd ||
+      safeBdayA.slice(5) === mmdd ||
+      safeBdayB.slice(5) === mmdd;
 
     if (isSpecialDay) {
       weather = 'fireworks';
@@ -121,10 +124,12 @@ export function calculateRelationshipDuration(anniversaryDate: string) {
 }
 
 export function daysUntilNextDate(mmddSource: string): number {
+  if (!mmddSource || typeof mmddSource !== 'string') return 90;
   const parts = mmddSource.split('-');
   if (parts.length < 3) return 90;
   const month = parseInt(parts[1], 10) - 1;
   const day = parseInt(parts[2], 10);
+  if (Number.isNaN(month) || Number.isNaN(day)) return 90;
   const now = new Date();
   let target = new Date(now.getFullYear(), month, day);
   if (target.getTime() < now.getTime() - 86400000) {

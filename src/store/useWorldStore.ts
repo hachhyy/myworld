@@ -1361,24 +1361,24 @@ export const useWorldStore = create<WorldState>()(
           }));
         }
         // Limpieza automática de nombres antiguos por defecto ("Usuario A / B")
-        if (!state.petA.ownerName || state.petA.ownerName.includes('Usuario A')) {
+        if (state.petA && (!state.petA.ownerName || state.petA.ownerName.includes('Usuario A'))) {
           state.petA.ownerName = 'Alex';
         }
-        if (!state.petB.ownerName || state.petB.ownerName.includes('Usuario B')) {
+        if (state.petB && (!state.petB.ownerName || state.petB.ownerName.includes('Usuario B'))) {
           state.petB.ownerName = 'Cris';
         }
-        if (!state.lunarA.ownerName || state.lunarA.ownerName.includes('Usuario A')) {
-          state.lunarA.ownerName = state.petA.ownerName;
+        if (state.lunarA && (!state.lunarA.ownerName || state.lunarA.ownerName.includes('Usuario A'))) {
+          state.lunarA.ownerName = state.petA?.ownerName || 'Alex';
         }
-        if (!state.lunarB.ownerName || state.lunarB.ownerName.includes('Usuario B')) {
-          state.lunarB.ownerName = state.petB.ownerName;
+        if (state.lunarB && (!state.lunarB.ownerName || state.lunarB.ownerName.includes('Usuario B'))) {
+          state.lunarB.ownerName = state.petB?.ownerName || 'Cris';
         }
-        if (!state.lunarA.periodStartDates || state.lunarA.periodStartDates.length === 0) {
+        if (state.lunarA && (!state.lunarA.periodStartDates || state.lunarA.periodStartDates.length === 0)) {
           state.lunarA.cycleLength = 28;
           state.lunarA.periodLength = 5;
           state.lunarA.periodStartDates = getSeedPeriodStartDates(2, 28);
         }
-        if (!state.lunarB.periodStartDates || state.lunarB.periodStartDates.length === 0) {
+        if (state.lunarB && (!state.lunarB.periodStartDates || state.lunarB.periodStartDates.length === 0)) {
           state.lunarB.cycleLength = 28;
           state.lunarB.periodLength = 5;
           state.lunarB.periodStartDates = getSeedPeriodStartDates(8, 28);

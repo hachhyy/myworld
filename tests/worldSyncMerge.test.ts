@@ -196,4 +196,25 @@ describe('mergeWorldSnapshots', () => {
     assert.equal(merged.totalKissesHistory, 0);
     assert.equal(merged.kissesResetAt, 2000);
   });
+
+  it('never overwrites valid local pet/lunar fields with null/undefined from remote and handles non-arrays safely', () => {
+    const local: SyncableWorldData = {
+      roomCode: 'MIEL26',
+      petA: { ownerName: 'Alex', birthday: '1999-04-18', petName: 'Mochi' },
+      diaryPages: [{ id: 'd1', title: 'Ok', strokes: [], stickers: [] }],
+    };
+    const corruptRemote = {
+      roomCode: 123456 as unknown as string,
+      petA: { ownerName: 'Alex', birthday: null, petName: undefined } as unknown as Record<
+        string,
+        unknown
+      >,
+      diaryPages: 'not-an-array' as unknown as SyncableWorldData['diaryPages'],
+    };
+    const merged = mergeWorldSnapshots(local, corruptRemote);
+    assert.equal(merged.roomCode, '123456');
+    assert.equal(merged.petA?.birthday, '1999-04-18');
+    assert.equal(merged.petA?.petName, 'Mochi');
+    assert.equal(merged.diaryPages?.length, 1);
+  });
 });

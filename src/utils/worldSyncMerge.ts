@@ -83,12 +83,29 @@ const MAX_TOMBSTONES = 200;
  * Normalizes any 6-char room code consistently across all devices:
  * trims whitespace, uppercases, strips non-alphanumeric characters, max 6 chars.
  */
-export function normalizeRoomCode(code: string): string {
-  return (code || '')
+export function normalizeRoomCode(code: unknown): string {
+  return String(code ?? '')
     .trim()
     .toUpperCase()
     .replace(/[^A-Z0-9]/g, '')
     .slice(0, 6);
+}
+
+function mergeDefinedObject<T extends Record<string, unknown>>(
+  localObj: T | undefined,
+  remoteObj: T | undefined
+): T | undefined {
+  if (!localObj && !remoteObj) return undefined;
+  const base: Record<string, unknown> =
+    localObj && typeof localObj === 'object' ? { ...localObj } : {};
+  if (remoteObj && typeof remoteObj === 'object') {
+    for (const [k, v] of Object.entries(remoteObj)) {
+      if (v !== null && v !== undefined) {
+        base[k] = v;
+      }
+    }
+  }
+  return base as T;
 }
 
 /**
@@ -102,18 +119,21 @@ export function mergeById<T extends Identifiable>(
   deletedIds: string[] = [],
   resolveConflict?: (localItem: T, remoteItem: T) => T
 ): T[] {
-  const deletedSet = new Set(deletedIds);
+  const deletedSet = new Set(Array.isArray(deletedIds) ? deletedIds : []);
   const localMap = new Map<string, T>();
   const remoteMap = new Map<string, T>();
 
-  for (const item of localItems || []) {
-    if (item && item.id && !deletedSet.has(item.id)) {
+  const safeLocal = Array.isArray(localItems) ? localItems : [];
+  const safeRemote = Array.isArray(remoteItems) ? remoteItems : [];
+
+  for (const item of safeLocal) {
+    if (item && typeof item === 'object' && item.id && !deletedSet.has(item.id)) {
       localMap.set(item.id, item);
     }
   }
 
-  for (const item of remoteItems || []) {
-    if (item && item.id && !deletedSet.has(item.id)) {
+  for (const item of safeRemote) {
+    if (item && typeof item === 'object' && item.id && !deletedSet.has(item.id)) {
       remoteMap.set(item.id, item);
     }
   }
@@ -230,7 +250,10 @@ export function mergeWorldSnapshots(
   remote: SyncableWorldData
 ): SyncableWorldData {
   const mergedDeletedIds = Array.from(
-    new Set([...(local.deletedIds || []), ...(remote.deletedIds || [])])
+    new Set([
+      ...(Array.isArray(local.deletedIds) ? local.deletedIds : []),
+      ...(Array.isArray(remote.deletedIds) ? remote.deletedIds : []),
+    ])
   ).slice(-MAX_TOMBSTONES);
 
   const localReset = local.kissesResetAt || 0;
@@ -257,19 +280,19 @@ export function mergeWorldSnapshots(
   const mergedPetCare =
     remote.petCare && local.petCare
       ? remotePetCareTime >= localPetCareTime
-        ? { ...local.petCare, ...remote.petCare }
-        : { ...remote.petCare, ...local.petCare }
+        ? mergeDefinedObject(local.petCare, remote.petCare)
+        : mergeDefinedObject(remote.petCare, local.petCare)
       : remote.petCare || local.petCare;
 
   const diaryPages =
-    local.diaryPages || remote.diaryPages
+    Array.isArray(local.diaryPages) || Array.isArray(remote.diaryPages)
       ? mergeById(local.diaryPages, remote.diaryPages, mergedDeletedIds, mergeDiaryPage).map(
           (p) => ({ ...p, photoDataUrl: sanitizePhotoUrl(p.photoDataUrl) })
         )
       : undefined;
 
   const mapPins =
-    local.mapPins || remote.mapPins
+    Array.isArray(local.mapPins) || Array.isArray(remote.mapPins)
       ? mergeById(local.mapPins, remote.mapPins, mergedDeletedIds, mergeMapPin).map((p) => ({
           ...p,
           photoDataUrl: sanitizePhotoUrl(p.photoDataUrl),
@@ -294,44 +317,32 @@ export function mergeWorldSnapshots(
     totalKissesHistory,
     kissesResetAt,
     pendingKissBursts:
-      local.pendingKissBursts || remote.pendingKissBursts
+      Array.isArray(local.pendingKissBursts) || Array.isArray(remote.pendingKissBursts)
         ? mergeById(local.pendingKissBursts, remote.pendingKissBursts, mergedDeletedIds)
         : undefined,
-    petA:
-      local.petA || remote.petA
-        ? { ...(local.petA || {}), ...(remote.petA || {}) }
-        : undefined,
-    petB:
-      local.petB || remote.petB
-        ? { ...(local.petB || {}), ...(remote.petB || {}) }
-        : undefined,
+    petA: mergeDefinedObject(local.petA, remote.petA),
+    petB: mergeDefinedObject(local.petB, remote.petB),
     petCare: mergedPetCare,
     diaryPages,
     mediaItems:
-      local.mediaItems || remote.mediaItems
+      Array.isArray(local.mediaItems) || Array.isArray(remote.mediaItems)
         ? mergeById(local.mediaItems, remote.mediaItems, mergedDeletedIds, mergeMediaItem)
         : undefined,
     mapPins,
     cravings:
-      local.cravings || remote.cravings
+      Array.isArray(local.cravings) || Array.isArray(remote.cravings)
         ? mergeById(local.cravings, remote.cravings, mergedDeletedIds, mergeCraving)
         : undefined,
     expenses:
-      local.expenses || remote.expenses
+      Array.isArray(local.expenses) || Array.isArray(remote.expenses)
         ? mergeById(local.expenses, remote.expenses, mergedDeletedIds, mergeExpense)
         : undefined,
     savingsGoals:
-      local.savingsGoals || remote.savingsGoals
+      Array.isArray(local.savingsGoals) || Array.isArray(remote.savingsGoals)
         ? mergeById(local.savingsGoals, remote.savingsGoals, mergedDeletedIds, mergeSavingsGoal)
         : undefined,
-    lunarA:
-      local.lunarA || remote.lunarA
-        ? { ...(local.lunarA || {}), ...(remote.lunarA || {}) }
-        : undefined,
-    lunarB:
-      local.lunarB || remote.lunarB
-        ? { ...(local.lunarB || {}), ...(remote.lunarB || {}) }
-        : undefined,
+    lunarA: mergeDefinedObject(local.lunarA, remote.lunarA),
+    lunarB: mergeDefinedObject(local.lunarB, remote.lunarB),
     deletedIds: mergedDeletedIds,
   };
 }
