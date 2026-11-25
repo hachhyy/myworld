@@ -16,7 +16,11 @@ import {
 } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import { PastelTheme, useWorldStore } from '../store/useWorldStore';
-import { joinWorldByCodeInTable, pushWorldStateToSupabase } from '../lib/supabaseClient';
+import {
+  joinWorldByCodeInTable,
+  updateWorldRoomCodeInTable,
+} from '../lib/supabaseClient';
+import { normalizeRoomCode } from '../utils/worldSyncMerge';
 import { calculateRelationshipDuration } from '../utils/solarAndTime';
 import { soundEngine, triggerHeartbeatHaptic } from '../utils/soundAndHaptics';
 
@@ -60,14 +64,75 @@ export const SettingsModal: React.FC = () => {
     setLunarOwner,
     authUserEmail,
     logoutSession,
+    syncStatus,
+    syncError,
+    lastSyncedAt,
+    realtimeStatus,
   } = useWorldStore();
 
   const [joinCodeInput, setJoinCodeInput] = useState('');
+  const [linkFeedback, setLinkFeedback] = useState<{ type: 'ok' | 'error'; text: string } | null>(
+    null
+  );
+  const [linkingCode, setLinkingCode] = useState(false);
   const [pushStatus, setPushStatus] = useState<string>('Pendiente de activar');
   const [copiedCode, setCopiedCode] = useState(false);
   const [generatingPdf, setGeneratingPdf] = useState(false);
   const [confirmResetKisses, setConfirmResetKisses] = useState(false);
   const [kissesResetDone, setKissesResetDone] = useState(false);
+
+  const formattedLastSync = lastSyncedAt
+    ? new Date(lastSyncedAt).toLocaleTimeString('es-ES', {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+      })
+    : 'Pendiente';
+
+  const handleForceSyncNow = () => {
+    soundEngine.playPop(1.15);
+    setLinkFeedback(null);
+    window.dispatchEvent(new CustomEvent('myworld-force-sync'));
+  };
+
+  const handleRelinkByCode = async () => {
+    const clean = normalizeRoomCode(joinCodeInput);
+    if (clean.length < 4) {
+      setLinkFeedback({
+        type: 'error',
+        text: 'Introduce un código válido de 6 caracteres (ej. MIEL26).',
+      });
+      return;
+    }
+    setLinkingCode(true);
+    setLinkFeedback(null);
+    try {
+      const worldRow = await joinWorldByCodeInTable(clean);
+      setLinkedWorld(
+        worldRow.id,
+        worldRow.name,
+        worldRow.room_code,
+        worldRow.anniversary_date
+      );
+      useWorldStore.setState({ onboardingCompleted: true });
+      setJoinCodeInput('');
+      soundEngine.playChime();
+      setLinkFeedback({
+        type: 'ok',
+        text: `¡Vinculado al planeta ${worldRow.room_code}! Descargando datos...`,
+      });
+      window.setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('myworld-force-sync'));
+      }, 100);
+    } catch (err) {
+      setLinkFeedback({
+        type: 'error',
+        text: err instanceof Error ? err.message : 'No se pudo vincular el código.',
+      });
+    } finally {
+      setLinkingCode(false);
+    }
+  };
 
   // Activar Notificaciones Web Push mediante clic directo del usuario (requisito iOS 16.4+)
   const handleRequestPushPermission = async () => {
@@ -298,26 +363,65 @@ export const SettingsModal: React.FC = () => {
                 </p>
               </div>
 
-              {/* 2. Privacidad Multi-Pareja y Código de Vinculación de 6 Caracteres */}
+              {/* 2. Privacidad Multi-Pareja, Código de 6 Caracteres y Estado de Sincronización en Vivo */}
               <div className="hand-card p-3.5 space-y-2.5 text-xs">
                 <h3 className="font-bold uppercase tracking-wider flex items-center gap-1.5">
                   <KeyRound className="w-4 h-4 text-[#FF7A9E]" />
-                  Sala Privada Multi-Pareja (Código 6 caracteres)
+                  Sincronización y Código de Mundo (6 caracteres)
                 </h3>
+
+                {/* Estado de Sincronización en Vivo */}
+                <div className="p-2.5 rounded-2xl bg-[var(--bg-secondary)]/85 border border-[var(--glass-border)] space-y-1.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-bold text-[11px] flex items-center gap-1.5">
+                      {syncStatus === 'connected' && '🟢 Conectado a Supabase'}
+                      {(syncStatus === 'syncing' || syncStatus === 'connecting') &&
+                        '🟡 Sincronizando con la nube...'}
+                      {(syncStatus === 'error' || syncStatus === 'offline') &&
+                        '🔴 Modo Local / Error'}
+                    </span>
+                    <span className="text-[10px] font-mono text-[var(--text-muted)] shrink-0">
+                      Última sync: {formattedLastSync}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-[10px] text-[var(--text-muted)]">
+                    <span>
+                      Realtime:{' '}
+                      <strong>
+                        {realtimeStatus === 'SUBSCRIBED'
+                          ? 'Activo ⚡'
+                          : realtimeStatus === 'CONNECTING'
+                          ? 'Conectando...'
+                          : 'Reconectando'}
+                      </strong>
+                    </span>
+                    {worldId && (
+                      <span className="font-mono opacity-75">ID: {worldId.slice(0, 8)}</span>
+                    )}
+                  </div>
+                  {syncError && (
+                    <p className="text-[10px] text-[#B4234F] bg-[#FFEAF0] border border-[#FFB7C5] rounded-xl px-2.5 py-1.5 font-semibold break-words">
+                      ⚠️ {syncError}
+                    </p>
+                  )}
+                </div>
+
+                {/* Código de Mundo activo (6 caracteres) + Copiar */}
                 <div className="flex items-center justify-between p-3 rounded-2xl bg-[var(--bg-secondary)]/80 border border-[var(--glass-border)]">
                   <div>
                     <span className="text-[10px] text-[var(--text-muted)] block">
-                      Código único de vuestro planeta:
+                      Código de Mundo activo (ambos móviles deben tener el mismo):
                     </span>
                     <span className="text-xl font-bold tracking-widest font-mono">
-                      {roomCode}
+                      {normalizeRoomCode(roomCode)}
                     </span>
                   </div>
                   <div className="flex gap-1.5">
                     <motion.button
                       whileTap={{ scale: 0.92 }}
                       onClick={() => {
-                        navigator.clipboard?.writeText(roomCode);
+                        const clean = normalizeRoomCode(roomCode);
+                        navigator.clipboard?.writeText(clean);
                         setCopiedCode(true);
                         setTimeout(() => setCopiedCode(false), 2000);
                       }}
@@ -328,7 +432,25 @@ export const SettingsModal: React.FC = () => {
                     </motion.button>
                     <motion.button
                       whileTap={{ scale: 0.9, rotate: -15 }}
-                      onClick={() => generateNewRoomCode()}
+                      onClick={async () => {
+                        const newCode = generateNewRoomCode();
+                        if (worldId) {
+                          const res = await updateWorldRoomCodeInTable(worldId, newCode);
+                          if (!res.ok) {
+                            setLinkFeedback({
+                              type: 'error',
+                              text:
+                                res.error ||
+                                'El nuevo código no se pudo guardar en Supabase.',
+                            });
+                          } else {
+                            setLinkFeedback({
+                              type: 'ok',
+                              text: `Nuevo código ${newCode} guardado en la nube. Compártelo con tu pareja.`,
+                            });
+                          }
+                        }
+                      }}
                       className="hand-button p-2 bg-[var(--glass-bg)] cursor-pointer"
                       title="Generar nuevo código"
                     >
@@ -337,35 +459,59 @@ export const SettingsModal: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="flex gap-1.5">
-                  <input
-                    type="text"
-                    maxLength={6}
-                    value={joinCodeInput}
-                    onChange={(e) => setJoinCodeInput(e.target.value.toUpperCase())}
-                    placeholder="Código de tu pareja"
-                    className="flex-1 min-w-0 px-3 py-2 rounded-2xl border border-[#FFB7C5]/55 bg-[var(--input-bg)] font-mono uppercase text-xs placeholder:normal-case placeholder:font-sans focus:outline-none focus:ring-2 focus:ring-[#FF9EBB]"
+                {/* Botón manual: Forzar sincronización ahora */}
+                <motion.button
+                  whileTap={{ scale: 0.95 }}
+                  type="button"
+                  onClick={handleForceSyncNow}
+                  disabled={syncStatus === 'syncing'}
+                  className="w-full hand-button glossy-pink-cta rounded-full py-2.5 px-3 font-bold flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  <RefreshCw
+                    className={`w-3.5 h-3.5 ${syncStatus === 'syncing' ? 'animate-spin' : ''}`}
                   />
-                  <motion.button
-                    whileTap={{ scale: 0.92, rotate: -1.5 }}
-                    onClick={async () => {
-                      if (joinCodeInput.trim().length >= 4) {
-                        const worldRow = await joinWorldByCodeInTable(joinCodeInput.trim());
-                        setLinkedWorld(
-                          worldRow.id,
-                          worldRow.name,
-                          worldRow.room_code,
-                          worldRow.anniversary_date
-                        );
-                        useWorldStore.setState({ onboardingCompleted: true });
-                        setJoinCodeInput('');
-                        soundEngine.playChime();
-                      }
-                    }}
-                    className="hand-button glossy-mint-cta rounded-full px-4 py-2 font-bold cursor-pointer shrink-0"
-                  >
-                    Vincular
-                  </motion.button>
+                  <span>
+                    {syncStatus === 'syncing'
+                      ? 'Sincronizando ahora...'
+                      : '🔄 Forzar sincronización ahora'}
+                  </span>
+                </motion.button>
+
+                {/* Cambiar / Re-vincular código de 6 letras */}
+                <div className="pt-1 space-y-1.5">
+                  <label className="block text-[11px] font-bold text-[var(--text-ink)]">
+                    🔗 Cambiar / Re-vincular código de 6 letras:
+                  </label>
+                  <div className="flex gap-1.5">
+                    <input
+                      type="text"
+                      maxLength={6}
+                      value={joinCodeInput}
+                      onChange={(e) => setJoinCodeInput(normalizeRoomCode(e.target.value))}
+                      placeholder="Ej. MIEL26"
+                      className="flex-1 min-w-0 px-3 py-2 rounded-2xl border border-[#FFB7C5]/55 bg-[var(--input-bg)] font-mono uppercase text-xs placeholder:normal-case placeholder:font-sans focus:outline-none focus:ring-2 focus:ring-[#FF9EBB]"
+                    />
+                    <motion.button
+                      whileTap={{ scale: 0.92, rotate: -1.5 }}
+                      type="button"
+                      disabled={linkingCode}
+                      onClick={handleRelinkByCode}
+                      className="hand-button glossy-mint-cta rounded-full px-4 py-2 font-bold cursor-pointer shrink-0"
+                    >
+                      {linkingCode ? 'Vinculando...' : 'Re-vincular'}
+                    </motion.button>
+                  </div>
+                  {linkFeedback && (
+                    <p
+                      className={`text-[11px] font-semibold px-2.5 py-1.5 rounded-xl border ${
+                        linkFeedback.type === 'ok'
+                          ? 'bg-[#E9FBF2] border-[#9EE6C4] text-[#246646]'
+                          : 'bg-[#FFEAF0] border-[#FFB7C5] text-[#B4234F]'
+                      }`}
+                    >
+                      {linkFeedback.text}
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -531,35 +677,13 @@ export const SettingsModal: React.FC = () => {
                         <motion.button
                           whileTap={{ scale: 0.92 }}
                           type="button"
-                          onClick={async () => {
+                          onClick={() => {
                             resetKissCounter();
                             setConfirmResetKisses(false);
                             setKissesResetDone(true);
                             setTimeout(() => setKissesResetDone(false), 3000);
                             if (worldId) {
-                              const st = useWorldStore.getState();
-                              await pushWorldStateToSupabase(worldId, st.roomCode, {
-                                worldId,
-                                planetName: st.planetName,
-                                anniversaryDate: st.anniversaryDate,
-                                theme: st.theme,
-                                currency: st.currency,
-                                lunarMode: st.lunarMode,
-                                lunarOwner: st.lunarOwner,
-                                totalKissesHistory: 0,
-                                pendingKissBursts: [],
-                                petA: st.petA,
-                                petB: st.petB,
-                                petCare: st.petCare,
-                                diaryPages: st.diaryPages,
-                                mediaItems: st.mediaItems,
-                                mapPins: st.mapPins,
-                                cravings: st.cravings,
-                                expenses: st.expenses,
-                                savingsGoals: st.savingsGoals,
-                                lunarA: st.lunarA,
-                                lunarB: st.lunarB,
-                              });
+                              window.dispatchEvent(new CustomEvent('myworld-force-sync'));
                             }
                           }}
                           className="hand-button px-3.5 py-1.5 rounded-full bg-[#FF7A9E] text-white font-bold text-xs cursor-pointer"

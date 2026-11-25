@@ -1,24 +1,43 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { PetSpecies } from '../store/useWorldStore';
+import {
+  normalizeRoomCode,
+  type SyncableWorldData,
+} from '../utils/worldSyncMerge';
 
-const rawUrl =
-  import.meta.env.VITE_SUPABASE_URL || 'https://rdvunykuoflteuqkzsfb.supabase.co';
+const envUrl = (import.meta.env.VITE_SUPABASE_URL || '').trim();
+const envAnonKey = (import.meta.env.VITE_SUPABASE_ANON_KEY || '').trim();
+
+const FALLBACK_SUPABASE_URL = 'https://rdvunykuoflteuqkzsfb.supabase.co';
+const FALLBACK_SUPABASE_ANON_KEY = 'sb_publishable_iZHf6ya70vhiwwzQwazrvQ_pBqQ2l5-';
+
+const rawUrl = envUrl || FALLBACK_SUPABASE_URL;
 // Asegurar URL base limpia (sin /rest/v1/ al final, ya que Supabase SDK añade /rest/v1 y /auth/v1 automáticamente)
 export const SUPABASE_URL = rawUrl.replace(/\/rest\/v1\/?$/, '').replace(/\/$/, '');
 
-export const SUPABASE_ANON_KEY =
-  import.meta.env.VITE_SUPABASE_ANON_KEY ||
-  'sb_publishable_iZHf6ya70vhiwwzQwazrvQ_pBqQ2l5-';
+export const SUPABASE_ANON_KEY = envAnonKey || FALLBACK_SUPABASE_ANON_KEY;
 
+export const isUsingEnvVars = Boolean(envUrl && envAnonKey);
 export const isSupabaseConfigured = Boolean(SUPABASE_URL && SUPABASE_ANON_KEY);
 
-// Cliente oficial de Supabase con sesión persistente en móvil
+if (!isUsingEnvVars && typeof console !== 'undefined') {
+  console.warn(
+    '[MyWorld Sync] VITE_SUPABASE_URL o VITE_SUPABASE_ANON_KEY no detectadas en import.meta.env; usando configuración de proyecto por defecto.'
+  );
+}
+
+// Cliente oficial de Supabase con sesión persistente en móvil y heartbeat Realtime para iOS PWA
 export const supabase: SupabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
     persistSession: true,
     autoRefreshToken: true,
     detectSessionInUrl: true,
     storageKey: 'myworld-supabase-auth-token',
+  },
+  realtime: {
+    params: {
+      eventsPerSecond: 10,
+    },
   },
 });
 
@@ -39,6 +58,15 @@ export interface ProfileRow {
   pet_species: PetSpecies;
   pet_name: string;
 }
+
+export interface SyncResult<T = undefined> {
+  ok: boolean;
+  data?: T;
+  error?: string;
+  code?: string;
+}
+
+export type RealtimeConnectionStatus = 'SUBSCRIBED' | 'CONNECTING' | 'DISCONNECTED' | 'ERROR';
 
 const LOCAL_WORLDS_KEY = 'myworld_local_worlds_table';
 const LOCAL_PROFILES_KEY = 'myworld_local_profiles_table';
@@ -106,6 +134,24 @@ function generateUUID(): string {
   });
 }
 
+async function syncAuthenticatedProfileWorldId(worldId: string): Promise<void> {
+  if (!isSupabaseConfigured || !worldId) return;
+  try {
+    const { data: sessionData } = await supabase.auth.getSession();
+    const uid = sessionData.session?.user?.id;
+    if (!uid) return;
+    const { error } = await supabase
+      .from('profiles')
+      .update({ world_id: worldId, updated_at: new Date().toISOString() })
+      .eq('id', uid);
+    if (error) {
+      console.warn('[MyWorld Sync] No se pudo actualizar profiles.world_id:', error.message);
+    }
+  } catch (err) {
+    console.warn('[MyWorld Sync] Error actualizando profiles.world_id:', err);
+  }
+}
+
 // 1. Registro con supabase.auth.signUp
 export async function registerUserWithSupabase(
   name: string,
@@ -135,6 +181,7 @@ export async function registerUserWithSupabase(
         userId = data.user.id;
       }
     } catch (err) {
+      console.error('[MyWorld Sync] Error en signUp:', err);
       if (err instanceof Error && err.message && !err.message.includes('fetch')) {
         throw err;
       }
@@ -174,19 +221,30 @@ export async function loginUserWithSupabase(
       });
       if (error) throw new Error(error.message);
       if (data.user) {
-        const { data: prof } = await supabase
+        const { data: prof, error: profErr } = await supabase
           .from('profiles')
           .select('*')
           .eq('id', data.user.id)
           .maybeSingle();
+        if (profErr) {
+          console.error('[MyWorld Sync] Error leyendo perfil tras login:', profErr.message);
+        }
         let world: WorldRow | undefined;
         if (prof?.world_id) {
-          const { data: w } = await supabase
+          const { data: w, error: wErr } = await supabase
             .from('worlds')
-            .select('*')
+            .select('id,name,room_code,anniversary_date,created_by')
             .eq('id', prof.world_id)
             .maybeSingle();
-          if (w) world = w as WorldRow;
+          if (wErr) {
+            console.error('[MyWorld Sync] Error leyendo mundo tras login:', wErr.message);
+          }
+          if (w) {
+            world = {
+              ...(w as WorldRow),
+              room_code: normalizeRoomCode((w as WorldRow).room_code),
+            };
+          }
         }
         return {
           userId: data.user.id,
@@ -197,6 +255,7 @@ export async function loginUserWithSupabase(
         };
       }
     } catch (err) {
+      console.error('[MyWorld Sync] Error en login:', err);
       // Buscar también en respaldo local si el correo aún no fue confirmado en Supabase
       const profiles = getLocalProfiles();
       const existing = profiles.find((p) => p.email.toLowerCase() === email.toLowerCase());
@@ -240,125 +299,188 @@ export async function createWorldInTable(
   planetName: string,
   anniversaryDate: string
 ): Promise<WorldRow> {
-  const roomCode = generateSixCharCode();
-  const newWorld: WorldRow = {
-    id: generateUUID(),
-    name: planetName.trim() || 'Nuestro Pequeño Planeta',
-    room_code: roomCode,
-    anniversary_date: anniversaryDate,
-    created_by: userId,
+  const roomCode = normalizeRoomCode(generateSixCharCode());
+  const cleanName = planetName.trim() || 'Nuestro Pequeño Planeta';
+
+  if (!isSupabaseConfigured) {
+    throw new Error('Supabase no está configurado en este despliegue.');
+  }
+
+  const { data: sessionData } = await supabase.auth.getSession();
+  const activeUid = sessionData.session?.user?.id || null;
+  const { data, error } = await supabase
+    .from('worlds')
+    .insert({
+      name: cleanName,
+      room_code: roomCode,
+      anniversary_date: anniversaryDate,
+      created_by: activeUid,
+    })
+    .select('id,name,room_code,anniversary_date,created_by')
+    .single();
+
+  if (error || !data) {
+    const msg = error?.message || 'No se pudo crear el planeta en Supabase.';
+    console.error('[MyWorld Sync] Error creando planeta en Supabase:', msg, error);
+    throw new Error(
+      `No se pudo crear el planeta en la nube (${msg}). Revisa conexión o políticas RLS.`
+    );
+  }
+
+  const createdWorld: WorldRow = {
+    ...(data as WorldRow),
+    room_code: normalizeRoomCode((data as WorldRow).room_code),
   };
 
-  if (isSupabaseConfigured) {
-    try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const activeUid = sessionData.session?.user?.id || null;
-      const { data, error } = await supabase
-        .from('worlds')
-        .insert({
-          name: newWorld.name,
-          room_code: newWorld.room_code,
-          anniversary_date: newWorld.anniversary_date,
-          created_by: activeUid,
-        })
-        .select()
-        .single();
-      if (!error && data) {
-        const worlds = getLocalWorlds();
-        worlds.push(data as WorldRow);
-        saveLocalWorlds(worlds);
-        return data as WorldRow;
-      }
-    } catch {
-      // Guardar también localmente si aún no hay sesión confirmada
+  await syncAuthenticatedProfileWorldId(createdWorld.id);
+
+  const worlds = getLocalWorlds().filter((w) => w.id !== createdWorld.id);
+  worlds.push(createdWorld);
+  saveLocalWorlds(worlds);
+
+  // Guardar referencia local del creador
+  if (userId) {
+    const profiles = getLocalProfiles();
+    const idx = profiles.findIndex((p) => p.id === userId);
+    if (idx >= 0) {
+      profiles[idx] = { ...profiles[idx], world_id: createdWorld.id };
+      saveLocalProfiles(profiles);
     }
   }
 
-  const worlds = getLocalWorlds();
-  worlds.push(newWorld);
-  saveLocalWorlds(worlds);
-  return newWorld;
+  return createdWorld;
 }
 
 // 4. Buscar y vincularse a un Planeta existente en la tabla `worlds` mediante el código de 6 caracteres (aislamiento estricto por `world_id`)
 export async function joinWorldByCodeInTable(roomCodeInput: string): Promise<WorldRow> {
-  const cleanCode = roomCodeInput.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6);
+  const cleanCode = normalizeRoomCode(roomCodeInput);
   if (cleanCode.length < 4) {
     throw new Error('Introduce un código válido de 6 letras o números.');
   }
 
-  if (isSupabaseConfigured) {
-    try {
-      const { data, error } = await supabase
-        .from('worlds')
-        .select('*')
-        .eq('room_code', cleanCode)
-        .maybeSingle();
-      if (!error && data) {
-        const worlds = getLocalWorlds();
-        const exists = worlds.some((w) => w.id === data.id);
-        if (!exists) {
-          worlds.push(data as WorldRow);
-          saveLocalWorlds(worlds);
-        }
-        return data as WorldRow;
-      }
-
-      // Si el código aún no existe en la tabla remota, crear la fila aislada con su UUID único `world_id`
-      const { data: created, error: insertErr } = await supabase
-        .from('worlds')
-        .insert({
-          name: `Planeta ${cleanCode}`,
-          room_code: cleanCode,
-          anniversary_date: '2024-06-30',
-        })
-        .select()
-        .single();
-
-      if (!insertErr && created) {
-        const worlds = getLocalWorlds();
-        worlds.push(created as WorldRow);
-        saveLocalWorlds(worlds);
-        return created as WorldRow;
-      }
-    } catch {
-      // Continuar a búsqueda local si no hay red
-    }
+  if (!isSupabaseConfigured) {
+    throw new Error('Supabase no está configurado en este despliegue.');
   }
 
-  const worlds = getLocalWorlds();
-  const found = worlds.find((w) => w.room_code.toUpperCase() === cleanCode);
-  if (found) return found;
+  const { data, error } = await supabase
+    .from('worlds')
+    .select('id,name,room_code,anniversary_date,created_by')
+    .eq('room_code', cleanCode)
+    .maybeSingle();
 
-  const linkedWorld: WorldRow = {
-    id: generateUUID(),
-    name: `Planeta ${cleanCode}`,
-    room_code: cleanCode,
-    anniversary_date: '2024-06-30',
-    created_by: null,
+  if (error) {
+    console.error('[MyWorld Sync] Error buscando planeta por room_code:', error.message, error);
+    throw new Error(
+      `Sin conexión con la nube al buscar el código ${cleanCode} (${error.message}).`
+    );
+  }
+
+  if (data) {
+    const foundWorld: WorldRow = {
+      ...(data as WorldRow),
+      room_code: normalizeRoomCode((data as WorldRow).room_code),
+    };
+    await syncAuthenticatedProfileWorldId(foundWorld.id);
+
+    const worlds = getLocalWorlds().filter((w) => w.id !== foundWorld.id);
+    worlds.push(foundWorld);
+    saveLocalWorlds(worlds);
+    return foundWorld;
+  }
+
+  // Si el código aún no existe en la tabla remota, crear la fila aislada con su UUID único `world_id`
+  const { data: sessionData } = await supabase.auth.getSession();
+  const activeUid = sessionData.session?.user?.id || null;
+
+  const { data: created, error: insertErr } = await supabase
+    .from('worlds')
+    .insert({
+      name: `Planeta ${cleanCode}`,
+      room_code: cleanCode,
+      anniversary_date: '2024-06-30',
+      created_by: activeUid,
+    })
+    .select('id,name,room_code,anniversary_date,created_by')
+    .single();
+
+  if (insertErr || !created) {
+    const msg = insertErr?.message || 'RLS o red impidió crear la sala.';
+    console.error('[MyWorld Sync] Error creando planeta por room_code:', msg, insertErr);
+    throw new Error(
+      `No se pudo vincular el código ${cleanCode} en Supabase (${msg}).`
+    );
+  }
+
+  const createdWorld: WorldRow = {
+    ...(created as WorldRow),
+    room_code: normalizeRoomCode((created as WorldRow).room_code),
   };
-  worlds.push(linkedWorld);
+  await syncAuthenticatedProfileWorldId(createdWorld.id);
+
+  const worlds = getLocalWorlds().filter((w) => w.id !== createdWorld.id);
+  worlds.push(createdWorld);
   saveLocalWorlds(worlds);
-  return linkedWorld;
+  return createdWorld;
+}
+
+export async function updateWorldRoomCodeInTable(
+  worldId: string,
+  newRoomCode: string
+): Promise<SyncResult<{ roomCode: string }>> {
+  const cleanCode = normalizeRoomCode(newRoomCode);
+  if (!isSupabaseConfigured || !worldId || cleanCode.length < 4) {
+    return { ok: false, error: 'Código o mundo inválido.' };
+  }
+  try {
+    const { data, error } = await supabase
+      .from('worlds')
+      .update({ room_code: cleanCode, updated_at: new Date().toISOString() })
+      .eq('id', worldId)
+      .select('id,room_code');
+
+    if (error) {
+      console.error('[MyWorld Sync] Error actualizando room_code:', error.message);
+      return { ok: false, error: error.message, code: error.code };
+    }
+    if (!data || data.length === 0) {
+      const msg = 'No se pudo actualizar el código (0 filas afectadas por RLS o ID inexistente).';
+      console.error('[MyWorld Sync]', msg);
+      return { ok: false, error: msg, code: 'RLS_ZERO_ROWS' };
+    }
+    return { ok: true, data: { roomCode: cleanCode } };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Error de red actualizando código';
+    console.error('[MyWorld Sync] Excepción actualizando room_code:', msg);
+    return { ok: false, error: msg };
+  }
 }
 
 // 5. Guardar mascota inicial y cumpleaños en la tabla `profiles` filtrando por `world_id`
-export async function saveProfileInTable(profile: ProfileRow): Promise<void> {
+export async function saveProfileInTable(profile: ProfileRow): Promise<SyncResult> {
+  let cloudResult: SyncResult = { ok: true };
   if (isSupabaseConfigured && profile.world_id) {
     try {
       const { data: sessionData } = await supabase.auth.getSession();
-      const uid = sessionData.session?.user?.id || profile.id;
-      await supabase.from('profiles').upsert({
-        id: uid,
-        name: profile.name,
-        email: profile.email,
-        world_id: profile.world_id,
-        birthday: profile.birthday,
-        pet_species: profile.pet_species,
-        pet_name: profile.pet_name,
-      });
-    } catch {
-      // Respaldo en localStorage
+      const uid = sessionData.session?.user?.id;
+      if (uid) {
+        const { error } = await supabase.from('profiles').upsert({
+          id: uid,
+          name: profile.name,
+          email: profile.email,
+          world_id: profile.world_id,
+          birthday: profile.birthday,
+          pet_species: profile.pet_species,
+          pet_name: profile.pet_name,
+        });
+        if (error) {
+          console.error('[MyWorld Sync] Error guardando perfil en Supabase:', error.message);
+          cloudResult = { ok: false, error: error.message, code: error.code };
+        }
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Error de red guardando perfil';
+      console.error('[MyWorld Sync] Excepción guardando perfil:', msg);
+      cloudResult = { ok: false, error: msg };
     }
   }
 
@@ -370,70 +492,115 @@ export async function saveProfileInTable(profile: ProfileRow): Promise<void> {
     profiles.push(profile);
   }
   saveLocalProfiles(profiles);
+  return cloudResult;
 }
 
 export async function signOutFromSupabase(): Promise<void> {
   if (isSupabaseConfigured) {
-    await supabase.auth.signOut().catch(() => {});
+    await supabase.auth.signOut().catch((err) => {
+      console.warn('[MyWorld Sync] Error al cerrar sesión:', err);
+    });
   }
 }
 
 // 6. Sincronización en Tiempo Real del estado completo de los 7 edificios filtrado estrictamente por `world_id`
 export const CLIENT_INSTANCE_ID = generateUUID();
 
-export interface SyncedWorldSnapshot {
-  worldId?: string;
-  planetName?: string;
-  anniversaryDate?: string;
-  theme?: string;
-  currency?: string;
-  lunarMode?: string;
-  lunarOwner?: 'userA' | 'userB';
-  totalKissesHistory?: number;
-  pendingKissBursts?: unknown[];
-  petA?: unknown;
-  petB?: unknown;
-  petCare?: unknown;
-  diaryPages?: unknown[];
-  mediaItems?: unknown[];
-  mapPins?: unknown[];
-  cravings?: unknown[];
-  expenses?: unknown[];
-  savingsGoals?: unknown[];
-  lunarA?: unknown;
-  lunarB?: unknown;
-  updatedAtClient?: number;
-  updatedByClientId?: string;
+export type SyncedWorldSnapshot = SyncableWorldData;
+
+export interface PulledWorldPayload {
+  snapshot: SyncedWorldSnapshot;
+  resolvedWorldId: string;
+  resolvedRoomCode: string;
+}
+
+function rowToSnapshot(row: Record<string, unknown>): SyncedWorldSnapshot {
+  const ws = (row.world_state as SyncedWorldSnapshot) || {};
+  return {
+    ...ws,
+    worldId: row.id as string,
+    roomCode: row.room_code ? normalizeRoomCode(row.room_code as string) : ws.roomCode,
+    planetName: (row.name as string) || ws.planetName,
+    anniversaryDate: (row.anniversary_date as string) || ws.anniversaryDate,
+    theme: (row.theme as string) || ws.theme,
+    currency: (row.currency as string) || ws.currency,
+    lunarMode: (row.lunar_mode as string) || ws.lunarMode,
+    totalKissesHistory:
+      typeof row.total_kisses_history === 'number'
+        ? ws.kissesResetAt
+          ? row.total_kisses_history
+          : Math.max(row.total_kisses_history, ws.totalKissesHistory || 0)
+        : ws.totalKissesHistory,
+  };
 }
 
 export async function pullWorldStateFromSupabase(
-  worldId: string
-): Promise<SyncedWorldSnapshot | null> {
-  if (!isSupabaseConfigured || !worldId) return null;
+  worldId: string,
+  roomCodeFallback?: string
+): Promise<SyncResult<PulledWorldPayload>> {
+  if (!isSupabaseConfigured || !worldId) {
+    return { ok: false, error: 'Supabase no configurado o world_id vacío.' };
+  }
+
   try {
-    const { data, error } = await supabase
+    const selectCols =
+      'id,name,room_code,anniversary_date,theme,currency,lunar_mode,total_kisses_history,world_state';
+
+    let { data, error } = await supabase
       .from('worlds')
-      .select('id,name,anniversary_date,theme,currency,lunar_mode,total_kisses_history,world_state')
+      .select(selectCols)
       .eq('id', worldId)
       .maybeSingle();
 
-    if (error || !data) return null;
-    const ws = (data.world_state as SyncedWorldSnapshot) || {};
+    if (error) {
+      console.error('[MyWorld Sync] Error al leer worlds por id:', error.message, error);
+      return { ok: false, error: error.message, code: error.code };
+    }
+
+    // Auto-sanación: si el dispositivo tenía un worldId local antiguo pero un roomCode válido, re-anclar al UUID real de Supabase
+    if (!data && roomCodeFallback) {
+      const cleanCode = normalizeRoomCode(roomCodeFallback);
+      if (cleanCode.length >= 4) {
+        const byCode = await supabase
+          .from('worlds')
+          .select(selectCols)
+          .eq('room_code', cleanCode)
+          .maybeSingle();
+
+        if (byCode.error) {
+          console.error(
+            '[MyWorld Sync] Error al buscar worlds por room_code:',
+            byCode.error.message
+          );
+          return { ok: false, error: byCode.error.message, code: byCode.error.code };
+        }
+        data = byCode.data;
+        if (data) {
+          await syncAuthenticatedProfileWorldId(data.id);
+        }
+      }
+    }
+
+    if (!data) {
+      const msg =
+        'No se encontró el planeta en Supabase (verifica el código de 6 letras o políticas RLS de SELECT).';
+      console.error('[MyWorld Sync]', msg, { worldId, roomCodeFallback });
+      return { ok: false, error: msg, code: 'WORLD_NOT_FOUND' };
+    }
+
+    const snapshot = rowToSnapshot(data as Record<string, unknown>);
     return {
-      ...ws,
-      worldId: data.id,
-      planetName: data.name || ws.planetName,
-      anniversaryDate: data.anniversary_date || ws.anniversaryDate,
-      theme: data.theme || ws.theme,
-      currency: data.currency || ws.currency,
-      lunarMode: data.lunar_mode || ws.lunarMode,
-      totalKissesHistory:
-        typeof data.total_kisses_history === 'number'
-          ? Math.max(data.total_kisses_history, ws.totalKissesHistory || 0)
-          : ws.totalKissesHistory,
+      ok: true,
+      data: {
+        snapshot,
+        resolvedWorldId: data.id,
+        resolvedRoomCode: normalizeRoomCode(data.room_code || roomCodeFallback || ''),
+      },
     };
-  } catch {
-    return null;
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Error de red al sincronizar con Supabase';
+    console.error('[MyWorld Sync] Excepción en pullWorldStateFromSupabase:', msg);
+    return { ok: false, error: msg, code: 'NETWORK_ERROR' };
   }
 }
 
@@ -441,12 +608,18 @@ export async function pushWorldStateToSupabase(
   worldId: string,
   roomCode: string,
   snapshot: SyncedWorldSnapshot
-): Promise<boolean> {
-  if (!isSupabaseConfigured || !worldId) return false;
+): Promise<SyncResult<{ updatedAt: string }>> {
+  if (!isSupabaseConfigured || !worldId) {
+    return { ok: false, error: 'Supabase no configurado o world_id vacío.' };
+  }
+
+  const normalizedCode = normalizeRoomCode(roomCode);
+  const nowIso = new Date().toISOString();
+
   try {
     const payload = {
       name: snapshot.planetName || 'Nuestro Pequeño Planeta',
-      room_code: roomCode,
+      room_code: normalizedCode || undefined,
       anniversary_date: snapshot.anniversaryDate || '2024-06-30',
       theme: snapshot.theme || 'melocoton',
       currency: snapshot.currency || '€',
@@ -455,31 +628,64 @@ export async function pushWorldStateToSupabase(
       world_state: {
         ...snapshot,
         worldId,
+        roomCode: normalizedCode,
         updatedAtClient: Date.now(),
         updatedByClientId: CLIENT_INSTANCE_ID,
       },
-      updated_at: new Date().toISOString(),
+      updated_at: nowIso,
     };
 
-    const { error } = await supabase
+    // IMPORTANTE: .select('id') detecta bloqueos silenciosos de RLS (cuando PostgREST devuelve error=null pero 0 filas afectadas)
+    const { data, error } = await supabase
       .from('worlds')
       .update(payload)
-      .eq('id', worldId);
+      .eq('id', worldId)
+      .select('id');
 
-    return !error;
-  } catch {
-    return false;
+    if (error) {
+      console.error('[MyWorld Sync] Error al guardar en Supabase:', error.message, error);
+      return { ok: false, error: error.message, code: error.code };
+    }
+
+    if (!data || data.length === 0) {
+      const msg =
+        'Guardado bloqueado (0 filas actualizadas). Revisa RLS de UPDATE en public.worlds o re-vincula el código.';
+      console.error('[MyWorld Sync]', msg, { worldId, roomCode: normalizedCode });
+      return { ok: false, error: msg, code: 'RLS_ZERO_ROWS' };
+    }
+
+    return { ok: true, data: { updatedAt: nowIso } };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Error de red al guardar en Supabase';
+    console.error('[MyWorld Sync] Excepción en pushWorldStateToSupabase:', msg);
+    return { ok: false, error: msg, code: 'NETWORK_ERROR' };
   }
+}
+
+export interface RealtimeSubscriptionHandle {
+  unsubscribe: () => void;
+  getStatus: () => RealtimeConnectionStatus;
 }
 
 export function subscribeToWorldRealtime(
   worldId: string,
-  onRemoteUpdate: (snapshot: SyncedWorldSnapshot) => void
-): () => void {
-  if (!isSupabaseConfigured || !worldId) return () => {};
+  onRemoteUpdate: (snapshot: SyncedWorldSnapshot) => void,
+  onStatusChange?: (status: RealtimeConnectionStatus, detail?: string) => void
+): RealtimeSubscriptionHandle {
+  if (!isSupabaseConfigured || !worldId) {
+    onStatusChange?.('DISCONNECTED', 'Supabase no configurado');
+    return {
+      unsubscribe: () => {},
+      getStatus: () => 'DISCONNECTED',
+    };
+  }
 
+  let currentStatus: RealtimeConnectionStatus = 'CONNECTING';
+  onStatusChange?.('CONNECTING');
+
+  const channelName = `myworld-isolated-${worldId}-${Date.now()}`;
   const channel = supabase
-    .channel(`myworld-isolated-${worldId}`)
+    .channel(channelName)
     .on(
       'postgres_changes',
       {
@@ -492,30 +698,32 @@ export function subscribeToWorldRealtime(
         const row = payload.new as Record<string, unknown>;
         if (!row || row.id !== worldId) return;
         const ws = (row.world_state as SyncedWorldSnapshot) || {};
-        // Ignorar actualizaciones originadas en esta misma pestaña
+        // Ignorar actualizaciones originadas en esta misma pestaña/dispositivo para evitar bucles
         if (ws.updatedByClientId && ws.updatedByClientId === CLIENT_INSTANCE_ID) {
           return;
         }
-        onRemoteUpdate({
-          ...ws,
-          worldId: row.id as string,
-          planetName: (row.name as string) || ws.planetName,
-          anniversaryDate: (row.anniversary_date as string) || ws.anniversaryDate,
-          theme: (row.theme as string) || ws.theme,
-          currency: (row.currency as string) || ws.currency,
-          lunarMode: (row.lunar_mode as string) || ws.lunarMode,
-          totalKissesHistory:
-            typeof row.total_kisses_history === 'number'
-              ? row.total_kisses_history
-              : ws.totalKissesHistory,
-        });
+        onRemoteUpdate(rowToSnapshot(row));
       }
     )
-    .subscribe();
+    .subscribe((status, err) => {
+      if (status === 'SUBSCRIBED') {
+        currentStatus = 'SUBSCRIBED';
+        onStatusChange?.('SUBSCRIBED');
+      } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+        currentStatus = 'ERROR';
+        console.error('[MyWorld Sync] Canal Realtime en error:', status, err?.message);
+        onStatusChange?.('ERROR', err?.message || status);
+      } else if (status === 'CLOSED') {
+        currentStatus = 'DISCONNECTED';
+        onStatusChange?.('DISCONNECTED', 'Canal Realtime cerrado');
+      }
+    });
 
-  return () => {
-    supabase.removeChannel(channel);
+  return {
+    unsubscribe: () => {
+      currentStatus = 'DISCONNECTED';
+      supabase.removeChannel(channel);
+    },
+    getStatus: () => currentStatus,
   };
 }
-
-

@@ -221,18 +221,33 @@ drop policy if exists "Perfiles: insertar o editar propio" on public.profiles;
 create policy "Perfiles: insertar o editar propio" on public.profiles
   for all using (auth.uid() = id) with check (auth.uid() = id);
 
--- Políticas para worlds (permitir crear planeta, buscar por código para vincularse y editar el propio)
+-- Garantizar columna world_state y REPLICA IDENTITY FULL para Realtime
+alter table public.worlds add column if not exists world_state jsonb default '{}'::jsonb;
+alter table public.worlds replica identity full;
+
+-- Políticas para worlds (soporta tanto usuarios autenticados como acceso directo por código de 6 letras)
 drop policy if exists "Worlds: usuarios autenticados pueden crear y vincularse" on public.worlds;
-create policy "Worlds: usuarios autenticados pueden crear y vincularse" on public.worlds
-  for select using (auth.role() = 'authenticated');
+drop policy if exists "Worlds: lectura por codigo o id" on public.worlds;
+create policy "Worlds: lectura por codigo o id" on public.worlds
+  for select using (auth.role() in ('anon', 'authenticated'));
 
 drop policy if exists "Worlds: insertar nuevo planeta" on public.worlds;
 create policy "Worlds: insertar nuevo planeta" on public.worlds
-  for insert with check (auth.role() = 'authenticated');
+  for insert with check (auth.role() in ('anon', 'authenticated'));
 
 drop policy if exists "Worlds: actualizar nuestro planeta" on public.worlds;
 create policy "Worlds: actualizar nuestro planeta" on public.worlds
-  for update using (id = public.my_world_id() or created_by = auth.uid());
+  for update
+  using (
+    auth.role() in ('anon', 'authenticated')
+    and (
+      auth.uid() is null
+      or id = public.my_world_id()
+      or created_by = auth.uid()
+      or public.my_world_id() is null
+    )
+  )
+  with check (auth.role() in ('anon', 'authenticated'));
 
 -- Políticas de aislamiento por pareja (world_id = public.my_world_id()) para todos los módulos
 drop policy if exists "Aislamiento pareja kiss_bursts" on public.kiss_bursts;
@@ -268,15 +283,33 @@ create policy "Aislamiento pareja lunar_cycles" on public.lunar_cycles
   for all using (world_id = public.my_world_id()) with check (world_id = public.my_world_id());
 
 -- ============================================================================
--- 12. ACTIVAR SUPABASE REALTIME EN TODAS LAS TABLAS DEL PLANETA
+-- 12. ACTIVAR SUPABASE REALTIME EN TODAS LAS TABLAS DEL PLANETA (IDEMPOTENTE)
 -- ============================================================================
-alter publication supabase_realtime add table public.worlds;
-alter publication supabase_realtime add table public.profiles;
-alter publication supabase_realtime add table public.kiss_bursts;
-alter publication supabase_realtime add table public.diary_pages;
-alter publication supabase_realtime add table public.media_items;
-alter publication supabase_realtime add table public.map_pins;
-alter publication supabase_realtime add table public.cravings;
-alter publication supabase_realtime add table public.expenses;
-alter publication supabase_realtime add table public.savings_goals;
-alter publication supabase_realtime add table public.lunar_cycles;
+do $$
+declare
+  tbl text;
+begin
+  foreach tbl in array array[
+    'worlds',
+    'profiles',
+    'kiss_bursts',
+    'diary_pages',
+    'media_items',
+    'map_pins',
+    'cravings',
+    'expenses',
+    'savings_goals',
+    'lunar_cycles'
+  ]
+  loop
+    if not exists (
+      select 1
+      from pg_publication_tables
+      where pubname = 'supabase_realtime'
+        and schemaname = 'public'
+        and tablename = tbl
+    ) then
+      execute format('alter publication supabase_realtime add table public.%I', tbl);
+    end if;
+  end loop;
+end $$;

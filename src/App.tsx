@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
+import { CloudOff, RefreshCw } from 'lucide-react';
 import { useWorldStore } from './store/useWorldStore';
 import { computeSolarEnvironment } from './utils/solarAndTime';
 import {
@@ -8,7 +9,10 @@ import {
   pullWorldStateFromSupabase,
   pushWorldStateToSupabase,
   subscribeToWorldRealtime,
+  type RealtimeSubscriptionHandle,
+  type SyncedWorldSnapshot,
 } from './lib/supabaseClient';
+import { mergeWorldSnapshots, normalizeRoomCode } from './utils/worldSyncMerge';
 import { OnboardingFlow } from './components/OnboardingFlow';
 import { LoadingScreen } from './components/LoadingScreen';
 import { Planet3DScene } from './components/Planet3DScene';
@@ -22,40 +26,128 @@ import { FuenteDeseos } from './components/buildings/FuenteDeseos';
 import { EdificioCerdito } from './components/buildings/EdificioCerdito';
 import { InvernaderoLunar } from './components/buildings/InvernaderoLunar';
 
+function extractLocalSnapshot(): SyncedWorldSnapshot {
+  const st = useWorldStore.getState();
+  return {
+    worldId: st.worldId || undefined,
+    roomCode: normalizeRoomCode(st.roomCode),
+    planetName: st.planetName,
+    anniversaryDate: st.anniversaryDate,
+    theme: st.theme,
+    currency: st.currency,
+    lunarMode: st.lunarMode,
+    lunarOwner: st.lunarOwner,
+    totalKissesHistory: st.totalKissesHistory,
+    kissesResetAt: st.kissesResetAt,
+    pendingKissBursts: st.pendingKissBursts as unknown as SyncedWorldSnapshot['pendingKissBursts'],
+    petA: st.petA as unknown as Record<string, unknown>,
+    petB: st.petB as unknown as Record<string, unknown>,
+    petCare: st.petCare as unknown as SyncedWorldSnapshot['petCare'],
+    diaryPages: st.diaryPages as unknown as SyncedWorldSnapshot['diaryPages'],
+    mediaItems: st.mediaItems as unknown as SyncedWorldSnapshot['mediaItems'],
+    mapPins: st.mapPins as unknown as SyncedWorldSnapshot['mapPins'],
+    cravings: st.cravings as unknown as SyncedWorldSnapshot['cravings'],
+    expenses: st.expenses as unknown as SyncedWorldSnapshot['expenses'],
+    savingsGoals: st.savingsGoals as unknown as SyncedWorldSnapshot['savingsGoals'],
+    lunarA: st.lunarA as unknown as Record<string, unknown>,
+    lunarB: st.lunarB as unknown as Record<string, unknown>,
+    deletedIds: st.deletedIds,
+  };
+}
+
+function applyMergedSnapshotToStore(remoteSnap: SyncedWorldSnapshot, expectedWorldId: string) {
+  if (!remoteSnap || (remoteSnap.worldId && remoteSnap.worldId !== expectedWorldId)) return;
+  const merged = mergeWorldSnapshots(extractLocalSnapshot(), remoteSnap);
+
+  // Actualización directa con setState (NO incrementa localChangeVersion -> cero bucles Realtime -> push)
+  useWorldStore.setState((prev) => ({
+    planetName: merged.planetName || prev.planetName,
+    roomCode: merged.roomCode ? normalizeRoomCode(merged.roomCode) : prev.roomCode,
+    anniversaryDate: merged.anniversaryDate || prev.anniversaryDate,
+    theme: (merged.theme as typeof prev.theme) || prev.theme,
+    currency: (merged.currency as typeof prev.currency) || prev.currency,
+    lunarMode: (merged.lunarMode as typeof prev.lunarMode) || prev.lunarMode,
+    lunarOwner: (merged.lunarOwner as typeof prev.lunarOwner) || prev.lunarOwner,
+    totalKissesHistory:
+      typeof merged.totalKissesHistory === 'number'
+        ? merged.totalKissesHistory
+        : prev.totalKissesHistory,
+    kissesResetAt:
+      typeof merged.kissesResetAt === 'number' ? merged.kissesResetAt : prev.kissesResetAt,
+    pendingKissBursts: Array.isArray(merged.pendingKissBursts)
+      ? (merged.pendingKissBursts as unknown as typeof prev.pendingKissBursts)
+      : prev.pendingKissBursts,
+    petA:
+      merged.petA && typeof merged.petA === 'object'
+        ? { ...prev.petA, ...(merged.petA as Partial<typeof prev.petA>) }
+        : prev.petA,
+    petB:
+      merged.petB && typeof merged.petB === 'object'
+        ? { ...prev.petB, ...(merged.petB as Partial<typeof prev.petB>) }
+        : prev.petB,
+    petCare:
+      merged.petCare && typeof merged.petCare === 'object'
+        ? { ...prev.petCare, ...(merged.petCare as Partial<typeof prev.petCare>) }
+        : prev.petCare,
+    diaryPages: Array.isArray(merged.diaryPages)
+      ? (merged.diaryPages as unknown as typeof prev.diaryPages)
+      : prev.diaryPages,
+    mediaItems: Array.isArray(merged.mediaItems)
+      ? (merged.mediaItems as unknown as typeof prev.mediaItems)
+      : prev.mediaItems,
+    mapPins: Array.isArray(merged.mapPins)
+      ? (merged.mapPins as unknown as typeof prev.mapPins)
+      : prev.mapPins,
+    cravings: Array.isArray(merged.cravings)
+      ? (merged.cravings as unknown as typeof prev.cravings)
+      : prev.cravings,
+    expenses: Array.isArray(merged.expenses)
+      ? (merged.expenses as unknown as typeof prev.expenses)
+      : prev.expenses,
+    savingsGoals: Array.isArray(merged.savingsGoals)
+      ? (merged.savingsGoals as unknown as typeof prev.savingsGoals)
+      : prev.savingsGoals,
+    lunarA:
+      merged.lunarA && typeof merged.lunarA === 'object'
+        ? { ...prev.lunarA, ...(merged.lunarA as Partial<typeof prev.lunarA>) }
+        : prev.lunarA,
+    lunarB:
+      merged.lunarB && typeof merged.lunarB === 'object'
+        ? { ...prev.lunarB, ...(merged.lunarB as Partial<typeof prev.lunarB>) }
+        : prev.lunarB,
+    deletedIds: Array.isArray(merged.deletedIds) ? merged.deletedIds : prev.deletedIds,
+  }));
+}
+
 export const App: React.FC = () => {
   const {
     onboardingCompleted,
     worldId,
     roomCode,
-    planetName,
     theme,
-    currency,
-    lunarMode,
-    lunarOwner,
     solarOverride,
     weatherOverride,
     anniversaryDate,
-    totalKissesHistory,
-    pendingKissBursts,
     petA,
     petB,
-    petCare,
     activeUser,
     diaryPages,
-    mediaItems,
-    mapPins,
-    cravings,
-    expenses,
-    savingsGoals,
-    lunarA,
-    lunarB,
     activeBuilding,
     setActiveBuilding,
     setAuthSession,
+    setSyncMeta,
+    syncStatus,
+    syncError,
+    localChangeVersion,
   } = useWorldStore();
 
   const [hapticVisualPulse, setHapticVisualPulse] = useState(false);
-  const isApplyingRemoteRef = React.useRef(false);
+
+  const realtimeHandleRef = useRef<RealtimeSubscriptionHandle | null>(null);
+  const lastPushedVersionRef = useRef<number>(localChangeVersion);
+  const isPushingRef = useRef<boolean>(false);
+  const isPullingRef = useRef<boolean>(false);
+  const lastReconnectAtRef = useRef<number>(0);
 
   const solar = computeSolarEnvironment(
     solarOverride,
@@ -80,146 +172,266 @@ export const App: React.FC = () => {
     });
   }, [onboardingCompleted, setAuthSession]);
 
-  // Sincronización Bidireccional en Tiempo Real con Supabase (Aislamiento estricto por `worldId`)
+  // Descarga fresca desde Supabase con auto-sanación de world_id y merge no destructivo
+  const fetchWorldData = useCallback(
+    async (targetWorldId: string, targetRoomCode: string, silent = false) => {
+      if (!targetWorldId || isPullingRef.current) return false;
+      if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+        setSyncMeta({
+          syncStatus: 'offline',
+          syncError: 'Sin conexión a internet en este dispositivo.',
+        });
+        return false;
+      }
+
+      isPullingRef.current = true;
+      if (!silent) {
+        setSyncMeta({ syncStatus: 'syncing' });
+      }
+
+      try {
+        const res = await pullWorldStateFromSupabase(targetWorldId, targetRoomCode);
+        if (!res.ok || !res.data) {
+          setSyncMeta({
+            syncStatus: 'error',
+            syncError: res.error || 'No se pudo leer el planeta desde Supabase.',
+          });
+          return false;
+        }
+
+        const { snapshot, resolvedWorldId, resolvedRoomCode } = res.data;
+
+        // Auto-sanación si el dispositivo tenía un worldId local antiguo distinto al UUID real de la nube
+        if (resolvedWorldId && resolvedWorldId !== targetWorldId) {
+          useWorldStore.setState({
+            worldId: resolvedWorldId,
+            roomCode: resolvedRoomCode || normalizeRoomCode(targetRoomCode),
+          });
+        }
+
+        const hasRemoteContent = Boolean(
+          snapshot.diaryPages ||
+            snapshot.mediaItems ||
+            snapshot.mapPins ||
+            snapshot.cravings ||
+            snapshot.expenses ||
+            snapshot.petA
+        );
+
+        if (hasRemoteContent) {
+          applyMergedSnapshotToStore(snapshot, resolvedWorldId);
+        } else {
+          // Planeta recién creado en Supabase sin world_state aún -> inicializar nube con estado local
+          const initPush = await pushWorldStateToSupabase(
+            resolvedWorldId,
+            resolvedRoomCode || targetRoomCode,
+            extractLocalSnapshot()
+          );
+          if (!initPush.ok) {
+            setSyncMeta({
+              syncStatus: 'error',
+              syncError: initPush.error || 'Error inicializando estado en Supabase.',
+            });
+            return false;
+          }
+        }
+
+        setSyncMeta({
+          syncStatus: 'connected',
+          syncError: null,
+          lastSyncedAt: Date.now(),
+        });
+        return true;
+      } finally {
+        isPullingRef.current = false;
+      }
+    },
+    [setSyncMeta]
+  );
+
+  // Push seguro con read-merge-write para evitar sobrescrituras destructivas entre móviles
+  const pushLocalChanges = useCallback(
+    async (targetWorldId: string, targetRoomCode: string) => {
+      if (!targetWorldId || isPushingRef.current) return false;
+      if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+        setSyncMeta({
+          syncStatus: 'offline',
+          syncError: 'Sin conexión a internet. Los cambios se enviarán al volver la red.',
+        });
+        return false;
+      }
+
+      isPushingRef.current = true;
+      setSyncMeta({ syncStatus: 'syncing' });
+
+      try {
+        const localSnap = extractLocalSnapshot();
+        // Leer estado remoto más reciente antes de escribir para hacer merge por ID y no machacar cambios de la pareja
+        const latestRemote = await pullWorldStateFromSupabase(targetWorldId, targetRoomCode);
+        const effectiveWorldId = latestRemote.data?.resolvedWorldId || targetWorldId;
+        const effectiveRoomCode =
+          latestRemote.data?.resolvedRoomCode || normalizeRoomCode(targetRoomCode);
+
+        const mergedToPush =
+          latestRemote.ok && latestRemote.data
+            ? mergeWorldSnapshots(latestRemote.data.snapshot, localSnap)
+            : localSnap;
+
+        const pushRes = await pushWorldStateToSupabase(
+          effectiveWorldId,
+          effectiveRoomCode,
+          mergedToPush
+        );
+
+        if (!pushRes.ok) {
+          setSyncMeta({
+            syncStatus: 'error',
+            syncError: pushRes.error || 'Error guardando cambios en Supabase.',
+          });
+          return false;
+        }
+
+        // Aplicar también cualquier elemento nuevo que la pareja haya añadido mientras tanto
+        if (latestRemote.ok && latestRemote.data) {
+          applyMergedSnapshotToStore(mergedToPush, effectiveWorldId);
+        }
+
+        lastPushedVersionRef.current = useWorldStore.getState().localChangeVersion;
+        setSyncMeta({
+          syncStatus: 'connected',
+          syncError: null,
+          lastSyncedAt: Date.now(),
+        });
+        return true;
+      } finally {
+        isPushingRef.current = false;
+      }
+    },
+    [setSyncMeta]
+  );
+
+  // Suscripción Realtime + Reconexión automática iOS PWA (visibilitychange / focus / online) + Polling 18s
   useEffect(() => {
     if (!onboardingCompleted || !worldId) return;
 
-    const applySnapshot = (snap: Awaited<ReturnType<typeof pullWorldStateFromSupabase>>) => {
-      if (!snap || (snap.worldId && snap.worldId !== worldId)) return;
-      isApplyingRemoteRef.current = true;
-      useWorldStore.setState((prev) => ({
-        planetName: snap.planetName || prev.planetName,
-        anniversaryDate: snap.anniversaryDate || prev.anniversaryDate,
-        theme: (snap.theme as typeof prev.theme) || prev.theme,
-        currency: (snap.currency as typeof prev.currency) || prev.currency,
-        lunarMode: (snap.lunarMode as typeof prev.lunarMode) || prev.lunarMode,
-        lunarOwner: (snap.lunarOwner as typeof prev.lunarOwner) || prev.lunarOwner,
-        totalKissesHistory:
-          typeof snap.totalKissesHistory === 'number'
-            ? snap.totalKissesHistory
-            : prev.totalKissesHistory,
-        pendingKissBursts: Array.isArray(snap.pendingKissBursts)
-          ? (snap.pendingKissBursts as typeof prev.pendingKissBursts)
-          : prev.pendingKissBursts,
-        petA:
-          snap.petA && typeof snap.petA === 'object'
-            ? { ...prev.petA, ...(snap.petA as Partial<typeof prev.petA>) }
-            : prev.petA,
-        petB:
-          snap.petB && typeof snap.petB === 'object'
-            ? { ...prev.petB, ...(snap.petB as Partial<typeof prev.petB>) }
-            : prev.petB,
-        petCare:
-          snap.petCare && typeof snap.petCare === 'object'
-            ? { ...prev.petCare, ...(snap.petCare as Partial<typeof prev.petCare>) }
-            : prev.petCare,
-        diaryPages: Array.isArray(snap.diaryPages)
-          ? (snap.diaryPages as typeof prev.diaryPages).map((p) => ({
-              ...p,
-              photoDataUrl: p.photoDataUrl?.startsWith('data:image/svg+xml')
-                ? undefined
-                : p.photoDataUrl,
-            }))
-          : prev.diaryPages,
-        mediaItems: Array.isArray(snap.mediaItems)
-          ? (snap.mediaItems as typeof prev.mediaItems)
-          : prev.mediaItems,
-        mapPins: Array.isArray(snap.mapPins)
-          ? (snap.mapPins as typeof prev.mapPins).map((p) => ({
-              ...p,
-              photoDataUrl: p.photoDataUrl?.startsWith('data:image/svg+xml')
-                ? undefined
-                : p.photoDataUrl,
-            }))
-          : prev.mapPins,
-        cravings: Array.isArray(snap.cravings)
-          ? (snap.cravings as typeof prev.cravings)
-          : prev.cravings,
-        expenses: Array.isArray(snap.expenses)
-          ? (snap.expenses as typeof prev.expenses)
-          : prev.expenses,
-        savingsGoals: Array.isArray(snap.savingsGoals)
-          ? (snap.savingsGoals as typeof prev.savingsGoals)
-          : prev.savingsGoals,
-        lunarA:
-          snap.lunarA && typeof snap.lunarA === 'object'
-            ? { ...prev.lunarA, ...(snap.lunarA as Partial<typeof prev.lunarA>) }
-            : prev.lunarA,
-        lunarB:
-          snap.lunarB && typeof snap.lunarB === 'object'
-            ? { ...prev.lunarB, ...(snap.lunarB as Partial<typeof prev.lunarB>) }
-            : prev.lunarB,
-      }));
-      setTimeout(() => {
-        isApplyingRemoteRef.current = false;
-      }, 250);
+    const setupRealtimeChannel = (wid: string) => {
+      realtimeHandleRef.current?.unsubscribe();
+      realtimeHandleRef.current = subscribeToWorldRealtime(
+        wid,
+        (remoteSnap) => {
+          applyMergedSnapshotToStore(remoteSnap, wid);
+          setSyncMeta({
+            syncStatus: 'connected',
+            syncError: null,
+            lastSyncedAt: Date.now(),
+          });
+        },
+        (rtStatus, detail) => {
+          setSyncMeta({ realtimeStatus: rtStatus });
+          if (rtStatus === 'SUBSCRIBED') {
+            setSyncMeta({ syncStatus: 'connected', syncError: null });
+          } else if (rtStatus === 'ERROR') {
+            setSyncMeta({
+              syncError: detail ? `Realtime: ${detail}` : 'Canal Realtime desconectado',
+            });
+          }
+        }
+      );
     };
 
-    pullWorldStateFromSupabase(worldId).then((snap) => {
-      if (snap && (snap.diaryPages || snap.mediaItems || snap.petA)) {
-        applySnapshot(snap);
+    // 1. Descarga inicial fresca + suscripción Realtime
+    fetchWorldData(worldId, roomCode);
+    setupRealtimeChannel(worldId);
+
+    // 2. Reconexión al volver a primer plano en iOS PWA / cambio de pestaña / recuperar red
+    const handleResumeSync = (forceResubscribe = false) => {
+      if (document.visibilityState !== 'visible') return;
+      const now = Date.now();
+      if (!forceResubscribe && now - lastReconnectAtRef.current < 1500) return;
+      lastReconnectAtRef.current = now;
+
+      const currentState = useWorldStore.getState();
+      const wid = currentState.worldId;
+      if (!wid) return;
+
+      fetchWorldData(wid, currentState.roomCode, true);
+
+      const rtStatus = realtimeHandleRef.current?.getStatus();
+      if (forceResubscribe || rtStatus !== 'SUBSCRIBED') {
+        setupRealtimeChannel(wid);
       }
-    });
 
-    const unsubscribe = subscribeToWorldRealtime(worldId, (snap) => {
-      applySnapshot(snap);
-    });
+      // Si quedaron cambios locales pendientes sin subir, empujarlos ahora
+      if (currentState.localChangeVersion > lastPushedVersionRef.current) {
+        pushLocalChanges(wid, currentState.roomCode);
+      }
+    };
 
-    return () => unsubscribe();
-  }, [onboardingCompleted, worldId]);
-
-  // Push automático con debounce (650ms) a Supabase filtrado estrictamente por `worldId`
-  useEffect(() => {
-    if (!onboardingCompleted || !worldId || isApplyingRemoteRef.current) return;
-    const timer = setTimeout(() => {
-      pushWorldStateToSupabase(worldId, roomCode, {
-        worldId,
-        planetName,
-        anniversaryDate,
-        theme,
-        currency,
-        lunarMode,
-        lunarOwner,
-        totalKissesHistory,
-        pendingKissBursts,
-        petA,
-        petB,
-        petCare,
-        diaryPages,
-        mediaItems,
-        mapPins,
-        cravings,
-        expenses,
-        savingsGoals,
-        lunarA,
-        lunarB,
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        handleResumeSync(false);
+      }
+    };
+    const onWindowFocus = () => handleResumeSync(false);
+    const onOnline = () => handleResumeSync(true);
+    const onOffline = () => {
+      setSyncMeta({
+        syncStatus: 'offline',
+        realtimeStatus: 'DISCONNECTED',
+        syncError: 'Sin conexión a internet.',
       });
+    };
+    const onForceManualSync = () => {
+      const st = useWorldStore.getState();
+      if (!st.worldId) return;
+      setupRealtimeChannel(st.worldId);
+      fetchWorldData(st.worldId, st.roomCode, false).then((ok) => {
+        if (ok && st.localChangeVersion > lastPushedVersionRef.current) {
+          pushLocalChanges(st.worldId!, st.roomCode);
+        }
+      });
+    };
+
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    window.addEventListener('focus', onWindowFocus);
+    window.addEventListener('online', onOnline);
+    window.addEventListener('offline', onOffline);
+    window.addEventListener('myworld-force-sync', onForceManualSync);
+
+    // 3. Respaldo ligero cada 18 segundos solo mientras la pestaña/PWA está visible (redes 4G/5G iOS)
+    const pollInterval = window.setInterval(() => {
+      if (document.visibilityState !== 'visible') return;
+      const st = useWorldStore.getState();
+      if (!st.worldId) return;
+      fetchWorldData(st.worldId, st.roomCode, true);
+      if (realtimeHandleRef.current?.getStatus() !== 'SUBSCRIBED') {
+        setupRealtimeChannel(st.worldId);
+      }
+    }, 18000);
+
+    return () => {
+      window.clearInterval(pollInterval);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+      window.removeEventListener('focus', onWindowFocus);
+      window.removeEventListener('online', onOnline);
+      window.removeEventListener('offline', onOffline);
+      window.removeEventListener('myworld-force-sync', onForceManualSync);
+      realtimeHandleRef.current?.unsubscribe();
+      realtimeHandleRef.current = null;
+    };
+  }, [onboardingCompleted, worldId, roomCode, fetchWorldData, pushLocalChanges, setSyncMeta]);
+
+  // Push automático con debounce (650ms) SOLO cuando hay mutaciones locales reales (`localChangeVersion`)
+  useEffect(() => {
+    if (!onboardingCompleted || !worldId) return;
+    if (localChangeVersion <= lastPushedVersionRef.current) return;
+
+    const timer = window.setTimeout(() => {
+      pushLocalChanges(worldId, roomCode);
     }, 650);
-    return () => clearTimeout(timer);
-  }, [
-    onboardingCompleted,
-    worldId,
-    roomCode,
-    planetName,
-    anniversaryDate,
-    theme,
-    currency,
-    lunarMode,
-    lunarOwner,
-    totalKissesHistory,
-    pendingKissBursts,
-    petA,
-    petB,
-    petCare,
-    diaryPages,
-    mediaItems,
-    mapPins,
-    cravings,
-    expenses,
-    savingsGoals,
-    lunarA,
-    lunarB,
-  ]);
+
+    return () => window.clearTimeout(timer);
+  }, [onboardingCompleted, worldId, roomCode, localChangeVersion, pushLocalChanges]);
 
   // Sincronizar Tema Pastel, Modo Noche y colores de fondo/barra de estado en el DOM global (sin huecos detrás de la Isla Dinámica o Home Bar)
   const hasActiveLinkedSession = Boolean(onboardingCompleted && worldId);
@@ -268,6 +480,25 @@ export const App: React.FC = () => {
         background: `linear-gradient(180deg, ${solar.skyTopColor} 0%, ${solar.skyBottomColor} 100%)`,
       }}
     >
+      {/* Aviso no intrusivo cuando falla la conexión o escritura en Supabase */}
+      <AnimatePresence>
+        {(syncStatus === 'error' || syncStatus === 'offline') && (
+          <motion.button
+            type="button"
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            onClick={() => window.dispatchEvent(new CustomEvent('myworld-force-sync'))}
+            title={syncError || 'Sin conexión con la nube'}
+            className="fixed top-[max(env(safe-area-inset-top),8px)] left-1/2 -translate-x-1/2 z-[60] px-3.5 py-1.5 rounded-full bg-[#FFEAF0]/95 backdrop-blur-md border border-[#FF9EBB] shadow-md text-[#6B3B4B] text-[11px] font-bold flex items-center gap-1.5 cursor-pointer max-w-[92vw]"
+          >
+            <CloudOff className="w-3.5 h-3.5 shrink-0 text-[#E0527B]" />
+            <span className="truncate">Sin conexión con la nube</span>
+            <RefreshCw className="w-3 h-3 shrink-0 opacity-80" />
+          </motion.button>
+        )}
+      </AnimatePresence>
+
       {/* 1. Pantalla de Carga con saludo de las 2 mascotas y transición de aterrizaje */}
       <LoadingScreen />
 

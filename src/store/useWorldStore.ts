@@ -1,7 +1,13 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { soundEngine, triggerHeartbeatHaptic } from '../utils/soundAndHaptics';
-import { signOutFromSupabase } from '../lib/supabaseClient';
+import {
+  signOutFromSupabase,
+  type RealtimeConnectionStatus,
+} from '../lib/supabaseClient';
+import { normalizeRoomCode } from '../utils/worldSyncMerge';
+
+export type SyncStatus = 'connecting' | 'connected' | 'syncing' | 'error' | 'offline';
 
 export type PastelTheme = 'melocoton' | 'salvia' | 'lavanda' | 'mantequilla';
 export type BuildingId =
@@ -295,6 +301,25 @@ export interface WorldState {
   lunarA: LunarProfileState;
   lunarB: LunarProfileState;
 
+  // Estado de Sincronización Multi-Dispositivo (efímero, no se persiste)
+  syncStatus: SyncStatus;
+  syncError: string | null;
+  lastSyncedAt: number | null;
+  realtimeStatus: RealtimeConnectionStatus;
+  localChangeVersion: number;
+
+  // Metadatos persistentes para merge sin sobrescritura destructiva
+  deletedIds: string[];
+  kissesResetAt: number;
+
+  // Acciones de Sincronización
+  setSyncMeta: (partial: {
+    syncStatus?: SyncStatus;
+    syncError?: string | null;
+    lastSyncedAt?: number | null;
+    realtimeStatus?: RealtimeConnectionStatus;
+  }) => void;
+
   // Acciones de Sesión y Onboarding
   setAuthSession: (userId: string, email: string, name: string) => void;
   setLinkedWorld: (worldId: string, planetName: string, roomCode: string, anniversaryDate: string) => void;
@@ -376,7 +401,38 @@ const broadcastChannel =
 
 export const useWorldStore = create<WorldState>()(
   persist(
-    (set, get) => ({
+    (set, get) => {
+      // Wrapper para mutaciones de datos del planeta: incrementa localChangeVersion
+      // para disparar push a Supabase SOLO en cambios reales del usuario (nunca al recibir Realtime ni al montar).
+      const setSynced = (
+        updater:
+          | Partial<WorldState>
+          | ((state: WorldState) => Partial<WorldState>)
+      ) => {
+        set((state) => {
+          const patch = typeof updater === 'function' ? updater(state) : updater;
+          return {
+            ...patch,
+            localChangeVersion: state.localChangeVersion + 1,
+          };
+        });
+      };
+
+      const appendDeletedId = (deletedIds: string[], id: string): string[] =>
+        Array.from(new Set([...deletedIds, id])).slice(-200);
+
+      return {
+      // Estado de Sincronización Multi-Dispositivo (efímero)
+      syncStatus: 'connecting',
+      syncError: null,
+      lastSyncedAt: null,
+      realtimeStatus: 'CONNECTING',
+      localChangeVersion: 0,
+
+      // Tombstones persistentes y marca de reinicio de besos
+      deletedIds: [],
+      kissesResetAt: 0,
+
       // Si es la primera vez en el móvil, comienza en el Paso 1 del Onboarding
       authUserId: null,
       authUserEmail: null,
@@ -749,6 +805,11 @@ export const useWorldStore = create<WorldState>()(
       },
 
       // ============================================================
+      // ACCIONES DE SINCRONIZACIÓN
+      // ============================================================
+      setSyncMeta: (partial) => set(partial),
+
+      // ============================================================
       // ACCIONES DE SESIÓN PERSISTENTE Y ONBOARDING (3 PASOS)
       // ============================================================
       setAuthSession: (userId, email, name) => {
@@ -773,7 +834,7 @@ export const useWorldStore = create<WorldState>()(
         set({
           worldId,
           planetName: planetName.trim() || 'Nuestro Planeta',
-          roomCode: roomCode.toUpperCase(),
+          roomCode: normalizeRoomCode(roomCode),
           anniversaryDate: anniversaryDate || getSeedAnniversaryDate(),
           onboardingStep: 3,
         });
@@ -782,7 +843,7 @@ export const useWorldStore = create<WorldState>()(
       completeOnboardingWithPet: (species, petName, birthday) => {
         soundEngine.playChime();
         triggerHeartbeatHaptic('onboarding-complete');
-        set((state) => ({
+        setSynced((state) => ({
           petA: {
             ...state.petA,
             species,
@@ -806,11 +867,15 @@ export const useWorldStore = create<WorldState>()(
           settingsOpen: false,
           activeBuilding: null,
           hasCompletedLanding: false,
+          syncStatus: 'offline',
+          syncError: null,
+          lastSyncedAt: null,
+          realtimeStatus: 'DISCONNECTED',
         });
       },
 
       setPlanetName: (planetName) => {
-        set({ planetName });
+        setSynced({ planetName });
         const wid = get().worldId;
         if (wid) {
           broadcastChannel?.postMessage({ type: 'SYNC', worldId: wid, state: { planetName } });
@@ -820,7 +885,7 @@ export const useWorldStore = create<WorldState>()(
         const cleanA = nameA.trim() || 'Alex';
         const cleanB = nameB.trim() || 'Cris';
         soundEngine.playPop(1.1);
-        set((state) => ({
+        setSynced((state) => ({
           petA: { ...state.petA, ownerName: cleanA },
           petB: { ...state.petB, ownerName: cleanB },
           lunarA: { ...state.lunarA, ownerName: cleanA },
@@ -828,8 +893,8 @@ export const useWorldStore = create<WorldState>()(
         }));
       },
       setRoomCode: (roomCode) => {
-        const clean = roomCode.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6);
-        set({ roomCode: clean });
+        const clean = normalizeRoomCode(roomCode);
+        setSynced({ roomCode: clean });
       },
       generateNewRoomCode: () => {
         const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -837,17 +902,17 @@ export const useWorldStore = create<WorldState>()(
         for (let i = 0; i < 6; i++) {
           code += chars[Math.floor(Math.random() * chars.length)];
         }
-        set({ roomCode: code });
+        setSynced({ roomCode: code });
         return code;
       },
-      setAnniversaryDate: (anniversaryDate) => set({ anniversaryDate }),
+      setAnniversaryDate: (anniversaryDate) => setSynced({ anniversaryDate }),
       setActiveUser: (activeUser) => {
         soundEngine.playPop(1.1);
         set({ activeUser });
       },
       setTheme: (theme) => {
         soundEngine.playPop(1.15);
-        set({ theme });
+        setSynced({ theme });
       },
       toggleMute: () => {
         const next = !get().isMuted;
@@ -884,7 +949,7 @@ export const useWorldStore = create<WorldState>()(
         const cooldown = Date.now() + 5 * 60 * 1000;
         triggerHeartbeatHaptic('kiss-burst');
         soundEngine.playChime();
-        set((state) => ({
+        setSynced((state) => ({
           totalKissesHistory: state.totalKissesHistory + count,
           kissCooldownUntil: cooldown,
           pendingKissBursts: [...state.pendingKissBursts, burst],
@@ -898,8 +963,9 @@ export const useWorldStore = create<WorldState>()(
       resetKissCounter: () => {
         soundEngine.playPop(0.95);
         triggerHeartbeatHaptic('reset-kisses');
-        set({
+        setSynced({
           totalKissesHistory: 0,
+          kissesResetAt: Date.now(),
           pendingKissBursts: [],
           kissCooldownUntil: 0,
         });
@@ -918,13 +984,19 @@ export const useWorldStore = create<WorldState>()(
         const all = get().pendingKissBursts;
         const forMe = all.filter((b) => b.from !== current);
         if (forMe.length > 0) {
-          set({ pendingKissBursts: all.filter((b) => b.from === current) });
+          setSynced((state) => ({
+            pendingKissBursts: all.filter((b) => b.from === current),
+            deletedIds: forMe.reduce(
+              (acc, b) => appendDeletedId(acc, b.id),
+              state.deletedIds
+            ),
+          }));
         }
         return forMe;
       },
 
       updatePetProfile: (user, partial) => {
-        set((state) => ({
+        setSynced((state) => ({
           [user === 'userA' ? 'petA' : 'petB']: {
             ...(user === 'userA' ? state.petA : state.petB),
             ...partial,
@@ -935,7 +1007,7 @@ export const useWorldStore = create<WorldState>()(
       careForPets: (action) => {
         triggerHeartbeatHaptic(action);
         soundEngine.playPop(1.25);
-        set((state) => {
+        setSynced((state) => {
           const c = state.petCare;
           const next = { ...c, lastUpdated: Date.now() };
           if (action === 'feed') {
@@ -959,8 +1031,8 @@ export const useWorldStore = create<WorldState>()(
 
       updateRoomDecor: (roomRug, roomLamp) => {
         soundEngine.playPop();
-        set((state) => ({
-          petCare: { ...state.petCare, roomRug, roomLamp },
+        setSynced((state) => ({
+          petCare: { ...state.petCare, roomRug, roomLamp, lastUpdated: Date.now() },
         }));
       },
 
@@ -973,13 +1045,13 @@ export const useWorldStore = create<WorldState>()(
           readByUserA: author === 'userA',
           readByUserB: author === 'userB',
         };
-        set((state) => ({
+        setSynced((state) => ({
           diaryPages: [newPage, ...state.diaryPages],
         }));
       },
 
       updateDiaryPage: (pageId, patch) => {
-        set((state) => ({
+        setSynced((state) => ({
           diaryPages: state.diaryPages.map((p) =>
             p.id === pageId ? { ...p, ...patch } : p
           ),
@@ -988,7 +1060,7 @@ export const useWorldStore = create<WorldState>()(
 
       updateDiaryPagePhoto: (pageId, photoDataUrl) => {
         soundEngine.playChime();
-        set((state) => ({
+        setSynced((state) => ({
           diaryPages: state.diaryPages.map((p) =>
             p.id === pageId ? { ...p, photoDataUrl } : p
           ),
@@ -997,13 +1069,14 @@ export const useWorldStore = create<WorldState>()(
 
       deleteDiaryPage: (pageId) => {
         soundEngine.playPop(0.85);
-        set((state) => ({
+        setSynced((state) => ({
           diaryPages: state.diaryPages.filter((p) => p.id !== pageId),
+          deletedIds: appendDeletedId(state.deletedIds, pageId),
         }));
       },
 
       addStrokeToDiaryPage: (pageId, stroke) => {
-        set((state) => ({
+        setSynced((state) => ({
           diaryPages: state.diaryPages.map((p) =>
             p.id === pageId
               ? {
@@ -1019,7 +1092,7 @@ export const useWorldStore = create<WorldState>()(
 
       addStickerToDiaryPage: (pageId, sticker) => {
         soundEngine.playPop(1.3);
-        set((state) => ({
+        setSynced((state) => ({
           diaryPages: state.diaryPages.map((p) =>
             p.id === pageId ? { ...p, stickers: [...p.stickers, sticker] } : p
           ),
@@ -1027,7 +1100,7 @@ export const useWorldStore = create<WorldState>()(
       },
 
       markDiaryPagesRead: (user) => {
-        set((state) => ({
+        setSynced((state) => ({
           diaryPages: state.diaryPages.map((p) =>
             user === 'userA' ? { ...p, readByUserA: true } : { ...p, readByUserB: true }
           ),
@@ -1036,22 +1109,23 @@ export const useWorldStore = create<WorldState>()(
 
       addMediaItem: (item) => {
         soundEngine.playPop(1.1);
-        set((state) => ({
+        setSynced((state) => ({
           mediaItems: [{ ...item, id: `media-${Date.now()}` }, ...state.mediaItems],
         }));
       },
 
       deleteMediaItem: (id) => {
         soundEngine.playPop(0.85);
-        set((state) => ({
+        setSynced((state) => ({
           mediaItems: state.mediaItems.filter((m) => m.id !== id),
+          deletedIds: appendDeletedId(state.deletedIds, id),
         }));
       },
 
       submitMediaReview: (id, user, rating, review) => {
         soundEngine.playChime();
         triggerHeartbeatHaptic('movie-review');
-        set((state) => ({
+        setSynced((state) => ({
           mediaItems: state.mediaItems.map((m) => {
             if (m.id !== id) return m;
             return user === 'userA'
@@ -1062,13 +1136,14 @@ export const useWorldStore = create<WorldState>()(
             ...state.petCare,
             affection: Math.min(100, state.petCare.affection + 15),
             celebrationBounceUntil: Date.now() + 5000,
+            lastUpdated: Date.now(),
           },
         }));
       },
 
       incrementSeriesProgress: (id, field) => {
         soundEngine.playPop(1.15);
-        set((state) => ({
+        setSynced((state) => ({
           mediaItems: state.mediaItems.map((m) =>
             m.id === id ? { ...m, [field]: m[field] + 1 } : m
           ),
@@ -1077,7 +1152,7 @@ export const useWorldStore = create<WorldState>()(
 
       moveWatchlistToWatched: (id) => {
         soundEngine.playChime();
-        set((state) => ({
+        setSynced((state) => ({
           mediaItems: state.mediaItems.map((m) =>
             m.id === id ? { ...m, status: 'watched' } : m
           ),
@@ -1088,21 +1163,22 @@ export const useWorldStore = create<WorldState>()(
 
       addMapPin: (pin) => {
         soundEngine.playChime();
-        set((state) => ({
+        setSynced((state) => ({
           mapPins: [{ ...pin, id: `pin-${Date.now()}` }, ...state.mapPins],
         }));
       },
 
       deleteMapPin: (id) => {
         soundEngine.playPop(0.85);
-        set((state) => ({
+        setSynced((state) => ({
           mapPins: state.mapPins.filter((p) => p.id !== id),
+          deletedIds: appendDeletedId(state.deletedIds, id),
         }));
       },
 
       toggleMapPinStatus: (id) => {
         soundEngine.playPop();
-        set((state) => ({
+        setSynced((state) => ({
           mapPins: state.mapPins.map((p) =>
             p.id === id
               ? { ...p, status: p.status === 'visited' ? 'wishlist' : 'visited' }
@@ -1118,7 +1194,7 @@ export const useWorldStore = create<WorldState>()(
 
       addCraving: (item) => {
         soundEngine.playPop(1.2);
-        set((state) => ({
+        setSynced((state) => ({
           cravings: [
             {
               ...item,
@@ -1138,7 +1214,7 @@ export const useWorldStore = create<WorldState>()(
           day: 'numeric',
           month: 'short',
         });
-        set((state) => ({
+        setSynced((state) => ({
           cravings: state.cravings.map((c) =>
             c.id === id ? { ...c, completed: true, completedAt: today } : c
           ),
@@ -1146,42 +1222,46 @@ export const useWorldStore = create<WorldState>()(
             ...state.petCare,
             affection: 100,
             celebrationBounceUntil: Date.now() + 6000,
+            lastUpdated: Date.now(),
           },
         }));
       },
 
       deleteCraving: (id) => {
         soundEngine.playPop(0.85);
-        set((state) => ({
+        setSynced((state) => ({
           cravings: state.cravings.filter((c) => c.id !== id),
+          deletedIds: appendDeletedId(state.deletedIds, id),
         }));
       },
 
-      setCurrency: (currency) => set({ currency }),
+      setCurrency: (currency) => setSynced({ currency }),
 
       addExpense: (exp) => {
         soundEngine.playPop(1.1);
-        set((state) => ({
+        setSynced((state) => ({
           expenses: [{ ...exp, id: `exp-${Date.now()}`, settled: false }, ...state.expenses],
         }));
       },
 
       deleteExpense: (id) => {
         soundEngine.playPop(0.85);
-        set((state) => ({
+        setSynced((state) => ({
           expenses: state.expenses.filter((e) => e.id !== id),
+          deletedIds: appendDeletedId(state.deletedIds, id),
         }));
       },
 
       settleAllExpenses: () => {
         soundEngine.playChime();
         triggerHeartbeatHaptic('settle-piggy');
-        set((state) => ({
+        setSynced((state) => ({
           expenses: state.expenses.map((e) => ({ ...e, settled: true })),
           petCare: {
             ...state.petCare,
             affection: 100,
             celebrationBounceUntil: Date.now() + 5000,
+            lastUpdated: Date.now(),
           },
         }));
       },
@@ -1191,7 +1271,7 @@ export const useWorldStore = create<WorldState>()(
         triggerHeartbeatHaptic('savings-added');
         const active = get().activeUser;
         const today = new Date().toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
-        set((state) => ({
+        setSynced((state) => ({
           savingsGoals: state.savingsGoals.map((g) =>
             g.id === goalId
               ? {
@@ -1209,7 +1289,7 @@ export const useWorldStore = create<WorldState>()(
 
       addSavingsGoal: (title, emoji, targetAmount) => {
         soundEngine.playPop();
-        set((state) => ({
+        setSynced((state) => ({
           savingsGoals: [
             ...state.savingsGoals,
             {
@@ -1224,29 +1304,44 @@ export const useWorldStore = create<WorldState>()(
         }));
       },
 
-      setLunarMode: (lunarMode) => set({ lunarMode }),
+      setLunarMode: (lunarMode) => setSynced({ lunarMode }),
 
       setLunarOwner: (lunarOwner) => {
         soundEngine.playPop(1.1);
-        set({ lunarOwner });
+        setSynced({ lunarOwner });
       },
 
       updateLunarProfile: (which, partial) => {
         soundEngine.playPop(1.1);
-        set((state) => {
+        setSynced((state) => {
           const key = which === 'A' ? 'lunarA' : 'lunarB';
           const updated = { ...state[key], ...partial, lastUpdated: 'Hoy' };
           return { [key]: updated };
         });
       },
-    }),
+      };
+    },
     {
       name: 'myworld-cozy-storage-v3',
+      partialize: (state) => {
+        const {
+          syncStatus: _s1,
+          syncError: _s2,
+          lastSyncedAt: _s3,
+          realtimeStatus: _s4,
+          localChangeVersion: _s5,
+          ...persisted
+        } = state;
+        return persisted;
+      },
       onRehydrateStorage: () => (state) => {
         if (!state) return;
         if (state.onboardingCompleted && state.worldId) {
           state.hasCompletedLanding = false;
         }
+        state.roomCode = normalizeRoomCode(state.roomCode || 'MIEL26') || 'MIEL26';
+        state.deletedIds = Array.isArray(state.deletedIds) ? state.deletedIds : [];
+        state.kissesResetAt = typeof state.kissesResetAt === 'number' ? state.kissesResetAt : 0;
         state.lunarOwner = state.lunarOwner || 'userA';
         // Limpiar cuadrados verdes inventados (data:image/svg+xml) de versiones anteriores
         if (Array.isArray(state.diaryPages)) {
