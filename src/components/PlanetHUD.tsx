@@ -79,6 +79,20 @@ export const PlanetHUD: React.FC<PlanetHUDProps> = ({ solar, hasUnreadDiary, chi
   const [draftNameB, setDraftNameB] = useState(petB.ownerName);
   const [draftPetA, setDraftPetA] = useState(petA.petName);
   const [draftPetB, setDraftPetB] = useState(petB.petName);
+  const [hasDynamicIsland, setHasDynamicIsland] = useState(false);
+
+  // Detectar Isla Dinámica mediante geometría real de safe-area-inset-top (iPhone 14 Pro / 15 / 16 Pro: >= 54px)
+  useEffect(() => {
+    const checkIsland = () => {
+      const sat = parseFloat(
+        getComputedStyle(document.documentElement).getPropertyValue('--sat') || '0'
+      );
+      setHasDynamicIsland(sat >= 54);
+    };
+    checkIsland();
+    window.addEventListener('resize', checkIsland);
+    return () => window.removeEventListener('resize', checkIsland);
+  }, []);
 
   // Reloj de enfriamiento (5 minutos)
   useEffect(() => {
@@ -172,6 +186,14 @@ export const PlanetHUD: React.FC<PlanetHUDProps> = ({ solar, hasUnreadDiary, chi
       <div className="w-full h-full flex-1 min-h-0 flex flex-col justify-between overflow-hidden">
         {/* ZONA 1 (SUPERIOR): HEADER GLASSMORPHISM PEGADO A LA SAFE AREA REAL */}
         <header className="shrink-0 z-30 safe-top-header px-3 flex flex-col gap-1.5 max-w-md mx-auto w-full box-border">
+          {hasDynamicIsland && (
+            <div className="flex justify-center -mt-1 mb-0.5 pointer-events-none">
+              <span className="px-3 py-0.5 rounded-full bg-black/35 backdrop-blur-md border border-white/15 text-[10px] font-bold tracking-wide text-white/90 flex items-center gap-1 shadow-xs">
+                <span>🪐</span>
+                <span className="truncate max-w-[180px]">MyWorld · {planetName}</span>
+              </span>
+            </div>
+          )}
           <div className="flex items-center justify-between gap-2 w-full">
             {/* Botón de Silencio Rápido */}
             <motion.button

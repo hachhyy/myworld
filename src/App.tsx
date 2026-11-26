@@ -468,7 +468,10 @@ export const App: React.FC = () => {
     const topColor = hasActiveLinkedSession ? solar.skyTopColor : '#FFF5EE';
     const bottomColor = hasActiveLinkedSession ? solar.skyBottomColor : '#FFF5EE';
     document.documentElement.style.backgroundColor = topColor;
-    document.body.style.backgroundColor = bottomColor;
+    document.body.style.backgroundColor = topColor;
+    document.body.style.backgroundImage = hasActiveLinkedSession
+      ? `linear-gradient(180deg, ${topColor} 0%, ${bottomColor} 100%)`
+      : 'none';
 
     const themeColorMeta = document.querySelector('meta[name="theme-color"]');
     if (themeColorMeta) {
