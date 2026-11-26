@@ -345,6 +345,8 @@ export interface WorldState {
   completeLanding: () => void;
 
   // Besos
+  incrementKissLocal: () => void;
+  flushKissBatch: (triggerRain?: boolean, rainCount?: number) => void;
   sendKissBurst: (count: number, iconType: KissIconType, miniNote: string) => void;
   consumePendingKissesForActiveUser: () => PendingKissBurst[];
   resetKissCounter: () => void;
@@ -974,6 +976,37 @@ export const useWorldStore = create<WorldState>()(
         set({ anniversaryModalOpen });
       },
       completeLanding: () => set({ hasCompletedLanding: true }),
+
+      incrementKissLocal: () => {
+        set((state) => ({
+          totalKissesHistory: state.totalKissesHistory + 1,
+        }));
+      },
+
+      flushKissBatch: (triggerRain = false, rainCount = 10) => {
+        if (triggerRain) {
+          const burst: PendingKissBurst = {
+            id: `kiss-rain-${Date.now()}`,
+            from: get().activeUser,
+            count: rainCount,
+            iconType: 'corazones',
+            miniNote: '¡Lluvia de besos!',
+            timestamp: Date.now(),
+          };
+          triggerHeartbeatHaptic('kiss-burst');
+          soundEngine.playChime();
+          setSynced((state) => ({
+            pendingKissBursts: [...state.pendingKissBursts, burst],
+          }));
+          const wid = get().worldId;
+          if (wid) {
+            broadcastChannel?.postMessage({ type: 'KISS_BURST', worldId: wid, burst });
+          }
+          return;
+        }
+        // Solo incrementar localChangeVersion para empujar el acumulado de besos a Supabase
+        setSynced({});
+      },
 
       sendKissBurst: (count, iconType, miniNote) => {
         const trimmedNote = miniNote.trim().split(/\s+/).slice(0, 3).join(' ') || '¡Te quiero!';

@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Volume2, VolumeX, Settings, Sparkles, Heart, Send, RotateCcw, Pencil } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
+import { Volume2, VolumeX, Settings, Sparkles, Pencil } from 'lucide-react';
 import {
   BuildingId,
   KissIconType,
@@ -23,6 +23,8 @@ const RAIN_EMOJIS: Record<KissIconType, string> = {
   abrazos: '🫂',
 };
 
+const KISS_RAIN_THRESHOLD = 10;
+
 interface PlanetHUDProps {
   solar: SolarEnvironment;
   hasUnreadDiary: boolean;
@@ -41,9 +43,9 @@ export const PlanetHUD: React.FC<PlanetHUDProps> = ({ solar, hasUnreadDiary, chi
     anniversaryModalOpen,
     setAnniversaryModalOpen,
     totalKissesHistory,
-    kissCooldownUntil,
     pendingKissBursts,
-    sendKissBurst,
+    incrementKissLocal,
+    flushKissBatch,
     consumePendingKissesForActiveUser,
     petA,
     petB,
@@ -58,18 +60,21 @@ export const PlanetHUD: React.FC<PlanetHUDProps> = ({ solar, hasUnreadDiary, chi
     setActiveBuilding,
   } = useWorldStore();
 
+  const prefersReducedMotion = useReducedMotion();
   const duration = calculateRelationshipDuration(anniversaryDate);
 
-  // Estado del botón único de beso
-  const [spamCount, setSpamCount] = useState(0);
-  const [miniNote, setMiniNote] = useState('¡Te echo de menos!');
-  const [noteComposerOpen, setNoteComposerOpen] = useState(false);
-  const [cooldownRemainingSec, setCooldownRemainingSec] = useState(0);
+  // Estado del sistema instantáneo de labios + combo hacia lluvia automática
+  const [comboCount, setComboCount] = useState(0);
+  const [lipTiltDir, setLipTiltDir] = useState<-6 | 6>(-6);
   const [activeRainBursts, setActiveRainBursts] = useState<PendingKissBurst[]>([]);
   const [ovuloBubbleOpen, setOvuloBubbleOpen] = useState(true);
   const [tapFloatingHearts, setTapFloatingHearts] = useState<
     { id: number; dx: number; dy: number; rot: number; emoji: string }[]
   >([]);
+
+  const pendingBatchCountRef = useRef(0);
+  const batchTimerRef = useRef<number | null>(null);
+  const comboResetTimerRef = useRef<number | null>(null);
 
   // Modal rápido de Motes de la Pareja, Mascotas y ¿Quién soy yo?
   const [motesModalOpen, setMotesModalOpen] = useState(false);
@@ -92,73 +97,104 @@ export const PlanetHUD: React.FC<PlanetHUDProps> = ({ solar, hasUnreadDiary, chi
     return () => window.removeEventListener('resize', checkIsland);
   }, []);
 
-  // Reloj de enfriamiento (5 minutos)
+  // Vaciar cualquier lote de besos pendiente al desmontar
   useEffect(() => {
-    const tick = () => {
-      const rem = Math.max(0, Math.ceil((kissCooldownUntil - Date.now()) / 1000));
-      setCooldownRemainingSec(rem);
+    return () => {
+      if (batchTimerRef.current) window.clearTimeout(batchTimerRef.current);
+      if (comboResetTimerRef.current) window.clearTimeout(comboResetTimerRef.current);
+      if (pendingBatchCountRef.current > 0) {
+        flushKissBatch(false);
+        pendingBatchCountRef.current = 0;
+      }
     };
-    tick();
-    const timer = setInterval(tick, 1000);
-    return () => clearInterval(timer);
-  }, [kissCooldownUntil]);
+  }, [flushKissBatch]);
 
-  // Al abrir la app, alternar usuario o recibir besos en tiempo real desde el móvil de la pareja
+  // Al abrir la app, alternar usuario o recibir lluvia de besos en tiempo real desde el móvil de la pareja
   useEffect(() => {
     const pending = consumePendingKissesForActiveUser();
     if (pending.length > 0) {
       triggerHeartbeatHaptic('kiss-rain-received');
       soundEngine.playChime();
       setActiveRainBursts(pending);
-      const t = setTimeout(() => setActiveRainBursts([]), 7000);
-      return () => clearTimeout(t);
+      const t = window.setTimeout(() => setActiveRainBursts([]), 6000);
+      return () => window.clearTimeout(t);
     }
   }, [activeUser, pendingKissBursts.length, consumePendingKissesForActiveUser]);
 
-  const handleTapKissButton = () => {
-    if (cooldownRemainingSec > 0) {
-      soundEngine.playPop(0.75);
-      return;
-    }
-    const next = Math.min(50, spamCount + 1);
-    setSpamCount(next);
-    soundEngine.playPop(0.95 + next * 0.015);
+  const handleTapLips = () => {
+    // 1. +1 inmediato en UI (0 fricción)
+    incrementKissLocal();
+    setLipTiltDir((prev) => (prev === -6 ? 6 : -6));
+
+    const nextCombo = comboCount + 1;
+    soundEngine.playPop(0.96 + Math.min(nextCombo, KISS_RAIN_THRESHOLD) * 0.045);
     triggerHeartbeatHaptic('kiss-tap');
 
-    // Lanzar besos y corazoncitos flotando desde el botón hacia el planeta
+    // 2. Partículas de besos/corazones saliendo directamente de los labios hacia el planeta
     const now = Date.now();
     const spawned = [
-      { id: now + Math.random(), dx: -26 + Math.random() * 14, dy: -75 - Math.random() * 25, rot: -18, emoji: '💋' },
-      { id: now + Math.random() + 1, dx: -6 + Math.random() * 12, dy: -95 - Math.random() * 30, rot: 8, emoji: '💖' },
-      { id: now + Math.random() + 2, dx: 14 + Math.random() * 16, dy: -70 - Math.random() * 25, rot: 22, emoji: '💋' },
+      { id: now + Math.random(), dx: -28 + Math.random() * 14, dy: -78 - Math.random() * 26, rot: -18, emoji: '💋' },
+      { id: now + Math.random() + 1, dx: -6 + Math.random() * 12, dy: -98 - Math.random() * 30, rot: 8, emoji: '💖' },
+      { id: now + Math.random() + 2, dx: 14 + Math.random() * 18, dy: -72 - Math.random() * 24, rot: 20, emoji: '❤️' },
     ];
     setTapFloatingHearts((prev) => [...prev.slice(-15), ...spawned]);
-    setTimeout(() => {
+    window.setTimeout(() => {
       setTapFloatingHearts((prev) => prev.filter((p) => !spawned.some((s) => s.id === p.id)));
-    }, 950);
+    }, 900);
 
-    if (next === 50) {
-      setNoteComposerOpen(true);
+    // Reiniciar temporizador de decaimiento visual del combo tras 4s sin pulsar
+    if (comboResetTimerRef.current) window.clearTimeout(comboResetTimerRef.current);
+
+    // 3. Umbral automático de Lluvia de Besos (cada 10 besos -> evento Realtime para ambos móviles)
+    if (nextCombo >= KISS_RAIN_THRESHOLD) {
+      setComboCount(0);
+      pendingBatchCountRef.current = 0;
+      if (batchTimerRef.current) {
+        window.clearTimeout(batchTimerRef.current);
+        batchTimerRef.current = null;
+      }
+
+      flushKissBatch(true, KISS_RAIN_THRESHOLD);
+
+      // Celebración inmediata de lluvia en este móvil también
+      setActiveRainBursts([
+        {
+          id: `local-rain-${Date.now()}`,
+          from: activeUser,
+          count: 24,
+          iconType: 'corazones',
+          miniNote: '¡Lluvia de besos!',
+          timestamp: Date.now(),
+        },
+      ]);
+      window.setTimeout(() => setActiveRainBursts([]), 5500);
+      return;
     }
-  };
 
-  const handleConfirmSendKisses = () => {
-    const countToSend = Math.max(1, spamCount);
-    const words = miniNote.trim().split(/\s+/).slice(0, 3).join(' ');
-    sendKissBurst(countToSend, 'corazones', words || '¡Te echo de menos!');
-    setActiveRainBursts([
-      {
-        id: `local-${Date.now()}`,
-        from: activeUser,
-        count: countToSend,
-        iconType: 'corazones',
-        miniNote: words || '¡Te echo de menos!',
-        timestamp: Date.now(),
-      },
-    ]);
-    setTimeout(() => setActiveRainBursts([]), 6500);
-    setSpamCount(0);
-    setNoteComposerOpen(false);
+    setComboCount(nextCombo);
+    comboResetTimerRef.current = window.setTimeout(() => {
+      setComboCount(0);
+    }, 4500);
+
+    // 4. Sincronización inteligente por lotes (cada 5 toques o tras 600ms de pausa)
+    pendingBatchCountRef.current += 1;
+    if (pendingBatchCountRef.current >= 5) {
+      pendingBatchCountRef.current = 0;
+      if (batchTimerRef.current) {
+        window.clearTimeout(batchTimerRef.current);
+        batchTimerRef.current = null;
+      }
+      flushKissBatch(false);
+    } else {
+      if (batchTimerRef.current) window.clearTimeout(batchTimerRef.current);
+      batchTimerRef.current = window.setTimeout(() => {
+        if (pendingBatchCountRef.current > 0) {
+          pendingBatchCountRef.current = 0;
+          flushKissBatch(false);
+        }
+        batchTimerRef.current = null;
+      }, 600);
+    }
   };
 
   // Horas de cine calculadas
@@ -329,48 +365,11 @@ export const PlanetHUD: React.FC<PlanetHUDProps> = ({ solar, hasUnreadDiary, chi
         </div>
       </header>
 
-      {/* 3. BLOQUE INFERIOR ANCLADO AL BORDE REAL DE iOS: 2 FILAS DE UBICACIONES + BOTÓN ÚNICO DE BESO */}
+      {/* 3. BLOQUE INFERIOR ANCLADO AL BORDE REAL DE iOS: 2 FILAS DE UBICACIONES + LABIOS DIRECTOS */}
       <footer
         className="fixed z-30 left-3 right-3 max-w-md mx-auto flex flex-col items-center gap-3 pointer-events-none"
         style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 10px)' }}
       >
-        {/* Modal flotante de Mini Nota de hasta 3 palabras al pulsar ráfaga */}
-        <AnimatePresence>
-          {(spamCount > 0 || noteComposerOpen) && (
-            <motion.div
-              initial={{ y: 16, opacity: 0, scale: 0.94 }}
-              animate={{ y: 0, opacity: 1, scale: 1 }}
-              exit={{ y: 16, opacity: 0, scale: 0.94 }}
-              transition={{ type: 'spring', stiffness: 360, damping: 22 }}
-              className="pointer-events-auto hand-card p-3 w-full max-w-xs"
-            >
-              <div className="flex items-center justify-between mb-1.5">
-                <span className="text-xs font-bold tabular-nums">
-                  💋 Ráfaga: {spamCount} / 50
-                </span>
-                <span className="text-[11px] text-[var(--text-muted)]">Máx. 3 palabras</span>
-              </div>
-              <div className="flex gap-1.5">
-                <input
-                  type="text"
-                  value={miniNote}
-                  onChange={(e) => setMiniNote(e.target.value)}
-                  placeholder="¡Te echo de menos!"
-                  className="flex-1 px-3 py-1.5 rounded-2xl border border-[var(--border-ink)] bg-[var(--input-bg)] font-hand text-lg focus:outline-none focus:ring-2 focus:ring-[#FFB7C5]"
-                />
-                <motion.button
-                  whileTap={{ scale: 0.9, rotate: -2 }}
-                  onClick={handleConfirmSendKisses}
-                  className="hand-button glossy-pink-cta px-3.5 py-1.5 font-bold text-xs flex items-center gap-1 cursor-pointer"
-                >
-                  <Send className="w-3.5 h-3.5" />
-                  Enviar
-                </motion.button>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
         {/* Todas las ubicaciones visibles en 2 filas compactas y centradas (sin scroll horizontal) */}
         <div className="pointer-events-auto w-full flex flex-wrap justify-center gap-2">
           {[
@@ -400,119 +399,151 @@ export const PlanetHUD: React.FC<PlanetHUDProps> = ({ solar, hasUnreadDiary, chi
           ))}
         </div>
 
-        {/* Botón único circular flotante de beso (70x70px, SOLO símbolo 💋, SIN texto) */}
-        {(() => {
-          const isCoolingDown = cooldownRemainingSec > 0;
-          const progressRatio = isCoolingDown
-            ? Math.max(0.03, Math.min(1, 1 - cooldownRemainingSec / 300))
-            : 1;
-          const ringRadius = 32;
-          const ringCircumference = 2 * Math.PI * ringRadius;
-          const ringOffset = ringCircumference * (1 - progressRatio);
+        {/* Labios glossy directos sin contenedor circular ni texto (76px de ancho, físicas squish táctiles) */}
+        <div className="pointer-events-auto relative flex items-center justify-center pt-1 pb-0.5 shrink-0">
+          {/* Halo de brillo orgánico ultra sutil que se intensifica con el combo hacia la lluvia (cada 10 besos) */}
+          {comboCount > 0 && (
+            <motion.span
+              aria-hidden="true"
+              initial={{ opacity: 0, scale: 0.85 }}
+              animate={{
+                opacity: 0.18 + (comboCount / KISS_RAIN_THRESHOLD) * 0.42,
+                scale: 0.95 + (comboCount / KISS_RAIN_THRESHOLD) * 0.25,
+              }}
+              transition={{ type: 'spring', stiffness: 320, damping: 22 }}
+              className="pointer-events-none absolute w-[88px] h-[54px] rounded-full blur-xl bg-[#FF4D6D]"
+            />
+          )}
 
-          return (
-            <div className="pointer-events-auto relative flex items-center justify-center w-[70px] h-[70px] shrink-0">
-              {/* Besos y corazones flotando al pulsar */}
-              <AnimatePresence>
-                {tapFloatingHearts.map((h) => (
-                  <motion.span
-                    key={h.id}
-                    initial={{ opacity: 1, x: 0, y: -6, scale: 0.65, rotate: 0 }}
-                    animate={{
-                      opacity: [1, 1, 0],
-                      x: h.dx,
-                      y: h.dy,
-                      scale: [0.75, 1.25, 0.95],
-                      rotate: h.rot,
-                    }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.85, ease: 'easeOut' }}
-                    className="pointer-events-none absolute -top-2 z-40 text-lg select-none drop-shadow-sm"
-                  >
-                    {h.emoji}
-                  </motion.span>
-                ))}
-              </AnimatePresence>
-
-              <motion.button
-                type="button"
-                whileTap={{ scale: 0.86, rotate: -6 }}
-                animate={
-                  isCoolingDown
-                    ? { scale: 1 }
-                    : spamCount > 0
-                      ? { scale: 1.06 + Math.min(0.12, spamCount * 0.003) }
-                      : { scale: 1 }
-                }
-                transition={{ type: 'spring', stiffness: 460, damping: 16 }}
-                onClick={handleTapKissButton}
-                aria-label={isCoolingDown ? 'Botón de beso recargando' : 'Enviar beso'}
-                className={`w-[70px] h-[70px] rounded-full border-2 border-white/85 flex items-center justify-center cursor-pointer relative select-none overflow-hidden transition-[background,opacity] duration-200 shadow-[0_8px_24px_rgba(255,93,115,0.4)] ${
-                  isCoolingDown
-                    ? 'bg-gradient-to-b from-[#FFE6EE] via-[#FFC5D4] to-[#FFB7C5] opacity-90'
-                    : 'bg-gradient-to-b from-[#FFD2DF] via-[#FF9EBB] to-[#FF78A1]'
-                }`}
+          {/* Partículas de besos y corazones saliendo directamente desde los labios hacia el planeta */}
+          <AnimatePresence>
+            {tapFloatingHearts.map((h) => (
+              <motion.span
+                key={h.id}
+                initial={{ opacity: 1, x: 0, y: -4, scale: 0.65, rotate: 0 }}
+                animate={{
+                  opacity: [1, 1, 0],
+                  x: h.dx,
+                  y: h.dy,
+                  scale: [0.75, 1.25, 0.95],
+                  rotate: h.rot,
+                }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.85, ease: 'easeOut' }}
+                className="pointer-events-none absolute -top-2 z-40 text-lg select-none drop-shadow-sm"
               >
-                {/* Anillo circular de progreso durante la recarga */}
-                {isCoolingDown && (
-                  <svg
-                    viewBox="0 0 70 70"
-                    className="pointer-events-none absolute inset-0 w-full h-full -rotate-90 z-10"
-                  >
-                    <circle
-                      cx="35"
-                      cy="35"
-                      r={ringRadius}
-                      fill="none"
-                      stroke="rgba(255,255,255,0.55)"
-                      strokeWidth="4"
-                    />
-                    <circle
-                      cx="35"
-                      cy="35"
-                      r={ringRadius}
-                      fill="none"
-                      stroke="#FF5D73"
-                      strokeWidth="4.2"
-                      strokeLinecap="round"
-                      strokeDasharray={ringCircumference}
-                      strokeDashoffset={ringOffset}
-                      style={{ transition: 'stroke-dashoffset 0.8s ease-out' }}
-                    />
-                  </svg>
-                )}
+                {h.emoji}
+              </motion.span>
+            ))}
+          </AnimatePresence>
 
-                {/* Brillo superior sutil glossy */}
-                <span className="pointer-events-none absolute top-1 left-1/2 -translate-x-1/2 w-10 h-3.5 rounded-full bg-gradient-to-b from-white/75 to-white/5" />
+          <motion.button
+            type="button"
+            whileTap={{ scale: 0.82, rotate: lipTiltDir }}
+            animate={
+              prefersReducedMotion
+                ? { scale: 1 }
+                : comboCount > 0
+                  ? { scale: 1.03 + (comboCount / KISS_RAIN_THRESHOLD) * 0.08 }
+                  : { scale: [1, 1.035, 1] }
+            }
+            transition={
+              comboCount > 0 || prefersReducedMotion
+                ? { type: 'spring', stiffness: 520, damping: 14 }
+                : { duration: 2.8, repeat: Infinity, ease: 'easeInOut' }
+            }
+            onClick={handleTapLips}
+            aria-label="Enviar beso"
+            className="relative z-10 bg-transparent border-0 p-1 cursor-pointer select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF8FA3] rounded-full"
+            style={{
+              filter: `drop-shadow(0 8px 18px rgba(255, 77, 109, ${
+                0.45 + (comboCount / KISS_RAIN_THRESHOLD) * 0.3
+              }))`,
+            }}
+          >
+            <svg
+              viewBox="0 0 100 66"
+              width={76}
+              className="block w-[76px] h-auto overflow-visible"
+              aria-hidden="true"
+            >
+              <defs>
+                {/* Degradado coral/rosa cereza jugoso para el labio superior */}
+                <linearGradient id="kissUpperLipGrad" x1="20%" y1="0%" x2="80%" y2="100%">
+                  <stop offset="0%" stopColor="#FF758F" />
+                  <stop offset="48%" stopColor="#FF476F" />
+                  <stop offset="100%" stopColor="#E01E5A" />
+                </linearGradient>
+                {/* Degradado más profundo y jugoso para el labio inferior */}
+                <linearGradient id="kissLowerLipGrad" x1="50%" y1="0%" x2="50%" y2="100%">
+                  <stop offset="0%" stopColor="#FF5C82" />
+                  <stop offset="55%" stopColor="#FF3366" />
+                  <stop offset="100%" stopColor="#C9184A" />
+                </linearGradient>
+                {/* Brillo especular blanco suave */}
+                <linearGradient id="kissGlossGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                  <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.92" />
+                  <stop offset="100%" stopColor="#FFFFFF" stopOpacity="0.08" />
+                </linearGradient>
+              </defs>
 
-                {/* Únicamente el símbolo de beso bien centrado, sin texto */}
-                <span
-                  aria-hidden="true"
-                  className="text-[32px] leading-none select-none drop-shadow-[0_2px_4px_rgba(195,55,95,0.35)] relative z-10"
-                >
-                  💋
-                </span>
-              </motion.button>
+              {/* Labio superior con arco de Cupido suave */}
+              <path
+                d="M6 34 C16 20, 30 9, 41 13 C46 15, 48.5 18.5, 50 19.5 C51.5 18.5, 54 15, 59 13 C70 9, 84 20, 94 34 C82 37.5, 66 36.5, 50 35 C34 36.5, 18 37.5, 6 34 Z"
+                fill="url(#kissUpperLipGrad)"
+              />
 
-              {/* Micro botón discreto de recarga instantánea durante enfriamiento */}
-              {isCoolingDown && (
-                <motion.button
-                  type="button"
-                  whileTap={{ scale: 0.85, rotate: -90 }}
-                  onClick={() => {
-                    useWorldStore.setState({ kissCooldownUntil: 0 });
-                    soundEngine.playPop(1.3);
-                  }}
-                  title="Recargar al instante"
-                  aria-label="Recargar besos al instante"
-                  className="absolute -top-0.5 -right-1 z-20 w-6 h-6 rounded-full bg-[var(--glass-bg-strong)] border border-[var(--glass-border)] shadow-[0_4px_10px_rgba(255,158,187,0.35)] flex items-center justify-center text-[var(--text-ink)] cursor-pointer"
-                >
-                  <RotateCcw className="w-3 h-3" />
-                </motion.button>
-              )}
-            </div>
-          );
-        })()}
+              {/* Labio inferior carnoso y redondeado */}
+              <path
+                d="M8 34.5 C21 37, 36 36, 50 35.2 C64 36, 79 37, 92 34.5 C86 49, 71 60, 50 60 C29 60, 14 49, 8 34.5 Z"
+                fill="url(#kissLowerLipGrad)"
+              />
+
+              {/* Pliegue interior sutil entre labios */}
+              <path
+                d="M12 34.8 C27 37.4, 41 36.4, 50 35.4 C59 36.4, 73 37.4, 88 34.8"
+                fill="none"
+                stroke="#8F0F36"
+                strokeOpacity="0.45"
+                strokeWidth="2.1"
+                strokeLinecap="round"
+              />
+
+              {/* Brillo especular superior izquierdo */}
+              <ellipse
+                cx="34"
+                cy="21"
+                rx="9"
+                ry="3.6"
+                transform="rotate(-14 34 21)"
+                fill="url(#kissGlossGrad)"
+              />
+
+              {/* Brillo especular superior derecho */}
+              <ellipse
+                cx="66"
+                cy="21.5"
+                rx="7"
+                ry="2.8"
+                transform="rotate(14 66 21.5)"
+                fill="url(#kissGlossGrad)"
+                opacity="0.72"
+              />
+
+              {/* Reflejo jugoso principal en el labio inferior */}
+              <path
+                d="M32 46.5 C40 51.5, 59 51.5, 67 46"
+                fill="none"
+                stroke="#FFFFFF"
+                strokeOpacity="0.82"
+                strokeWidth="4.2"
+                strokeLinecap="round"
+              />
+              {/* Destello puntual glossy */}
+              <circle cx="24" cy="43.5" r="2.3" fill="#FFFFFF" fillOpacity="0.78" />
+            </svg>
+          </motion.button>
+        </div>
       </footer>
 
       {/* 4. LLUVIA FÍSICA DE BESOS Y NOTA FLOTANTE DESLIZABLE (SWIPE-TO-DISMISS) */}
