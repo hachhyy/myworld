@@ -216,7 +216,7 @@ export const OnboardingFlow: React.FC = () => {
   };
 
   return (
-    <div className="fixed inset-0 w-screen h-[100dvh] z-50 watercolor-paper overflow-y-auto overscroll-none flex flex-col justify-between px-4 safe-modal-inset select-none">
+    <div className="fixed inset-0 w-full z-50 watercolor-paper overflow-y-auto overscroll-none flex flex-col justify-between px-4 safe-modal-inset select-none">
       {/* Indicador superior de pasos */}
       <div className="w-full max-w-md mx-auto flex items-center justify-between pt-1 shrink-0">
         <div className="flex items-center gap-1.5 hand-pill px-3 py-1">

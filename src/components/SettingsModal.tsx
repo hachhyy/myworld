@@ -288,7 +288,7 @@ export const SettingsModal: React.FC = () => {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={() => setSettingsOpen(false)}
-            className="fixed inset-0 w-screen h-[100dvh] z-50 bg-[#4A3F35]/25 backdrop-blur-sm flex flex-col justify-start px-3 safe-modal-inset overflow-hidden"
+            className="fixed inset-0 w-full z-50 bg-[#4A3F35]/25 backdrop-blur-sm flex flex-col justify-start px-3 safe-modal-inset overflow-hidden"
           >
             <motion.div
               initial={{ scale: 0.94, y: 16 }}

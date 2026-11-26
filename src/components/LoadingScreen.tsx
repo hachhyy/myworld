@@ -58,7 +58,7 @@ export const LoadingScreen: React.FC = () => {
           initial={{ opacity: 1 }}
           exit={{ opacity: 0, scale: 1.18, filter: 'blur(6px)' }}
           transition={{ duration: 0.85, ease: 'easeInOut' }}
-          className="fixed inset-0 w-screen h-[100dvh] z-50 flex flex-col justify-between px-4 safe-modal-inset watercolor-paper overflow-hidden overscroll-none select-none"
+          className="fixed inset-0 w-full z-50 flex flex-col justify-between px-4 safe-modal-inset watercolor-paper overflow-hidden overscroll-none select-none"
         >
           {/* Nubes decorativas superiores */}
           <div className="w-full max-w-md mx-auto flex justify-between items-center pt-1 opacity-85 shrink-0">

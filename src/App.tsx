@@ -498,7 +498,7 @@ export const App: React.FC = () => {
 
   return (
     <div
-      className={`fixed inset-0 w-screen h-[100dvh] flex flex-col overflow-hidden overscroll-none select-none transition-[background,transform] duration-500 ${
+      className={`fixed inset-0 w-full flex flex-col overflow-hidden overscroll-none select-none transition-[background,transform] duration-500 ${
         hapticVisualPulse ? 'scale-[1.008]' : ''
       }`}
       style={{
@@ -515,7 +515,7 @@ export const App: React.FC = () => {
             exit={{ opacity: 0, y: -20 }}
             onClick={() => window.dispatchEvent(new CustomEvent('myworld-force-sync'))}
             title={syncError || 'Sin conexión con la nube'}
-            className="fixed top-[max(env(safe-area-inset-top),8px)] left-1/2 -translate-x-1/2 z-[60] px-3.5 py-1.5 rounded-full bg-[#FFEAF0]/95 backdrop-blur-md border border-[#FF9EBB] shadow-md text-[#6B3B4B] text-[11px] font-bold flex items-center gap-1.5 cursor-pointer max-w-[92vw]"
+            className="fixed top-[max(12px,calc(env(safe-area-inset-top,0px)+8px))] left-1/2 -translate-x-1/2 z-[60] px-3.5 py-1.5 rounded-full bg-[#FFEAF0]/95 backdrop-blur-md border border-[#FF9EBB] shadow-md text-[#6B3B4B] text-[11px] font-bold flex items-center gap-1.5 cursor-pointer max-w-[92vw]"
           >
             <CloudOff className="w-3.5 h-3.5 shrink-0 text-[#E0527B]" />
             <span className="truncate">Sin conexión con la nube</span>
@@ -545,7 +545,7 @@ export const App: React.FC = () => {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.94, y: 24 }}
             transition={{ type: 'spring', stiffness: 300, damping: 22 }}
-            className="fixed inset-0 w-screen h-[100dvh] z-40 flex flex-col overflow-hidden overscroll-none"
+            className="fixed inset-0 w-full z-40 flex flex-col overflow-hidden overscroll-none"
           >
             {activeBuilding === 'casita' && (
               <CasitaTamagotchi solar={solar} onClose={() => setActiveBuilding(null)} />

@@ -268,7 +268,7 @@ export const FaroMapaViajes: React.FC<FaroMapaViajesProps> = ({ onClose }) => {
   };
 
   return (
-    <div className="fixed inset-0 w-screen h-[100dvh] z-40 flex flex-col watercolor-paper overflow-hidden overscroll-none">
+    <div className="fixed inset-0 w-full z-40 flex flex-col watercolor-paper overflow-hidden overscroll-none">
       {/* Cabecera con Safe Area superior de iOS */}
       <div className="safe-top-header px-4 pb-3 flex items-center justify-between gap-2 border-b-2 border-[var(--border-ink)] bg-[var(--bg-card)] z-20">
         <motion.button
@@ -383,7 +383,7 @@ export const FaroMapaViajes: React.FC<FaroMapaViajesProps> = ({ onClose }) => {
               initial={{ y: 50, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               exit={{ y: 50, opacity: 0 }}
-              className="absolute bottom-3 left-3 right-3 max-w-sm mx-auto hand-card p-3.5 bg-[var(--bg-card)] z-30 shadow-2xl"
+              className="absolute bottom-[max(12px,calc(env(safe-area-inset-bottom,0px)+8px))] left-3 right-3 max-w-sm mx-auto hand-card p-3.5 bg-[var(--bg-card)] z-30 shadow-2xl"
             >
               <div className="flex items-start justify-between gap-2 mb-2">
                 <div>
@@ -483,7 +483,7 @@ export const FaroMapaViajes: React.FC<FaroMapaViajesProps> = ({ onClose }) => {
               initial={{ scale: 0.92, opacity: 0, y: 20 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.92, opacity: 0, y: 20 }}
-              className="absolute inset-x-3 bottom-3 max-w-sm mx-auto hand-card p-3.5 bg-[var(--bg-card)] z-30 space-y-2.5 max-h-[78vh] overflow-y-auto shadow-2xl"
+              className="absolute inset-x-3 bottom-[max(12px,calc(env(safe-area-inset-bottom,0px)+8px))] max-w-sm mx-auto hand-card p-3.5 bg-[var(--bg-card)] z-30 space-y-2.5 max-h-[78dvh] overflow-y-auto shadow-2xl"
             >
               <div className="flex items-center justify-between">
                 <h3 className="text-sm font-bold flex items-center gap-1">

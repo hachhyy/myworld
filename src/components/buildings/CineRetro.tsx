@@ -1085,7 +1085,7 @@ export const CineRetro: React.FC<CineRetroProps> = ({ onClose }) => {
   };
 
   return (
-    <div className="fixed inset-0 w-screen h-[100dvh] z-40 flex flex-col watercolor-paper overflow-hidden overscroll-none">
+    <div className="fixed inset-0 w-full z-40 flex flex-col watercolor-paper overflow-hidden overscroll-none">
       {/* Cabecera con Safe Area superior de iOS */}
       <div className="safe-top-header px-4 pb-3 flex items-center justify-between gap-2 border-b-2 border-[var(--border-ink)] bg-[var(--bg-card)]">
         <motion.button
@@ -1134,7 +1134,7 @@ export const CineRetro: React.FC<CineRetroProps> = ({ onClose }) => {
       </div>
 
       {/* CONTENIDO DE PESTAÑA */}
-      <div className="flex-1 overflow-y-auto p-3 space-y-3 max-w-md mx-auto w-full">
+      <div className="flex-1 overflow-y-auto px-3 pt-3 safe-bottom-dock space-y-3 max-w-md mx-auto w-full">
         {tab === 'watched' && (
           <>
             <div className="hand-card p-2.5 bg-[var(--bg-secondary)] text-xs flex items-center justify-between">
