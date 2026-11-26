@@ -501,7 +501,7 @@ export const App: React.FC = () => {
 
   return (
     <div
-      className={`fixed inset-0 w-screen h-[100dvh] flex flex-col overflow-hidden overscroll-none select-none transition-[background,transform] duration-500 ${
+      className={`fixed inset-0 w-full h-full flex flex-col overflow-hidden overscroll-none select-none transition-[background,transform] duration-500 ${
         hapticVisualPulse ? 'scale-[1.008]' : ''
       }`}
       style={{

@@ -16,14 +16,17 @@ import { soundEngine, triggerHeartbeatHaptic } from '../utils/soundAndHaptics';
 import { CuteOvuloAvatar } from './characters/CuteOvuloAvatar';
 
 const RAIN_EMOJIS: Record<KissIconType, string> = {
-  corazones: '💋',
+  corazones: '❤️',
   pintalabios: '💋',
   gatitos: '🐱',
   estrellas: '🌟',
   abrazos: '🫂',
 };
 
-const KISS_RAIN_THRESHOLD = 10;
+function rollNextRainThreshold(): number {
+  // Umbral variado entre 5 y 15 besos para que la lluvia de corazones sorprenda en distintos números
+  return 5 + Math.floor(Math.random() * 11);
+}
 
 interface PlanetHUDProps {
   solar: SolarEnvironment;
@@ -63,8 +66,9 @@ export const PlanetHUD: React.FC<PlanetHUDProps> = ({ solar, hasUnreadDiary, chi
   const prefersReducedMotion = useReducedMotion();
   const duration = calculateRelationshipDuration(anniversaryDate);
 
-  // Estado del sistema instantáneo de labios + combo hacia lluvia automática
+  // Estado del sistema instantáneo de labios + combo hacia lluvia automática en umbrales variados
   const [comboCount, setComboCount] = useState(0);
+  const [rainThreshold, setRainThreshold] = useState<number>(() => rollNextRainThreshold());
   const [lipTiltDir, setLipTiltDir] = useState<-6 | 6>(-6);
   const [activeRainBursts, setActiveRainBursts] = useState<PendingKissBurst[]>([]);
   const [ovuloBubbleOpen, setOvuloBubbleOpen] = useState(true);
@@ -109,7 +113,7 @@ export const PlanetHUD: React.FC<PlanetHUDProps> = ({ solar, hasUnreadDiary, chi
     };
   }, [flushKissBatch]);
 
-  // Al abrir la app, alternar usuario o recibir lluvia de besos en tiempo real desde el móvil de la pareja
+  // Al abrir la app, alternar usuario o recibir lluvia de corazones y besos en tiempo real desde el móvil de la pareja
   useEffect(() => {
     const pending = consumePendingKissesForActiveUser();
     if (pending.length > 0) {
@@ -122,15 +126,16 @@ export const PlanetHUD: React.FC<PlanetHUDProps> = ({ solar, hasUnreadDiary, chi
   }, [activeUser, pendingKissBursts.length, consumePendingKissesForActiveUser]);
 
   const handleTapLips = () => {
-    // 1. +1 inmediato en UI (0 fricción)
+    // 1. +1 inmediato al contador global acumulado del planeta (nunca se reinicia)
     incrementKissLocal();
     setLipTiltDir((prev) => (prev === -6 ? 6 : -6));
 
     const nextCombo = comboCount + 1;
-    soundEngine.playPop(0.96 + Math.min(nextCombo, KISS_RAIN_THRESHOLD) * 0.045);
+    const progress = Math.min(1, nextCombo / Math.max(1, rainThreshold));
+    soundEngine.playPop(0.96 + progress * 0.45);
     triggerHeartbeatHaptic('kiss-tap');
 
-    // 2. Partículas de besos/corazones saliendo directamente de los labios hacia el planeta
+    // 2. Partículas de corazones y besos saliendo directamente de los labios hacia el planeta
     const now = Date.now();
     const spawned = [
       { id: now + Math.random(), dx: -28 + Math.random() * 14, dy: -78 - Math.random() * 26, rot: -18, emoji: '💋' },
@@ -142,28 +147,30 @@ export const PlanetHUD: React.FC<PlanetHUDProps> = ({ solar, hasUnreadDiary, chi
       setTapFloatingHearts((prev) => prev.filter((p) => !spawned.some((s) => s.id === p.id)));
     }, 900);
 
-    // Reiniciar temporizador de decaimiento visual del combo tras 4s sin pulsar
+    // Reiniciar temporizador de decaimiento visual del combo tras 4.5s sin pulsar
     if (comboResetTimerRef.current) window.clearTimeout(comboResetTimerRef.current);
 
-    // 3. Umbral automático de Lluvia de Besos (cada 10 besos -> evento Realtime para ambos móviles)
-    if (nextCombo >= KISS_RAIN_THRESHOLD) {
+    // 3. Umbral automático variado de Lluvia de Corazones y Besos (sin reiniciar el contador global)
+    if (nextCombo >= rainThreshold) {
+      const triggeredCount = nextCombo;
       setComboCount(0);
+      setRainThreshold(rollNextRainThreshold());
       pendingBatchCountRef.current = 0;
       if (batchTimerRef.current) {
         window.clearTimeout(batchTimerRef.current);
         batchTimerRef.current = null;
       }
 
-      flushKissBatch(true, KISS_RAIN_THRESHOLD);
+      flushKissBatch(true, triggeredCount);
 
-      // Celebración inmediata de lluvia en este móvil también
+      // Celebración inmediata de lluvia de corazones en este móvil
       setActiveRainBursts([
         {
           id: `local-rain-${Date.now()}`,
           from: activeUser,
-          count: 24,
+          count: triggeredCount,
           iconType: 'corazones',
-          miniNote: '¡Lluvia de besos!',
+          miniNote: '¡Lluvia de corazones!',
           timestamp: Date.now(),
         },
       ]);
@@ -215,8 +222,8 @@ export const PlanetHUD: React.FC<PlanetHUDProps> = ({ solar, hasUnreadDiary, chi
 
   return (
     <>
-      {/* 1. ESCENARIO 3D EDGE-TO-EDGE REAL (100vw x 100dvh por detrás de la Isla Dinámica y la barra Home) */}
-      <div className="fixed inset-0 w-screen h-[100dvh] z-0 overflow-hidden">
+      {/* 1. ESCENARIO 3D EDGE-TO-EDGE REAL (por detrás de la Isla Dinámica y la barra Home) */}
+      <div className="fixed inset-0 w-full h-full z-0 overflow-hidden">
         {children}
       </div>
 
@@ -365,10 +372,10 @@ export const PlanetHUD: React.FC<PlanetHUDProps> = ({ solar, hasUnreadDiary, chi
         </div>
       </header>
 
-      {/* 3. BLOQUE INFERIOR ANCLADO AL BORDE REAL DE iOS: 2 FILAS DE UBICACIONES + LABIOS DIRECTOS */}
+      {/* 3. BLOQUE INFERIOR ANCLADO PEGADO AL BORDE REAL DE iOS: 2 FILAS DE UBICACIONES + LABIOS 💋 */}
       <footer
-        className="fixed z-30 left-3 right-3 max-w-md mx-auto flex flex-col items-center gap-3 pointer-events-none"
-        style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 10px)' }}
+        className="fixed z-30 left-3 right-3 max-w-md mx-auto flex flex-col items-center gap-2 pointer-events-none"
+        style={{ bottom: 'max(8px, calc(env(safe-area-inset-bottom, 0px) * 0.45))' }}
       >
         {/* Todas las ubicaciones visibles en 2 filas compactas y centradas (sin scroll horizontal) */}
         <div className="pointer-events-auto w-full flex flex-wrap justify-center gap-2">
@@ -399,23 +406,23 @@ export const PlanetHUD: React.FC<PlanetHUDProps> = ({ solar, hasUnreadDiary, chi
           ))}
         </div>
 
-        {/* Labios glossy directos sin contenedor circular ni texto (76px de ancho, físicas squish táctiles) */}
-        <div className="pointer-events-auto relative flex items-center justify-center pt-1 pb-0.5 shrink-0">
-          {/* Halo de brillo orgánico ultra sutil que se intensifica con el combo hacia la lluvia (cada 10 besos) */}
+        {/* Labios directos estilo emoji 💋 (marca de beso glossy inclinada, sin botón circular ni texto) */}
+        <div className="pointer-events-auto relative flex items-center justify-center shrink-0">
+          {/* Halo de brillo orgánico ultra sutil que crece según el combo hacia la lluvia */}
           {comboCount > 0 && (
             <motion.span
               aria-hidden="true"
               initial={{ opacity: 0, scale: 0.85 }}
               animate={{
-                opacity: 0.18 + (comboCount / KISS_RAIN_THRESHOLD) * 0.42,
-                scale: 0.95 + (comboCount / KISS_RAIN_THRESHOLD) * 0.25,
+                opacity: 0.18 + Math.min(1, comboCount / Math.max(1, rainThreshold)) * 0.44,
+                scale: 0.95 + Math.min(1, comboCount / Math.max(1, rainThreshold)) * 0.25,
               }}
               transition={{ type: 'spring', stiffness: 320, damping: 22 }}
-              className="pointer-events-none absolute w-[88px] h-[54px] rounded-full blur-xl bg-[#FF4D6D]"
+              className="pointer-events-none absolute w-[86px] h-[54px] rounded-full blur-xl bg-[#FF3B6B]"
             />
           )}
 
-          {/* Partículas de besos y corazones saliendo directamente desde los labios hacia el planeta */}
+          {/* Partículas de corazones y besos saliendo directamente desde los labios hacia el planeta */}
           <AnimatePresence>
             {tapFloatingHearts.map((h) => (
               <motion.span
@@ -444,7 +451,7 @@ export const PlanetHUD: React.FC<PlanetHUDProps> = ({ solar, hasUnreadDiary, chi
               prefersReducedMotion
                 ? { scale: 1 }
                 : comboCount > 0
-                  ? { scale: 1.03 + (comboCount / KISS_RAIN_THRESHOLD) * 0.08 }
+                  ? { scale: 1.03 + Math.min(1, comboCount / Math.max(1, rainThreshold)) * 0.08 }
                   : { scale: [1, 1.035, 1] }
             }
             transition={
@@ -454,93 +461,88 @@ export const PlanetHUD: React.FC<PlanetHUDProps> = ({ solar, hasUnreadDiary, chi
             }
             onClick={handleTapLips}
             aria-label="Enviar beso"
-            className="relative z-10 bg-transparent border-0 p-1 cursor-pointer select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF8FA3] rounded-full"
+            className="relative z-10 bg-transparent border-0 p-0 cursor-pointer select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF8FA3] rounded-full"
             style={{
-              filter: `drop-shadow(0 8px 18px rgba(255, 77, 109, ${
-                0.45 + (comboCount / KISS_RAIN_THRESHOLD) * 0.3
+              filter: `drop-shadow(0 6px 16px rgba(255, 59, 107, ${
+                0.45 + Math.min(1, comboCount / Math.max(1, rainThreshold)) * 0.3
               }))`,
             }}
           >
+            {/* Marca de beso 💋 fiel al emoji: labios separados con arco de Cupido marcado e inclinación natural */}
             <svg
-              viewBox="0 0 100 66"
+              viewBox="0 0 100 72"
               width={76}
-              className="block w-[76px] h-auto overflow-visible"
+              className="block w-[76px] h-auto overflow-visible -rotate-6"
               aria-hidden="true"
             >
               <defs>
-                {/* Degradado coral/rosa cereza jugoso para el labio superior */}
-                <linearGradient id="kissUpperLipGrad" x1="20%" y1="0%" x2="80%" y2="100%">
-                  <stop offset="0%" stopColor="#FF758F" />
-                  <stop offset="48%" stopColor="#FF476F" />
-                  <stop offset="100%" stopColor="#E01E5A" />
+                <linearGradient id="kissMarkUpper" x1="15%" y1="0%" x2="85%" y2="100%">
+                  <stop offset="0%" stopColor="#FF5C7C" />
+                  <stop offset="48%" stopColor="#F22952" />
+                  <stop offset="100%" stopColor="#C81038" />
                 </linearGradient>
-                {/* Degradado más profundo y jugoso para el labio inferior */}
-                <linearGradient id="kissLowerLipGrad" x1="50%" y1="0%" x2="50%" y2="100%">
-                  <stop offset="0%" stopColor="#FF5C82" />
-                  <stop offset="55%" stopColor="#FF3366" />
-                  <stop offset="100%" stopColor="#C9184A" />
+                <linearGradient id="kissMarkLower" x1="20%" y1="0%" x2="80%" y2="100%">
+                  <stop offset="0%" stopColor="#FF4D73" />
+                  <stop offset="55%" stopColor="#E61C47" />
+                  <stop offset="100%" stopColor="#B50D32" />
                 </linearGradient>
-                {/* Brillo especular blanco suave */}
-                <linearGradient id="kissGlossGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-                  <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.92" />
-                  <stop offset="100%" stopColor="#FFFFFF" stopOpacity="0.08" />
+                <linearGradient id="kissMarkSheen" x1="0%" y1="0%" x2="0%" y2="100%">
+                  <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.82" />
+                  <stop offset="100%" stopColor="#FFFFFF" stopOpacity="0.05" />
                 </linearGradient>
               </defs>
 
-              {/* Labio superior con arco de Cupido suave */}
+              {/* Labio superior estilo 💋 con arco de Cupido pronunciado y comisuras afiladas */}
               <path
-                d="M6 34 C16 20, 30 9, 41 13 C46 15, 48.5 18.5, 50 19.5 C51.5 18.5, 54 15, 59 13 C70 9, 84 20, 94 34 C82 37.5, 66 36.5, 50 35 C34 36.5, 18 37.5, 6 34 Z"
-                fill="url(#kissUpperLipGrad)"
+                d="M7 33 C14 24, 24 10, 37 11 C43 11.5, 47 16.5, 50 20 C53 16.5, 57 11.5, 63 11 C76 10, 86 24, 93 33 C84 34, 72 30.5, 50 29.5 C28 30.5, 16 34, 7 33 Z"
+                fill="url(#kissMarkUpper)"
               />
 
-              {/* Labio inferior carnoso y redondeado */}
+              {/* Labio inferior separado (abertura central natural de la marca de beso 💋) */}
               <path
-                d="M8 34.5 C21 37, 36 36, 50 35.2 C64 36, 79 37, 92 34.5 C86 49, 71 60, 50 60 C29 60, 14 49, 8 34.5 Z"
-                fill="url(#kissLowerLipGrad)"
+                d="M11 38.5 C24 41.5, 38 42.5, 50 42.5 C62 42.5, 76 41.5, 89 38.5 C83 55, 69 65, 50 65 C31 65, 17 55, 11 38.5 Z"
+                fill="url(#kissMarkLower)"
               />
 
-              {/* Pliegue interior sutil entre labios */}
+              {/* Pequeñas marcas sutiles de textura labial como el emoji 💋 */}
               <path
-                d="M12 34.8 C27 37.4, 41 36.4, 50 35.4 C59 36.4, 73 37.4, 88 34.8"
+                d="M35 16 C35.5 21, 35 25, 34 28 M65 16 C64.5 21, 65 25, 66 28 M42 45 C42 52, 41 58, 40 62 M58 45 C58 52, 59 58, 60 62"
                 fill="none"
-                stroke="#8F0F36"
-                strokeOpacity="0.45"
-                strokeWidth="2.1"
+                stroke="#960B2A"
+                strokeOpacity="0.28"
+                strokeWidth="1.6"
                 strokeLinecap="round"
               />
 
-              {/* Brillo especular superior izquierdo */}
+              {/* Brillo glossy suave en el arco superior */}
               <ellipse
                 cx="34"
-                cy="21"
-                rx="9"
-                ry="3.6"
-                transform="rotate(-14 34 21)"
-                fill="url(#kissGlossGrad)"
+                cy="18.5"
+                rx="7.5"
+                ry="2.8"
+                transform="rotate(-16 34 18.5)"
+                fill="url(#kissMarkSheen)"
               />
-
-              {/* Brillo especular superior derecho */}
               <ellipse
                 cx="66"
-                cy="21.5"
-                rx="7"
-                ry="2.8"
-                transform="rotate(14 66 21.5)"
-                fill="url(#kissGlossGrad)"
+                cy="18.5"
+                rx="6.2"
+                ry="2.4"
+                transform="rotate(16 66 18.5)"
+                fill="url(#kissMarkSheen)"
                 opacity="0.72"
               />
 
-              {/* Reflejo jugoso principal en el labio inferior */}
+              {/* Brillo jugoso curvo en el labio inferior */}
               <path
-                d="M32 46.5 C40 51.5, 59 51.5, 67 46"
+                d="M32 52.5 C41 57.5, 59 57.5, 68 52"
                 fill="none"
                 stroke="#FFFFFF"
-                strokeOpacity="0.82"
-                strokeWidth="4.2"
+                strokeOpacity="0.78"
+                strokeWidth="3.8"
                 strokeLinecap="round"
               />
-              {/* Destello puntual glossy */}
-              <circle cx="24" cy="43.5" r="2.3" fill="#FFFFFF" fillOpacity="0.78" />
+              <circle cx="24" cy="49" r="2.1" fill="#FFFFFF" fillOpacity="0.72" />
             </svg>
           </motion.button>
         </div>
@@ -598,10 +600,15 @@ export const PlanetHUD: React.FC<PlanetHUDProps> = ({ solar, hasUnreadDiary, chi
                     </p>
                   </motion.div>
 
-                  {/* Iconos cayendo físicamente sobre el planeta */}
+                  {/* Corazones y besos cayendo físicamente sobre el planeta */}
                   {drops.map((_, idx) => {
                     const leftPct = (idx * 19 + (idx % 5) * 7) % 92;
                     const delay = (idx % 12) * 0.12;
+                    const dropSymbols = ['❤️', '💖', '💋', '💕'];
+                    const dropEmoji =
+                      burst.iconType === 'corazones'
+                        ? dropSymbols[idx % dropSymbols.length]
+                        : iconEmoji;
                     return (
                       <motion.div
                         key={idx}
@@ -614,7 +621,7 @@ export const PlanetHUD: React.FC<PlanetHUDProps> = ({ solar, hasUnreadDiary, chi
                         transition={{ duration: 2.8 + (idx % 4) * 0.35, delay, ease: 'easeIn' }}
                         className="fixed top-0 text-3xl select-none"
                       >
-                        {iconEmoji}
+                        {dropEmoji}
                       </motion.div>
                     );
                   })}
